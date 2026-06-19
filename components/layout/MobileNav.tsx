@@ -4,8 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, ShoppingCart, Package, BarChart3, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth/context";
+import { canAccess } from "@/lib/auth/roles";
 
-const tabs = [
+const allTabs = [
   { href: "/dashboard", label: "Accueil", icon: LayoutDashboard },
   { href: "/pos", label: "Caisse", icon: ShoppingCart },
   { href: "/stocks", label: "Stock", icon: Package },
@@ -14,6 +16,8 @@ const tabs = [
 
 export function MobileNav() {
   const pathname = usePathname();
+  const { user } = useAuth();
+  const tabs = allTabs.filter((tab) => canAccess(user?.role, tab.href));
 
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-[var(--border)] z-30 safe-area-pb">

@@ -22,6 +22,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/context";
 import { useAuth } from "@/lib/auth/context";
+import { canAccess } from "@/lib/auth/roles";
 import { LanguageToggle } from "./LanguageToggle";
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
@@ -29,7 +30,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useI18n();
   const { user, logout } = useAuth();
 
-  const navItems = [
+  const allNavItems = [
     { href: "/dashboard", label: t.nav.dashboard, icon: LayoutDashboard, badge: null },
     { href: "/pos", label: t.nav.pos, icon: ShoppingCart, badge: null },
     { href: "/stocks", label: t.nav.stocks, icon: Package, badge: 6 },
@@ -45,6 +46,9 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     { href: "/rapports", label: t.nav.rapports, icon: BarChart3, badge: null },
     { href: "/ia", label: t.nav.ia, icon: Cpu, badge: null },
   ];
+
+  // Filtrer par rôle
+  const navItems = allNavItems.filter((item) => canAccess(user?.role, item.href));
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-[260px] bg-[#0f172a] flex flex-col z-40">

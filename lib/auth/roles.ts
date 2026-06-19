@@ -1,0 +1,78 @@
+// ========================================
+// RBAC — Permissions par rôle
+// ========================================
+
+export type Role = "manager" | "supervisor" | "cashier" | "stockist";
+
+// Routes accessibles par chaque rôle
+// manager = tout, les autres = sous-ensemble
+export const ROLE_PERMISSIONS: Record<Role, string[]> = {
+  manager: [
+    "/dashboard",
+    "/pos",
+    "/stocks",
+    "/import",
+    "/achats",
+    "/factures",
+    "/employes",
+    "/caisses",
+    "/clients",
+    "/pertes",
+    "/scanner",
+    "/comptabilite",
+    "/rapports",
+    "/ia",
+  ],
+  supervisor: [
+    "/dashboard",
+    "/pos",
+    "/stocks",
+    "/achats",
+    "/factures",
+    "/caisses",
+    "/clients",
+    "/pertes",
+    "/scanner",
+    "/rapports",
+  ],
+  cashier: [
+    "/dashboard",
+    "/pos",
+    "/caisses",
+    "/scanner",
+    "/clients",
+  ],
+  stockist: [
+    "/dashboard",
+    "/stocks",
+    "/import",
+    "/achats",
+    "/pertes",
+    "/scanner",
+  ],
+};
+
+// Page d'accueil par rôle (après login)
+export const ROLE_HOME: Record<Role, string> = {
+  manager: "/dashboard",
+  supervisor: "/dashboard",
+  cashier: "/pos",
+  stockist: "/stocks",
+};
+
+// Vérifier si un rôle peut accéder à une route
+export function canAccess(role: string | undefined, route: string): boolean {
+  if (!role) return false;
+  const permissions = ROLE_PERMISSIONS[role as Role];
+  if (!permissions) return false;
+  // Match exact ou sous-route (ex: /stocks/123 matche /stocks)
+  return permissions.some(
+    (allowed) => route === allowed || route.startsWith(allowed + "/")
+  );
+}
+
+// Obtenir les routes autorisées pour un rôle
+export function getAllowedRoutes(role: string | undefined): string[] {
+  if (!role) return [];
+  return ROLE_PERMISSIONS[role as Role] || [];
+}

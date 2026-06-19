@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation";
 import { Lock, User, Loader2, AlertCircle, ShoppingBag } from "lucide-react";
 import { useAuth } from "@/lib/auth/context";
 import { authApi, type ApiCashier } from "@/lib/api";
+import { ROLE_HOME, type Role } from "@/lib/auth/roles";
 import { Button } from "@/components/ui/Button";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, isAuthenticated, loading: authLoading } = useAuth();
+  const { login, user, isAuthenticated, loading: authLoading } = useAuth();
   const [cashiers, setCashiers] = useState<ApiCashier[]>([]);
   const [selectedCashier, setSelectedCashier] = useState<ApiCashier | null>(null);
   const [pin, setPin] = useState("");
@@ -19,9 +20,10 @@ export default function LoginPage() {
   // Rediriger si déjà connecté
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      router.push("/dashboard");
+      const role = user?.role as Role;
+      router.push(ROLE_HOME[role] || "/dashboard");
     }
-  }, [authLoading, isAuthenticated, router]);
+  }, [authLoading, isAuthenticated, router, user]);
 
   // Charger la liste des caissiers
   useEffect(() => {
@@ -40,7 +42,8 @@ export default function LoginPage() {
     const success = await login(selectedCashier.employeeNumber, pin);
 
     if (success) {
-      router.push("/dashboard");
+      const role = selectedCashier.role as Role;
+      router.push(ROLE_HOME[role] || "/dashboard");
     } else {
       setError("PIN incorrect ou compte inaccessible");
       setPin("");
@@ -65,7 +68,8 @@ export default function LoginPage() {
     setError("");
     const success = await login(selectedCashier.employeeNumber, pinValue);
     if (success) {
-      router.push("/dashboard");
+      const role = selectedCashier.role as Role;
+      router.push(ROLE_HOME[role] || "/dashboard");
     } else {
       setError("PIN incorrect");
       setPin("");
