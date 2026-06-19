@@ -20,6 +20,7 @@ import { useI18n } from "@/lib/i18n/context";
 import { useToast } from "@/components/ui/Toast";
 import { NewEmployeeModal } from "@/components/forms/NewEmployeeModal";
 import { useEmployees } from "@/lib/hooks/useApi";
+import { employeesApi } from "@/lib/api";
 import { formatDate, cn } from "@/lib/utils";
 import type { Employee } from "@/lib/types";
 
@@ -116,6 +117,7 @@ function EmployeeCard({
 
 export default function EmployesPage() {
   const { t } = useI18n();
+  const { toast } = useToast();
   const { employees: apiEmployees } = useEmployees();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [search, setSearch] = useState("");
@@ -123,6 +125,7 @@ export default function EmployesPage() {
   const [filterStatus, setFilterStatus] = useState("Tous");
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [showNewEmployee, setShowNewEmployee] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   // Convertir les employés API au format frontend, fallback sur mock
   useEffect(() => {
@@ -145,9 +148,47 @@ export default function EmployesPage() {
     }
   }, [apiEmployees]);
 
-  const handleNewEmployee = (data: Omit<Employee, "id" | "status" | "hoursThisWeek">) => {
-    const newEmp: Employee = { ...data, id: `e${Date.now()}`, status: "active", hoursThisWeek: 0 };
-    setEmployees((prev) => [newEmp, ...prev]);
+  const handleNewEmployee = async (data: Omit<Employee, "id" | "status" | "hoursThisWeek">) => {
+    setSaving(true);
+    try {
+      // Générer un numéro d'employé automatique
+      const empCount = employees.length + 1;
+      const employeeNumber = `EMP${String(empCount).padStart(3, "0")}`;
+      const created = await employeesApi.create({
+        employeeNumber,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        role: data.role,
+        department: data.department,
+        phone: data.phone,
+        email: data.email || undefined,
+        hireDate: data.hireDate ? new Date(data.hireDate) : new Date(),
+        status: "active",
+        pin: "0000", // PIN par défaut, à changer par l'employé
+      });
+      const newEmp: Employee = {
+        id: created.id,
+        firstName: created.firstName,
+        lastName: created.lastName,
+        role: created.role as Employee["role"],
+        department: created.department,
+        phone: created.phone || "",
+        email: created.email || "",
+        hireDate: created.hireDate ? new Date(created.hireDate).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
+        status: "active" as const,
+        hoursThisWeek: 0,
+      };
+      setEmployees((prev) => [newEmp, ...prev]);
+      toast(`${data.firstName} ${data.lastName} ajouté — PIN: 0000`, "success");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Erreur lors de l'ajout";
+      toast(msg, "warning");
+      // Fallback local
+      const newEmp: Employee = { ...data, id: `e${Date.now()}`, status: "active", hoursThisWeek: 0 };
+      setEmployees((prev) => [newEmp, ...prev]);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const activeCount = employees.filter((e) => e.status === "active").length;

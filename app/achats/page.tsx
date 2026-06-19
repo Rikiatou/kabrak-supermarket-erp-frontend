@@ -27,6 +27,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { suppliers as mockSuppliers } from "@/lib/mock-data";
 import { useSuppliers, usePurchaseOrders, useCreatePurchaseOrder } from "@/lib/hooks/useApi";
+import { suppliersApi } from "@/lib/api";
 import { formatCurrency, cn } from "@/lib/utils";
 import type { Supplier } from "@/lib/types";
 
@@ -164,9 +165,37 @@ export default function AchatsPage() {
     }
   }, [suppliers]);
 
-  const handleNewSupplier = (data: Omit<Supplier, "id" | "rating" | "totalOrders" | "pendingOrders">) => {
-    const newSup: Supplier = { ...data, id: `s${Date.now()}`, rating: 0, totalOrders: 0, pendingOrders: 0 };
-    setSupplierList((prev) => [newSup, ...prev]);
+  const handleNewSupplier = async (data: Omit<Supplier, "id" | "rating" | "totalOrders" | "pendingOrders">) => {
+    try {
+      const created = await suppliersApi.create({
+        name: data.name,
+        contact: data.contact,
+        phone: data.phone,
+        email: data.email || undefined,
+        address: data.address,
+        paymentTerms: data.paymentTerms,
+      });
+      const newSup: Supplier = {
+        id: created.id,
+        name: created.name,
+        contact: created.contact || "",
+        phone: created.phone || "",
+        email: created.email || "",
+        address: created.address || "",
+        paymentTerms: created.paymentTerms || "",
+        rating: created.rating || 0,
+        totalOrders: 0,
+        pendingOrders: 0,
+      };
+      setSupplierList((prev) => [newSup, ...prev]);
+      toast(`Fournisseur ajouté: ${data.name}`, "success");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Erreur lors de l'ajout";
+      toast(msg, "warning");
+      // Fallback local
+      const newSup: Supplier = { ...data, id: `s${Date.now()}`, rating: 0, totalOrders: 0, pendingOrders: 0 };
+      setSupplierList((prev) => [newSup, ...prev]);
+    }
   };
 
   // Convertir les orders API au format frontend, fallback sur mock
