@@ -1,0 +1,435 @@
+"use client";
+
+import { useState, useMemo } from "react";
+import {
+  Calendar,
+  Plus,
+  X,
+  Clock,
+  Store,
+  User,
+  Trash2,
+  Copy,
+  AlertCircle,
+} from "lucide-react";
+import { AppShell } from "@/components/layout/AppShell";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
+import { useToast } from "@/components/ui/Toast";
+import { cn } from "@/lib/utils";
+import {
+  useEmployees,
+  useSchedules,
+  useCreateSchedule,
+  useDeleteSchedule,
+} from "@/lib/hooks/useApi";
+import type { ApiSchedule, ApiEmployee } from "@/lib/api";
+
+const DAYS = [
+  { num: 1, label: "Lundi", short: "Lun" },
+  { num: 2, label: "Mardi", short: "Mar" },
+  { num: 3, label: "Mercredi", short: "Mer" },
+  { num: 4, label: "Jeudi", short: "Jeu" },
+  { num: 5, label: "Vendredi", short: "Ven" },
+  { num: 6, label: "Samedi", short: "Sam" },
+  { num: 0, label: "Dimanche", short: "Dim" },
+];
+
+const REGISTERS = [
+  { id: "reg1", name: "Caisse 1" },
+  { id: "reg2", name: "Caisse 2" },
+  { id: "reg3", name: "Caisse 3" },
+  { id: "reg4", name: "Caisse 4" },
+];
+
+const REGISTER_COLORS: Record<string, string> = {
+  reg1: "bg-blue-100 text-blue-700 border-blue-200",
+  reg2: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  reg3: "bg-purple-100 text-purple-700 border-purple-200",
+  reg4: "bg-amber-100 text-amber-700 border-amber-200",
+};
+
+const TIME_SLOTS = [
+  "08:00", "09:00", "10:00", "11:00", "12:00",
+  "13:00", "14:00", "15:00", "16:00", "17:00",
+  "18:00", "19:00", "20:00",
+];
+
+export default function PlanningPage() {
+  const { toast } = useToast();
+  const { employees } = useEmployees();
+  const { data: scheduleData, loading, reload } = useSchedules();
+  const { create, creating } = useCreateSchedule();
+  const { remove, deleting } = useDeleteSchedule();
+
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addEmployee, setAddEmployee] = useState<ApiEmployee | null>(null);
+  const [addDay, setAddDay] = useState<number>(1);
+  const [form, setForm] = useState({
+    registerId: "reg1",
+    startTime: "08:00",
+    endTime: "17:00",
+    breakStart: "",
+    breakEnd: "",
+    notes: "",
+  });
+
+  // Filtrer les employés caissiers/superviseurs/managers seulement
+  const cashiers = useMemo(
+    () => employees.filter((e) => ["cashier", "supervisor", "manager"].includes(e.role)),
+    [employees],
+  );
+
+  // Grouper les schedules par employé × jour
+  const scheduleMap = useMemo(() => {
+    const map: Record<string, ApiSchedule[]> = {};
+    const all = scheduleData?.all || [];
+    all.forEach((s) => {
+      const key = `${s.employeeId}-${s.dayOfWeek}`;
+      if (!map[key]) map[key] = [];
+      map[key].push(s);
+    });
+    return map;
+  }, [scheduleData]);
+
+  const getSchedules = (employeeId: string, dayOfWeek: number): ApiSchedule[] => {
+    return scheduleMap[`${employeeId}-${dayOfWeek}`] || [];
+  };
+
+  const handleAdd = (employee: ApiEmployee, day: number) => {
+    setAddEmployee(employee);
+    setAddDay(day);
+    setForm({
+      registerId: "reg1",
+      startTime: "08:00",
+      endTime: "17:00",
+      breakStart: "",
+      breakEnd: "",
+      notes: "",
+    });
+    setShowAddModal(true);
+  };
+
+  const handleSubmit = async () => {
+    if (!addEmployee) return;
+    if (form.startTime >= form.endTime) {
+      toast("L'heure de début doit être avant l'heure de fin", "warning");
+      return;
+    }
+    try {
+      await create({
+        employeeId: addEmployee.id,
+        registerId: form.registerId,
+        dayOfWeek: addDay,
+        startTime: form.startTime,
+        endTime: form.endTime,
+        breakStart: form.breakStart || undefined,
+        breakEnd: form.breakEnd || undefined,
+        notes: form.notes || undefined,
+      });
+      toast(`Créneau ajouté: ${addEmployee.firstName} ${DAYS.find(d => d.num === addDay)?.label}`, "success");
+      setShowAddModal(false);
+      reload();
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Erreur lors de l'ajout du créneau";
+      toast(msg, "warning");
+    }
+  };
+
+  const handleDelete = async (id: string, name: string) => {
+    try {
+      await remove(id);
+      toast(`Créneau supprimé: ${name}`, "info");
+      reload();
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Erreur lors de la suppression";
+      toast(msg, "warning");
+    }
+  };
+
+  const today = new Date().getDay();
+
+  return (
+    <AppShell title="Planning des caisses" subtitle="Assignation hebdomadaire des employés aux caisses">
+      <div className="space-y-4">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-[var(--brand)]" />
+            <div>
+              <h2 className="text-sm font-semibold text-[var(--text-primary)]">Planning hebdomadaire</h2>
+              <p className="text-xs text-[var(--text-muted)]">
+                {cashiers.length} employé(s) éligible(s) · {scheduleData?.total || 0} créneau(x) planifié(s)
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => reload()}
+          >
+            Actualiser
+          </Button>
+        </div>
+
+        {/* Légende caisses */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-[var(--text-muted)] font-medium">Caisses:</span>
+          {REGISTERS.map((reg) => (
+            <span
+              key={reg.id}
+              className={cn(
+                "inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium border",
+                REGISTER_COLORS[reg.id] || "bg-slate-100 text-slate-700 border-slate-200",
+              )}
+            >
+              <Store className="w-3 h-3" />
+              {reg.name}
+            </span>
+          ))}
+        </div>
+
+        {/* Grille planning */}
+        <Card className="overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[800px]">
+              <thead>
+                <tr className="border-b border-[var(--border)] bg-[var(--background)]">
+                  <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-3 py-3 sticky left-0 bg-[var(--background)] z-10">
+                    Employé
+                  </th>
+                  {DAYS.map((day) => (
+                    <th
+                      key={day.num}
+                      className={cn(
+                        "text-center text-xs font-semibold uppercase tracking-wide px-2 py-3 min-w-[120px]",
+                        day.num === today ? "text-[var(--brand)]" : "text-[var(--text-muted)]",
+                      )}
+                    >
+                      <div className="flex flex-col items-center">
+                        <span>{day.label}</span>
+                        {day.num === today && (
+                          <span className="text-[9px] bg-[var(--brand)] text-white px-1.5 py-0 rounded-full mt-0.5">Aujourd&apos;hui</span>
+                        )}
+                      </div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {cashiers.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-4 py-12 text-center">
+                      <User className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                      <p className="text-sm text-[var(--text-muted)]">Aucun employé caissier/superviseur trouvé</p>
+                    </td>
+                  </tr>
+                ) : (
+                  cashiers.map((employee) => (
+                    <tr key={employee.id} className="border-b border-[var(--border-subtle)] hover:bg-[var(--surface-hover)]">
+                      <td className="px-3 py-3 sticky left-0 bg-white z-10">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                            {employee.firstName.charAt(0)}{employee.lastName.charAt(0)}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-[var(--text-primary)] truncate">
+                              {employee.firstName} {employee.lastName}
+                            </p>
+                            <p className="text-[10px] text-[var(--text-muted)] capitalize">{employee.role}</p>
+                          </div>
+                        </div>
+                      </td>
+                      {DAYS.map((day) => {
+                        const slots = getSchedules(employee.id, day.num);
+                        return (
+                          <td key={day.num} className="px-2 py-2 align-top">
+                            <div className="space-y-1">
+                              {slots.map((slot) => {
+                                const reg = REGISTERS.find((r) => r.id === slot.registerId);
+                                return (
+                                  <div
+                                    key={slot.id}
+                                    className={cn(
+                                      "group relative rounded-lg border px-2 py-1.5 text-xs",
+                                      REGISTER_COLORS[slot.registerId] || "bg-slate-100 text-slate-700 border-slate-200",
+                                    )}
+                                  >
+                                    <div className="flex items-center gap-1 font-semibold">
+                                      <Store className="w-3 h-3 shrink-0" />
+                                      <span className="truncate">{reg?.name || slot.registerId}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1 text-[10px] mt-0.5 opacity-80">
+                                      <Clock className="w-2.5 h-2.5 shrink-0" />
+                                      <span className="tabular-nums">{slot.startTime}–{slot.endTime}</span>
+                                    </div>
+                                    {slot.breakStart && slot.breakEnd && (
+                                      <div className="text-[9px] opacity-60 mt-0.5">
+                                        Pause: {slot.breakStart}–{slot.breakEnd}
+                                      </div>
+                                    )}
+                                    {slot.notes && (
+                                      <div className="text-[9px] opacity-70 mt-0.5 italic truncate">{slot.notes}</div>
+                                    )}
+                                    <button
+                                      onClick={() => handleDelete(slot.id, `${employee.firstName} ${day.label}`)}
+                                      className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-white/50"
+                                      title="Supprimer"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                              <button
+                                onClick={() => handleAdd(employee, day.num)}
+                                className="w-full flex items-center justify-center gap-1 py-1 rounded-lg border border-dashed border-slate-200 text-[10px] text-[var(--text-muted)] hover:border-[var(--brand)] hover:text-[var(--brand)] transition-colors"
+                              >
+                                <Plus className="w-3 h-3" />
+                                {slots.length === 0 ? "Ajouter" : "Autre"}
+                              </button>
+                            </div>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+
+        {/* Statistiques rapides */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {DAYS.map((day) => {
+            const count = scheduleData?.byDay?.[day.num]?.length || 0;
+            return (
+              <Card key={day.num} className={cn("p-3", day.num === today && "border-[var(--brand)] border-2")}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-[var(--text-muted)]">{day.label}</p>
+                    <p className="text-lg font-bold text-[var(--text-primary)] tabular-nums">{count}</p>
+                  </div>
+                  <Calendar className={cn("w-5 h-5", count > 0 ? "text-[var(--brand)]" : "text-slate-300")} />
+                </div>
+              </Card>
+            );
+          }).slice(0, 4)}
+        </div>
+      </div>
+
+      {/* Modal ajout créneau */}
+      {showAddModal && addEmployee && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowAddModal(false)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-[var(--brand)]" />
+                <h3 className="text-sm font-bold text-[var(--text-primary)]">
+                  Nouveau créneau — {addEmployee.firstName} {addEmployee.lastName}
+                </h3>
+              </div>
+              <button onClick={() => setShowAddModal(false)} className="p-1 hover:bg-slate-100 rounded-lg">
+                <X className="w-4 h-4 text-[var(--text-muted)]" />
+              </button>
+            </div>
+
+            <div className="bg-slate-50 rounded-xl p-3 text-sm">
+              <p className="text-[var(--text-muted)] text-xs">Jour</p>
+              <p className="font-semibold">{DAYS.find((d) => d.num === addDay)?.label}</p>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Caisse</label>
+                <select
+                  value={form.registerId}
+                  onChange={(e) => setForm({ ...form, registerId: e.target.value })}
+                  className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)] bg-white"
+                >
+                  {REGISTERS.map((reg) => (
+                    <option key={reg.id} value={reg.id}>{reg.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Début</label>
+                  <select
+                    value={form.startTime}
+                    onChange={(e) => setForm({ ...form, startTime: e.target.value })}
+                    className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)] bg-white tabular-nums"
+                  >
+                    {TIME_SLOTS.map((t) => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Fin</label>
+                  <select
+                    value={form.endTime}
+                    onChange={(e) => setForm({ ...form, endTime: e.target.value })}
+                    className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)] bg-white tabular-nums"
+                  >
+                    {TIME_SLOTS.map((t) => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Pause début (optionnel)</label>
+                  <select
+                    value={form.breakStart}
+                    onChange={(e) => setForm({ ...form, breakStart: e.target.value })}
+                    className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)] bg-white tabular-nums"
+                  >
+                    <option value="">—</option>
+                    {TIME_SLOTS.map((t) => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Pause fin (optionnel)</label>
+                  <select
+                    value={form.breakEnd}
+                    onChange={(e) => setForm({ ...form, breakEnd: e.target.value })}
+                    className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)] bg-white tabular-nums"
+                  >
+                    <option value="">—</option>
+                    {TIME_SLOTS.map((t) => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Note (optionnel)</label>
+                <input
+                  value={form.notes}
+                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                  placeholder="Remplacement, heures supp..."
+                  className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]"
+                />
+              </div>
+            </div>
+
+            {form.startTime >= form.endTime && (
+              <div className="flex items-center gap-2 text-amber-600 text-xs bg-amber-50 rounded-lg p-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                L&apos;heure de début doit être avant l&apos;heure de fin
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <Button variant="secondary" className="flex-1" onClick={() => setShowAddModal(false)}>Annuler</Button>
+              <Button className="flex-1" onClick={handleSubmit} disabled={creating || form.startTime >= form.endTime}>
+                {creating ? "Ajout..." : "Ajouter le créneau"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </AppShell>
+  );
+}

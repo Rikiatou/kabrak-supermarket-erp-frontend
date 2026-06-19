@@ -18,6 +18,7 @@ import {
   FileText,
   AlertTriangle,
   ScanLine,
+  Calendar,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/context";
@@ -39,6 +40,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     { href: "/factures", label: "Factures", icon: FileText, badge: null },
     { href: "/employes", label: t.nav.employes, icon: Users, badge: null },
     { href: "/caisses", label: "Caisses", icon: Store, badge: null },
+    { href: "/planning", label: "Planning", icon: Calendar, badge: null },
     { href: "/clients", label: "Clients", icon: Users, badge: null },
     { href: "/pertes", label: "Pertes", icon: AlertTriangle, badge: null },
     { href: "/scanner", label: "Scanner", icon: ScanLine, badge: null },

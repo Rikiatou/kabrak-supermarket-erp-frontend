@@ -525,6 +525,40 @@ export const shiftsApi = {
 };
 
 // ========================================
+// API SCHEDULES (PLANNING CAISSES)
+// ========================================
+export interface ApiSchedule {
+  id: string;
+  employeeId: string;
+  registerId: string;
+  dayOfWeek: number; // 0=dimanche, 1=lundi, ..., 6=samedi
+  startTime: string; // "08:00"
+  endTime: string; // "17:00"
+  breakStart?: string | null;
+  breakEnd?: string | null;
+  isActive: boolean;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  employee?: ApiEmployee;
+  register?: ApiCashRegister;
+}
+
+export const schedulesApi = {
+  list: () => fetchAPI<{ all: ApiSchedule[]; byDay: Record<number, ApiSchedule[]>; total: number }>(`/schedules`),
+  today: () => fetchAPI<{ dayOfWeek: number; currentTime: string; active: ApiSchedule[] }>(`/schedules/today`),
+  byEmployee: (employeeId: string) => fetchAPI<ApiSchedule[]>(`/schedules/employee/${employeeId}`),
+  byRegister: (registerId: string) => fetchAPI<ApiSchedule[]>(`/schedules/register/${registerId}`),
+  create: (data: { employeeId: string; registerId: string; dayOfWeek: number; startTime: string; endTime: string; breakStart?: string; breakEnd?: string; notes?: string }) =>
+    fetchAPI<ApiSchedule>(`/schedules`, { method: "POST", body: JSON.stringify(data) }),
+  duplicate: (id: string, targetDayOfWeek: number) =>
+    fetchAPI<ApiSchedule>(`/schedules/${id}/duplicate`, { method: "POST", body: JSON.stringify({ targetDayOfWeek }) }),
+  update: (id: string, data: Partial<{ startTime: string; endTime: string; breakStart: string; breakEnd: string; isActive: boolean; notes: string }>) =>
+    fetchAPI<ApiSchedule>(`/schedules/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  remove: (id: string) => fetchAPI<{ id: string }>(`/schedules/${id}`, { method: "DELETE" }),
+};
+
+// ========================================
 // API CUSTOMERS (CLIENTS FIDÉLITÉ)
 // ========================================
 // Note: ApiCustomer is already defined above in the TYPES section.

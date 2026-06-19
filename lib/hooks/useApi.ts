@@ -10,6 +10,7 @@ import {
   employeesApi,
   purchaseOrdersApi,
   shiftsApi,
+  schedulesApi,
   customersApi,
   reportsApi,
   accountingApi,
@@ -22,6 +23,7 @@ import {
   type ApiEmployee,
   type ApiPurchaseOrder,
   type ApiShift,
+  type ApiSchedule,
   type ApiCustomer,
   type ApiLoyaltyHistory,
   type ApiExpense,
@@ -595,6 +597,34 @@ export function useCloseShift() {
     finally { setClosing(false); }
   };
   return { close, closing };
+}
+
+// ========================================
+// HOOKS: Schedules (Planning caisses)
+// ========================================
+export function useSchedules() {
+  return useApi(() => schedulesApi.list(), []);
+}
+export function useTodaySchedule() {
+  return useApi(() => schedulesApi.today(), []);
+}
+export function useCreateSchedule() {
+  const [creating, setCreating] = useState(false);
+  const create = async (data: Parameters<typeof schedulesApi.create>[0]) => {
+    setCreating(true);
+    try { return await schedulesApi.create(data); }
+    finally { setCreating(false); }
+  };
+  return { create, creating };
+}
+export function useDeleteSchedule() {
+  const [deleting, setDeleting] = useState(false);
+  const remove = async (id: string) => {
+    setDeleting(true);
+    try { return await schedulesApi.remove(id); }
+    finally { setDeleting(false); }
+  };
+  return { remove, deleting };
 }
 
 // ========================================
