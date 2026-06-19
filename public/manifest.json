@@ -1,0 +1,43 @@
+{
+  "name": "KABRAK Market Pro",
+  "short_name": "KABRAK",
+  "description": "ERP Supermarché - Gestion complète",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f172a",
+  "theme_color": "#1e40af",
+  "scope": "/",
+  "categories": ["business", "productivity", "shopping"],
+  "icons": [
+    {
+      "src": "/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Caisse POS",
+      "url": "/pos",
+      "description": "Encaisser une vente"
+    },
+    {
+      "name": "Tableau de bord",
+      "url": "/dashboard",
+      "description": "Vue d'ensemble"
+    },
+    {
+      "name": "Stocks",
+      "url": "/stocks",
+      "description": "Gestion du stock"
+    }
+  ]
+}

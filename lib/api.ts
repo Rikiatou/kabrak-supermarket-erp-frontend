@@ -1,0 +1,717 @@
+// Client API pour connecter le frontend Next.js au backend NestJS
+// Backend: http://localhost:3000/api
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+
+// Helper pour les requêtes
+async function fetchAPI<T>(
+  endpoint: string,
+  options?: RequestInit
+): Promise<T> {
+  const url = `${API_URL}${endpoint}`;
+  const res = await fetch(url, {
+    headers: {
+      "Content-Type": "application/json",
+      ...options?.headers,
+    },
+    ...options,
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ message: "Erreur API" }));
+    throw new Error(error.message || `Erreur ${res.status}`);
+  }
+
+  return res.json();
+}
+
+// ========================================
+// TYPES (alignés avec le backend Prisma)
+// ========================================
+export interface ApiProduct {
+  id: string;
+  sku: string;
+  barcode: string;
+  name: string;
+  description?: string;
+  category: string;
+  subCategory?: string;
+  brand?: string;
+  price: number;
+  costPrice: number;
+  taxRate: number;
+  stock: number;
+  minStock: number;
+  unit: string;
+  expiryDate?: string;
+  supplierId?: string;
+  imageUrl?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  supplier?: ApiSupplier;
+}
+
+export interface ApiSupplier {
+  id: string;
+  name: string;
+  contact: string;
+  phone: string;
+  email?: string;
+  address?: string;
+  paymentTerms: string;
+  rating: number;
+  isActive: boolean;
+  _count?: { products: number; purchaseOrders: number };
+}
+
+export interface ApiEmployee {
+  id: string;
+  employeeNumber: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+  department: string;
+  phone: string;
+  email?: string;
+  hireDate: string;
+  status: string;
+  pin?: string;
+}
+
+export interface ApiCashRegister {
+  id: string;
+  name: string;
+  code: string;
+  status: string;
+  openingCash: number;
+  currentCash: number;
+  location?: string;
+  isActive: boolean;
+}
+
+export interface ApiTransactionItem {
+  id: string;
+  productId: string;
+  quantity: number;
+  unitPrice: number;
+  discount: number;
+  tax: number;
+  total: number;
+  product?: ApiProduct;
+}
+
+export interface ApiTransaction {
+  id: string;
+  transactionNumber: string;
+  date: string;
+  cashierId: string;
+  registerId?: string;
+  subtotal: number;
+  discount: number;
+  tax: number;
+  total: number;
+  paymentMethod: string;
+  cashGiven?: number;
+  change?: number;
+  customerId?: string;
+  status: string;
+  syncStatus: string;
+  syncedAt?: string;
+  items: ApiTransactionItem[];
+  cashier?: ApiEmployee;
+  customer?: ApiCustomer;
+}
+
+export interface ApiCustomer {
+  id: string;
+  customerNumber: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email?: string;
+  points: number;
+  totalSpent: number;
+  visits?: number;
+  tier?: string;
+  createdAt?: string;
+}
+
+export interface ApiStockMovement {
+  id: string;
+  productId: string;
+  type: string;
+  quantity: number;
+  reason?: string;
+  reference?: string;
+  notes?: string;
+  syncStatus: string;
+  createdAt: string;
+  product?: ApiProduct;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
+// ========================================
+// API AUTH
+// ========================================
+export interface ApiAuthUser {
+  id: string;
+  employeeNumber: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+  department: string;
+}
+
+export interface ApiCashier {
+  id: string;
+  employeeNumber: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+  department: string;
+}
+
+export const authApi = {
+  // Login
+  login: (employeeNumber: string, pin: string) =>
+    fetchAPI<{ user: ApiAuthUser; token: string }>(`/auth/login`, {
+      method: "POST",
+      body: JSON.stringify({ employeeNumber, pin }),
+    }),
+
+  // Lister les caissiers
+  listCashiers: () => fetchAPI<ApiCashier[]>(`/auth/cashiers`),
+};
+
+// ========================================
+// API PRODUCTS
+// ========================================
+export const productsApi = {
+  // Liste paginée
+  list: (page = 1, limit = 100) =>
+    fetchAPI<PaginatedResponse<ApiProduct>>(
+      `/products?page=${page}&limit=${limit}`
+    ),
+
+  // Recherche
+  search: (params: { q?: string; category?: string; page?: number; limit?: number }) => {
+    const query = new URLSearchParams();
+    if (params.q) query.set("q", params.q);
+    if (params.category) query.set("category", params.category);
+    query.set("page", String(params.page || 1));
+    query.set("limit", String(params.limit || 100));
+    return fetchAPI<PaginatedResponse<ApiProduct>>(`/products/search?${query}`);
+  },
+
+  // Scan code-barres (caisse)
+  findByBarcode: (barcode: string) =>
+    fetchAPI<ApiProduct>(`/products/barcode/${barcode}`),
+
+  // Détail
+  get: (id: string) => fetchAPI<ApiProduct>(`/products/${id}`),
+
+  // Créer
+  create: (data: Partial<ApiProduct>) =>
+    fetchAPI<ApiProduct>(`/products`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  // Modifier
+  update: (id: string, data: Partial<ApiProduct>) =>
+    fetchAPI<ApiProduct>(`/products/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  // Supprimer (soft)
+  delete: (id: string) =>
+    fetchAPI<ApiProduct>(`/products/${id}`, { method: "DELETE" }),
+
+  // Statistiques
+  stats: () => fetchAPI<{ total: number; lowStock: number; expiring: number; outOfStock: number; healthy: number }>(`/products/stats`),
+
+  // Alertes
+  alerts: () => fetchAPI<ApiProduct[]>(`/products/alerts`),
+
+  // Import CSV
+  importCsv: (csv: string) =>
+    fetchAPI<{ total: number; success: number; errors: number; duration: number }>(
+      `/import/products`,
+      { method: "POST", body: JSON.stringify({ csv }) }
+    ),
+};
+
+// ========================================
+// API TRANSACTIONS (VENTES)
+// ========================================
+export const transactionsApi = {
+  // Créer une vente
+  create: (data: {
+    cashierId: string;
+    registerId?: string;
+    subtotal: number;
+    discount?: number;
+    tax: number;
+    total: number;
+    paymentMethod: string;
+    cashGiven?: number;
+    change?: number;
+    customerId?: string;
+    items: Array<{
+      productId: string;
+      quantity: number;
+      unitPrice: number;
+      discount?: number;
+      tax: number;
+      total: number;
+    }>;
+  }) =>
+    fetchAPI<ApiTransaction>(`/transactions`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  // Historique
+  list: (page = 1, limit = 50, cashierId?: string) => {
+    const query = new URLSearchParams();
+    query.set("page", String(page));
+    query.set("limit", String(limit));
+    if (cashierId) query.set("cashierId", cashierId);
+    return fetchAPI<PaginatedResponse<ApiTransaction>>(`/transactions?${query}`);
+  },
+
+  // Détail
+  get: (id: string) => fetchAPI<ApiTransaction>(`/transactions/${id}`),
+
+  // Stats du jour
+  todayStats: () =>
+    fetchAPI<{ transactions: number; revenue: number; itemsSold: number; avgBasket: number }>(
+      `/transactions/stats/today`
+    ),
+
+  // Ventes par caisse
+  salesByRegister: () =>
+    fetchAPI<Array<{ id: string; name: string; code: string; status: string; transactionsCount: number; revenue: number }>>(
+      `/transactions/stats/by-register`
+    ),
+
+  // Ventes par heure (graphique dashboard)
+  salesByHour: () =>
+    fetchAPI<Array<{ hour: string; revenue: number; transactions: number }>>(
+      `/transactions/stats/by-hour`
+    ),
+
+  // Marge par catégorie (graphique dashboard)
+  marginByCategory: () =>
+    fetchAPI<Array<{ category: string; revenue: number; margin: number; marginRate: number }>>(
+      `/transactions/stats/margin-by-category`
+    ),
+
+  // Rembourser
+  refund: (id: string, reason: string) =>
+    fetchAPI<ApiTransaction>(`/transactions/${id}/refund`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    }),
+};
+
+// ========================================
+// API STOCK
+// ========================================
+export const stockApi = {
+  // Mouvements
+  listMovements: (page = 1, limit = 50, productId?: string) => {
+    const query = new URLSearchParams();
+    query.set("page", String(page));
+    query.set("limit", String(limit));
+    if (productId) query.set("productId", productId);
+    return fetchAPI<PaginatedResponse<ApiStockMovement>>(`/stock/movements?${query}`);
+  },
+
+  // Créer mouvement
+  createMovement: (data: {
+    productId: string;
+    type: string;
+    quantity: number;
+    reason?: string;
+    reference?: string;
+    notes?: string;
+    createdBy?: string;
+  }) =>
+    fetchAPI<ApiStockMovement>(`/stock/movements`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  // Alertes
+  alerts: () =>
+    fetchAPI<{
+      lowStock: ApiProduct[];
+      outOfStock: ApiProduct[];
+      expiringSoon: ApiProduct[];
+      expired: ApiProduct[];
+      summary: {
+        lowStockCount: number;
+        outOfStockCount: number;
+        expiringSoonCount: number;
+        expiredCount: number;
+      };
+    }>(`/stock/alerts`),
+
+  // Valeur du stock
+  value: () =>
+    fetchAPI<{
+      totalProducts: number;
+      totalUnits: number;
+      totalCostValue: number;
+      totalSaleValue: number;
+      potentialMargin: number;
+    }>(`/stock/value`),
+
+  // Ajustement inventaire
+  adjust: (productId: string, newStock: number, reason: string, createdBy?: string) =>
+    fetchAPI<ApiStockMovement>(`/stock/adjust/${productId}`, {
+      method: "POST",
+      body: JSON.stringify({ newStock, reason, createdBy }),
+    }),
+};
+
+// ========================================
+// API SYNC
+// ========================================
+export const syncApi = {
+  status: () =>
+    fetchAPI<{
+      enabled: boolean;
+      online: boolean;
+      cloudApiUrl: string;
+      pending: { transactions: number; stockMovements: number; total: number };
+      failed: number;
+      lastSync: string;
+    }>(`/sync/status`),
+
+  force: () => fetchAPI<{ transactions: number; stockMovements: number; errors: string[] }>(`/sync/force`, { method: "POST" }),
+};
+
+// ========================================
+// API SUPPLIERS (FOURNISSEURS)
+// ========================================
+export const suppliersApi = {
+  list: () => fetchAPI<ApiSupplier[]>(`/suppliers`),
+  get: (id: string) => fetchAPI<ApiSupplier & { products: any[]; purchaseOrders: any[] }>(`/suppliers/${id}`),
+  create: (data: any) =>
+    fetchAPI<ApiSupplier>(`/suppliers`, { method: "POST", body: JSON.stringify(data) }),
+  update: (id: string, data: any) =>
+    fetchAPI<ApiSupplier>(`/suppliers/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+};
+
+// ========================================
+// API EMPLOYEES (EMPLOYÉS)
+// ========================================
+export const employeesApi = {
+  list: () => fetchAPI<ApiEmployee[]>(`/employees`),
+  get: (id: string) => fetchAPI<ApiEmployee & { transactions: any[]; shifts: any[] }>(`/employees/${id}`),
+  stats: () =>
+    fetchAPI<{ total: number; active: number; onLeave: number; byRole: Array<{ role: string; _count: number }> }>(
+      `/employees/stats`
+    ),
+  create: (data: any) =>
+    fetchAPI<ApiEmployee>(`/employees`, { method: "POST", body: JSON.stringify(data) }),
+  update: (id: string, data: any) =>
+    fetchAPI<ApiEmployee>(`/employees/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+};
+
+// ========================================
+// API PURCHASE ORDERS (BONS DE COMMANDE)
+// ========================================
+export interface ApiPurchaseOrderItem {
+  id: string;
+  productId: string;
+  product?: ApiProduct;
+  quantity: number;
+  unitCost: number;
+  total: number;
+  receivedQuantity?: number;
+}
+
+export interface ApiPurchaseOrder {
+  id: string;
+  orderNumber: string;
+  supplierId: string;
+  supplier?: ApiSupplier;
+  date: string;
+  expectedDate: string;
+  receivedDate?: string;
+  total: number;
+  status: string;
+  notes?: string;
+  items?: ApiPurchaseOrderItem[];
+  createdAt: string;
+}
+
+export const purchaseOrdersApi = {
+  list: (status?: string) =>
+    fetchAPI<ApiPurchaseOrder[]>(`/purchase-orders${status ? `?status=${status}` : ""}`),
+  get: (id: string) => fetchAPI<ApiPurchaseOrder>(`/purchase-orders/${id}`),
+  create: (data: { supplierId: string; expectedDate: string; notes?: string; items: Array<{ productId: string; quantity: number; unitCost: number }> }) =>
+    fetchAPI<ApiPurchaseOrder>(`/purchase-orders`, { method: "POST", body: JSON.stringify(data) }),
+  updateStatus: (id: string, status: string) =>
+    fetchAPI<ApiPurchaseOrder>(`/purchase-orders/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
+};
+
+// ========================================
+// API SHIFTS (CAISSES)
+// ========================================
+export interface ApiShift {
+  id: string;
+  registerId: string;
+  employeeId: string;
+  employee?: ApiEmployee;
+  openedAt: string;
+  closedAt?: string;
+  openingCash: number;
+  closingCash?: number;
+  expectedCash?: number;
+  difference?: number;
+  status: string;
+  notes?: string;
+}
+
+export const shiftsApi = {
+  list: () => fetchAPI<ApiShift[]>(`/shifts`),
+  active: () => fetchAPI<ApiShift[]>(`/shifts/active`),
+  open: (data: { registerId: string; employeeId: string; openingCash: number }) =>
+    fetchAPI<ApiShift>(`/shifts/open`, { method: "POST", body: JSON.stringify(data) }),
+  close: (id: string, data: { closingCash: number; expectedCash: number; notes?: string }) =>
+    fetchAPI<ApiShift>(`/shifts/${id}/close`, { method: "POST", body: JSON.stringify(data) }),
+  byEmployee: (employeeId: string) => fetchAPI<ApiShift[]>(`/shifts/employee/${employeeId}`),
+};
+
+// ========================================
+// API CUSTOMERS (CLIENTS FIDÉLITÉ)
+// ========================================
+// Note: ApiCustomer is already defined above in the TYPES section.
+export interface ApiLoyaltyHistory {
+  id: string;
+  customerId: string;
+  points: number;
+  type: string;
+  description: string;
+  createdAt: string;
+}
+
+export const customersApi = {
+  list: (search?: string) => fetchAPI<ApiCustomer[]>(`/customers${search ? `?search=${search}` : ""}`),
+  get: (id: string) => fetchAPI<ApiCustomer & { loyaltyHistory: ApiLoyaltyHistory[] }>(`/customers/${id}`),
+  stats: () => fetchAPI<{ total: number; totalPoints: number; totalRedeemed: number }>(`/customers/stats`),
+  create: (data: { firstName: string; lastName: string; phone: string; email?: string }) =>
+    fetchAPI<ApiCustomer>(`/customers`, { method: "POST", body: JSON.stringify(data) }),
+  update: (id: string, data: any) =>
+    fetchAPI<ApiCustomer>(`/customers/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  redeem: (id: string, points: number) =>
+    fetchAPI<ApiCustomer>(`/customers/${id}/redeem`, { method: "POST", body: JSON.stringify({ points }) }),
+};
+
+// ========================================
+// API REPORTS (RAPPORTS)
+// ========================================
+export const reportsApi = {
+  sales: (startDate: string, endDate: string) =>
+    fetchAPI<{ totalRevenue: number; transactionCount: number; avgBasket: number; byDay: Array<{ date: string; revenue: number; transactions: number }> }>(`/reports/sales?startDate=${startDate}&endDate=${endDate}`),
+  salesByCategory: (startDate: string, endDate: string) =>
+    fetchAPI<Array<{ category: string; revenue: number; quantity: number }>>(`/reports/sales/by-category?startDate=${startDate}&endDate=${endDate}`),
+  salesByEmployee: (startDate: string, endDate: string) =>
+    fetchAPI<Array<{ cashierId: string; firstName: string; lastName: string; revenue: number; transactions: number }>>(`/reports/sales/by-employee?startDate=${startDate}&endDate=${endDate}`),
+  topProducts: (startDate: string, endDate: string, limit?: number) =>
+    fetchAPI<Array<{ productId: string; name: string; quantity: number; revenue: number }>>(`/reports/products/top?startDate=${startDate}&endDate=${endDate}${limit ? `&limit=${limit}` : ""}`),
+  worstProducts: (startDate: string, endDate: string, limit?: number) =>
+    fetchAPI<Array<{ productId: string; name: string; quantity: number; revenue: number }>>(`/reports/products/worst?startDate=${startDate}&endDate=${endDate}${limit ? `&limit=${limit}` : ""}`),
+  profit: (startDate: string, endDate: string) =>
+    fetchAPI<{ totalRevenue: number; totalCost: number; grossProfit: number; marginRate: number }>(`/reports/profit?startDate=${startDate}&endDate=${endDate}`),
+  salesByDay: (startDate: string, endDate: string) =>
+    fetchAPI<Array<{ date: string; revenue: number; transactions: number; avgBasket: number }>>(`/reports/sales/by-day?startDate=${startDate}&endDate=${endDate}`),
+  salesByMonth: (year: number) =>
+    fetchAPI<Array<{ month: number; revenue: number; transactions: number }>>(`/reports/sales/by-month?year=${year}`),
+  inventoryValuation: () =>
+    fetchAPI<{ totalCostValue: number; totalSaleValue: number; potentialMargin: number; productCount: number }>(`/reports/inventory/valuation`),
+};
+
+// ========================================
+// API ACCOUNTING (COMPTABILITÉ)
+// ========================================
+export interface ApiExpense {
+  id: string;
+  date: string;
+  category: string;
+  description: string;
+  amount: number;
+  paymentMethod: string;
+  supplier?: string;
+  status: string;
+}
+
+export interface ApiRevenue {
+  id: string;
+  date: string;
+  category: string;
+  description: string;
+  amount: number;
+}
+
+export const accountingApi = {
+  expenses: (startDate?: string, endDate?: string, category?: string) =>
+    fetchAPI<ApiExpense[]>(`/accounting/expenses?${startDate ? `startDate=${startDate}&` : ""}${endDate ? `endDate=${endDate}&` : ""}${category ? `category=${category}` : ""}`),
+  createExpense: (data: { category: string; description: string; amount: number; paymentMethod?: string; supplier?: string }) =>
+    fetchAPI<ApiExpense>(`/accounting/expenses`, { method: "POST", body: JSON.stringify(data) }),
+  revenues: (startDate?: string, endDate?: string, category?: string) =>
+    fetchAPI<ApiRevenue[]>(`/accounting/revenues?${startDate ? `startDate=${startDate}&` : ""}${endDate ? `endDate=${endDate}&` : ""}${category ? `category=${category}` : ""}`),
+  createRevenue: (data: { category: string; description: string; amount: number }) =>
+    fetchAPI<ApiRevenue>(`/accounting/revenues`, { method: "POST", body: JSON.stringify(data) }),
+  profitLoss: (startDate: string, endDate: string) =>
+    fetchAPI<{ totalRevenue: number; totalExpenses: number; netProfit: number; expenseBreakdown: Array<{ category: string; amount: number }> }>(`/accounting/profit-loss?startDate=${startDate}&endDate=${endDate}`),
+  monthlySummary: (year: number) =>
+    fetchAPI<Array<{ month: number; revenue: number; expenses: number; profit: number }>>(`/accounting/monthly-summary?year=${year}`),
+  expenseBreakdown: (startDate: string, endDate: string) =>
+    fetchAPI<Array<{ category: string; amount: number; percentage: number }>>(`/accounting/expense-breakdown?startDate=${startDate}&endDate=${endDate}`),
+};
+
+// ========================================
+// API AI (INTELLIGENCE ARTIFICIELLE)
+// ========================================
+export interface ApiStockForecast {
+  id: string;
+  name: string;
+  sku: string;
+  category: string;
+  stock: number;
+  minStock: number;
+  unit: string;
+  costPrice: number;
+  price: number;
+  sold30Days: number;
+  dailyVelocity: number;
+  daysUntilOut: number | null;
+  recommendedOrder: number;
+  urgency: 'critical' | 'warning' | 'ok' | 'overstock';
+}
+
+export interface AiRecommendation {
+  type: string;
+  priority: 'high' | 'medium' | 'low';
+  title: string;
+  message: string;
+  productId?: string;
+  action?: string;
+}
+
+export const aiApi = {
+  stockForecast: () => fetchAPI<{ summary: { total: number; critical: number; warning: number; overstock: number; recommendedOrdersValue: number }; forecasts: ApiStockForecast[] }>(`/ai/stock-forecast`),
+  recommendations: () => fetchAPI<AiRecommendation[]>(`/ai/recommendations`),
+  salesInsights: () => fetchAPI<{ weeklyRevenue: number; weeklyTransactions: number; avgBasket: number; topProducts: any[] }>(`/ai/sales-insights`),
+};
+
+// ========================================
+// API INVOICES (FACTURES A4)
+// ========================================
+export interface ApiInvoiceItem {
+  id: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+  productId?: string;
+}
+
+export interface ApiInvoice {
+  id: string;
+  number: string;
+  clientName: string;
+  clientPhone: string;
+  clientEmail?: string;
+  clientAddress?: string;
+  customerId?: string;
+  date: string;
+  dueDate?: string;
+  subtotal: number;
+  taxRate: number;
+  tax: number;
+  total: number;
+  paidAmount: number;
+  balance: number;
+  status: string;
+  paidAt?: string;
+  paymentMethod?: string;
+  notes?: string;
+  items?: ApiInvoiceItem[];
+  payments?: ApiInvoicePayment[];
+  createdAt: string;
+}
+
+export interface ApiInvoicePayment {
+  id: string;
+  invoiceId: string;
+  amount: number;
+  method: string;
+  date: string;
+  note?: string;
+}
+
+export const invoicesApi = {
+  list: (status?: string) =>
+    fetchAPI<{ invoices: ApiInvoice[]; total: number }>(`/invoices${status ? `?status=${status}` : ""}`),
+  get: (id: string) => fetchAPI<ApiInvoice>(`/invoices/${id}`),
+  stats: () => fetchAPI<{ total: number; paid: number; partial: number; pending: number; overdue: number; totalPaidAmount: number; totalOutstanding: number }>(`/invoices/stats`),
+  create: (data: {
+    clientName: string;
+    clientPhone: string;
+    clientEmail?: string;
+    clientAddress?: string;
+    customerId?: string;
+    dueDate?: string;
+    notes?: string;
+    items: Array<{ description: string; quantity: number; unitPrice: number; productId?: string }>;
+  }) => fetchAPI<ApiInvoice>(`/invoices`, { method: "POST", body: JSON.stringify(data) }),
+  addPayment: (id: string, data: { amount: number; method: string; note?: string }) =>
+    fetchAPI<{ payment: ApiInvoicePayment; invoice: ApiInvoice }>(`/invoices/${id}/payments`, { method: "POST", body: JSON.stringify(data) }),
+  getPayments: (id: string) => fetchAPI<ApiInvoice & { payments: ApiInvoicePayment[] }>(`/invoices/${id}/payments`),
+  updateStatus: (id: string, status: string, paymentMethod?: string) =>
+    fetchAPI<ApiInvoice>(`/invoices/${id}/status`, { method: "PATCH", body: JSON.stringify({ status, paymentMethod }) }),
+  remove: (id: string) => fetchAPI<{ id: string }>(`/invoices/${id}`, { method: "DELETE" }),
+};
+
+// ========================================
+// HELPERS
+// ========================================
+
+// Convertir un produit API en produit frontend
+export function apiProductToFrontend(p: ApiProduct): Product {
+  return {
+    id: p.id,
+    sku: p.sku,
+    name: p.name,
+    category: p.category,
+    price: p.price,
+    costPrice: p.costPrice,
+    stock: p.stock,
+    minStock: p.minStock,
+    unit: p.unit,
+    barcode: p.barcode,
+    expiryDate: p.expiryDate,
+    supplier: p.supplier?.name,
+    imageUrl: p.imageUrl,
+  };
+}
+
+// Importer les types frontend
+import type { Product } from "./types";
