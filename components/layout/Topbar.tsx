@@ -4,6 +4,7 @@ import { Bell, Search, Wifi, WifiOff, Menu } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn, formatDate, formatTime } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/context";
+import { NotificationBell } from "./NotificationBell";
 
 interface TopbarProps {
   title: string;
@@ -91,10 +92,7 @@ export function Topbar({ title, subtitle, onMenuClick }: TopbarProps) {
       </div>
 
       {/* Notifications */}
-      <button className="relative w-9 h-9 flex items-center justify-center rounded-xl hover:bg-[var(--surface-hover)] transition-colors shrink-0">
-        <Bell className="w-4.5 h-4.5 text-[var(--text-secondary)]" />
-        <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[var(--danger)] rounded-full ring-2 ring-white" />
-      </button>
+      <NotificationBell />
     </header>
   );
 }

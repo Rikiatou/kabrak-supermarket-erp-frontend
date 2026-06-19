@@ -16,6 +16,7 @@ import {
   accountingApi,
   aiApi,
   invoicesApi,
+  notificationsApi,
   apiProductToFrontend,
   type ApiProduct,
   type ApiTransaction,
@@ -29,6 +30,8 @@ import {
   type ApiExpense,
   type ApiRevenue,
   type ApiInvoice,
+  type ApiNotification,
+  type ApiNotificationSummary,
 } from "@/lib/api";
 import type { Product } from "@/lib/types";
 
@@ -769,4 +772,43 @@ export function useAddPayment() {
     }
   };
   return { addPayment, adding };
+}
+
+// ========================================
+// HOOKS: Notifications (polling 5 min)
+// ========================================
+export function useNotifications(pollIntervalMs: number = 5 * 60 * 1000) {
+  const [notifications, setNotifications] = useState<ApiNotification[]>([]);
+  const [summary, setSummary] = useState<ApiNotificationSummary | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [lastChecked, setLastChecked] = useState<Date | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      const data = await notificationsApi.list();
+      setNotifications(data.items);
+      setSummary(data.summary);
+    } catch (e) {
+      // Silencieux — les notifs sont non-critiques
+    } finally {
+      setLoading(false);
+      setLastChecked(new Date());
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+    const interval = setInterval(load, pollIntervalMs);
+    return () => clearInterval(interval);
+  }, [load, pollIntervalMs]);
+
+  return {
+    notifications,
+    summary,
+    loading,
+    lastChecked,
+    reload: load,
+    unreadCount: summary?.total || 0,
+    criticalCount: summary?.critical || 0,
+  };
 }

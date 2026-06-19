@@ -772,6 +772,38 @@ export const invoicesApi = {
 };
 
 // ========================================
+// API NOTIFICATIONS
+// ========================================
+export interface ApiNotification {
+  id: string;
+  type: 'stockout' | 'near_expiry' | 'expired' | 'cash_diff' | 'revenue_goal' | 'invoice_overdue' | 'markdown_suggestion';
+  priority: 'critical' | 'high' | 'medium' | 'low';
+  title: string;
+  message: string;
+  productId?: string;
+  shiftId?: string;
+  invoiceId?: string;
+  action?: string;
+  actionUrl?: string;
+  createdAt: string;
+}
+
+export interface ApiNotificationSummary {
+  total: number;
+  critical: number;
+  high: number;
+  medium: number;
+  low: number;
+  revenue: number;
+  revenueGoal: number;
+  revenueProgress: number;
+}
+
+export const notificationsApi = {
+  list: () => fetchAPI<{ summary: ApiNotificationSummary; items: ApiNotification[] }>(`/notifications`),
+};
+
+// ========================================
 // HELPERS
 // ========================================
 
