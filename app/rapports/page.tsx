@@ -36,6 +36,7 @@ import { Badge } from "@/components/ui/Badge";
 import { formatCurrency, cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/context";
 import { useToast } from "@/components/ui/Toast";
+import { exportToCSV, printSection } from "@/lib/export";
 import {
   useSalesReport,
   useSalesByCategory,
@@ -209,11 +210,37 @@ export default function RapportsPage() {
     },
   ];
 
-  const handleExportPDF = () => toast(t.rapports.exportPDF, "info");
-  const handleExportExcel = () => toast(t.rapports.exportExcel, "info");
+  const handleExportPDF = () => {
+    printSection("rapports-content");
+    toast("Impression en cours...", "info");
+  };
+  const handleExportExcel = () => {
+    // Exporter les top produits en CSV
+    if (top && top.length > 0) {
+      exportToCSV(
+        top.map((p: Record<string, unknown>) => ({
+          Produit: (p.name as string) || (p.productName as string) || "",
+          Quantite: (p.quantity as number) || (p.qty as number) || 0,
+          CA: (p.revenue as number) || (p.totalRevenue as number) || 0,
+          Marge: (p.margin as string) || "",
+        })),
+        `rapports_ventes_${startDate}_${endDate}`,
+        [
+          { key: "Produit", label: "Produit" },
+          { key: "Quantite", label: "Quantité" },
+          { key: "CA", label: "Chiffre d'affaires" },
+          { key: "Marge", label: "Marge" },
+        ],
+      );
+      toast("Export Excel téléchargé", "success");
+    } else {
+      toast("Aucune donnée à exporter", "warning");
+    }
+  };
 
   return (
     <AppShell title={t.rapports.title} subtitle={t.rapports.subtitle}>
+      <div id="rapports-content">
       {/* Date range selector + Export */}
       <div className="flex items-center gap-3 mb-5 flex-wrap">
         <div className="flex items-center gap-2 bg-white border border-[var(--border)] rounded-xl p-1.5 shadow-[var(--shadow-sm)]">
@@ -315,14 +342,14 @@ export default function RapportsPage() {
                     cx="50%"
                     cy="50%"
                     outerRadius={90}
-                    label={(e: any) => e.category}
+                    label={(e: { category?: string }) => e.category}
                     labelLine={false}
                   >
                     {categories.map((_, i) => (
                       <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(v: any) => formatCurrency(Number(v))} />
+                  <Tooltip formatter={(v: number | string) => formatCurrency(Number(v))} />
                 </PieChart>
               </ResponsiveContainer>
             )}
@@ -342,7 +369,7 @@ export default function RapportsPage() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
                 <XAxis dataKey="category" tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={false} tickFormatter={(v) => `${(v / 1_000_000).toFixed(1)}M`} />
-                <Tooltip cursor={{ fill: "#f1f5f9" }} formatter={(v: any) => formatCurrency(Number(v))} />
+                <Tooltip cursor={{ fill: "#f1f5f9" }} formatter={(v: number | string) => formatCurrency(Number(v))} />
                 <Legend />
                 <Bar dataKey="revenue" name="CA" fill="#2563eb" radius={[6, 6, 0, 0]} maxBarSize={50} />
               </BarChart>
@@ -480,6 +507,7 @@ export default function RapportsPage() {
           <div className="px-4 pb-4 text-xs text-[var(--text-muted)]">Chargement de la valorisation…</div>
         )}
       </Card>
+      </div>
     </AppShell>
   );
 }

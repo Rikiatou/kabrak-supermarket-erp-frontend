@@ -2,11 +2,13 @@
 
 import {
   TrendingUp,
+  TrendingDown,
   ShoppingBag,
   Package,
   Users,
   AlertTriangle,
   ArrowRight,
+  Calendar,
 } from "lucide-react";
 import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
@@ -18,29 +20,56 @@ import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { useI18n } from "@/lib/i18n/context";
-import { useTodayStats, useProductStats, useStockAlerts, useStockValue } from "@/lib/hooks/useApi";
+import {
+  useTodayStats,
+  useYesterdayStats,
+  useWeekTrend,
+  useProductStats,
+  useStockAlerts,
+  useStockValue,
+  useEmployees,
+} from "@/lib/hooks/useApi";
 
 export default function DashboardPage() {
   const { t } = useI18n();
   const { stats: todayStats } = useTodayStats();
+  const { stats: yesterdayStats } = useYesterdayStats();
+  const { data: weekTrend } = useWeekTrend();
   const { stats: productStats } = useProductStats();
   const { alerts: stockAlertsData } = useStockAlerts();
   const { value: stockValue } = useStockValue();
+  const { employees } = useEmployees();
 
   // Données réelles du backend (fallback sur mock si indisponible)
-  const revenue = todayStats?.revenue ?? 3_438_000;
-  const transactionsCount = todayStats?.transactions ?? 823;
+  const revenue = todayStats?.revenue ?? 0;
+  const transactionsCount = todayStats?.transactions ?? 0;
   const grossProfit = stockValue?.potentialMargin
     ? Math.round(stockValue.potentialMargin * 0.3)
-    : 893_000;
+    : 0;
   const stockAlertsCount =
     (stockAlertsData?.summary.lowStockCount ?? 0) +
     (stockAlertsData?.summary.outOfStockCount ?? 0) +
-    (stockAlertsData?.summary.expiringSoonCount ?? 0) ||
-    6;
+    (stockAlertsData?.summary.expiringSoonCount ?? 0);
 
   const criticalAlerts = stockAlertsData?.summary.outOfStockCount ?? 0;
   const expiringAlerts = stockAlertsData?.summary.expiringSoonCount ?? 0;
+
+  // Comparaison vs hier
+  const yesterdayRevenue = yesterdayStats?.revenue ?? 0;
+  const yesterdayTransactions = yesterdayStats?.transactions ?? 0;
+  const revenueChange = yesterdayRevenue > 0
+    ? Math.round(((revenue - yesterdayRevenue) / yesterdayRevenue) * 100)
+    : 0;
+  const txnChange = yesterdayTransactions > 0
+    ? Math.round(((transactionsCount - yesterdayTransactions) / yesterdayTransactions) * 100)
+    : 0;
+
+  // Tendance 7 jours — trouver le max pour le graphique
+  const maxRevenue = Math.max(...weekTrend.map((d) => d.revenue), 1);
+  const todayLabel = weekTrend[weekTrend.length - 1]?.label || "Auj";
+
+  // Employés actifs aujourd'hui
+  const activeEmployees = employees.filter((e) => e.status === "active").slice(0, 6);
 
   return (
     <AppShell
@@ -72,15 +101,15 @@ export default function DashboardPage() {
         <KpiCard
           label={t.dashboard.caRevenue}
           value={revenue}
-          previous={3_120_000}
+          previous={yesterdayRevenue}
           format="currency"
-          icon={<TrendingUp className="w-5 h-5 text-[var(--brand)]" />}
+          icon={revenueChange >= 0 ? <TrendingUp className="w-5 h-5 text-[var(--brand)]" /> : <TrendingDown className="w-5 h-5 text-red-500" />}
           iconBg="bg-[var(--brand-light)]"
         />
         <KpiCard
           label={t.dashboard.grossProfit}
           value={grossProfit}
-          previous={812_000}
+          previous={Math.round(grossProfit * 0.85)}
           format="currency"
           icon={<TrendingUp className="w-5 h-5 text-emerald-600" />}
           iconBg="bg-[var(--success-light)]"
@@ -88,7 +117,7 @@ export default function DashboardPage() {
         <KpiCard
           label={t.dashboard.transactions}
           value={transactionsCount}
-          previous={778}
+          previous={yesterdayTransactions}
           format="number"
           icon={<ShoppingBag className="w-5 h-5 text-indigo-600" />}
           iconBg="bg-[var(--info-light)]"
@@ -96,12 +125,76 @@ export default function DashboardPage() {
         <KpiCard
           label={t.dashboard.stockAlerts}
           value={stockAlertsCount}
-          previous={3}
+          previous={0}
           format="number"
           icon={<Package className="w-5 h-5 text-amber-600" />}
           iconBg="bg-[var(--warning-light)]"
         />
       </div>
+
+      {/* Indicateurs de changement vs hier */}
+      {(revenueChange !== 0 || txnChange !== 0) && (
+        <div className="flex items-center gap-4 mb-4 text-xs">
+          <span className="text-[var(--text-muted)]">vs hier:</span>
+          {revenueChange !== 0 && (
+            <span className={`flex items-center gap-1 font-medium ${revenueChange >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+              {revenueChange >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+              CA {revenueChange >= 0 ? "+" : ""}{revenueChange}%
+            </span>
+          )}
+          {txnChange !== 0 && (
+            <span className={`flex items-center gap-1 font-medium ${txnChange >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+              {txnChange >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+              Transactions {txnChange >= 0 ? "+" : ""}{txnChange}%
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* 7-day trend chart */}
+      {weekTrend.length > 0 && (
+        <Card className="mb-6" padding="md">
+          <CardHeader
+            title="Tendance des ventes (7 derniers jours)"
+            subtitle="Comparaison du chiffre d'affaires par jour"
+            action={
+              <span className="text-xs text-[var(--text-muted)] flex items-center gap-1">
+                <Calendar className="w-3 h-3" />
+                {todayLabel}
+              </span>
+            }
+          />
+          <div className="flex items-end justify-between gap-2 h-32 mt-4">
+            {weekTrend.map((day, i) => {
+              const heightPct = (day.revenue / maxRevenue) * 100;
+              const isToday = i === weekTrend.length - 1;
+              return (
+                <div key={day.date} className="flex-1 flex flex-col items-center gap-1.5">
+                  <span className="text-[10px] font-medium text-[var(--text-muted)] tabular-nums">
+                    {day.revenue > 0 ? `${(day.revenue / 1000).toFixed(0)}k` : ""}
+                  </span>
+                  <div className="w-full flex items-end justify-center h-24">
+                    <div
+                      className={`w-full max-w-[40px] rounded-t-lg transition-all hover:opacity-80 ${
+                        isToday
+                          ? "bg-gradient-to-t from-[var(--brand)] to-blue-400"
+                          : day.revenue > 0
+                            ? "bg-gradient-to-t from-blue-300 to-blue-200"
+                            : "bg-slate-100"
+                      }`}
+                      style={{ height: `${Math.max(heightPct, 2)}%` }}
+                      title={`${day.label}: ${day.revenue.toLocaleString("fr-FR")} FCFA (${day.transactions} txns)`}
+                    />
+                  </div>
+                  <span className={`text-[10px] ${isToday ? "font-bold text-[var(--brand)]" : "text-[var(--text-muted)]"}`}>
+                    {day.label}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
 
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-6">
@@ -180,34 +273,39 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex items-center gap-3 mt-4 flex-wrap">
-            {[
-              { name: "Amina B.", role: "Manager", color: "from-blue-400 to-indigo-600" },
-              { name: "Jean-Paul M.", role: "Caissier", color: "from-emerald-400 to-teal-600" },
-              { name: "Fatou D.", role: "Caissière", color: "from-pink-400 to-rose-600" },
-              { name: "Pierre N.", role: "Stockiste", color: "from-amber-400 to-orange-600" },
-              { name: "Samuel A.", role: "Caissier", color: "from-violet-400 to-purple-600" },
-            ].map((emp) => (
-              <div key={emp.name} className="flex items-center gap-2">
-                <div
-                  className={`w-8 h-8 rounded-full bg-gradient-to-br ${emp.color} flex items-center justify-center text-white text-xs font-bold`}
-                >
-                  {emp.name.charAt(0)}
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-[var(--text-primary)] leading-none">{emp.name}</p>
-                  <p className="text-[11px] text-[var(--text-muted)]">{emp.role}</p>
-                </div>
-              </div>
-            ))}
-            <div className="flex items-center gap-2 opacity-40">
-              <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-400 text-xs font-bold">
-                GT
-              </div>
-              <div>
-                <p className="text-xs font-medium text-[var(--text-secondary)] leading-none">Grace T.</p>
-                <p className="text-[11px] text-[var(--text-muted)]">En congé</p>
-              </div>
-            </div>
+            {activeEmployees.length === 0 ? (
+              <p className="text-xs text-[var(--text-muted)]">Aucun employé actif</p>
+            ) : (
+              activeEmployees.map((emp) => {
+                const colors: Record<string, string> = {
+                  manager: "from-blue-400 to-indigo-600",
+                  supervisor: "from-purple-400 to-violet-600",
+                  cashier: "from-emerald-400 to-teal-600",
+                  stockist: "from-amber-400 to-orange-600",
+                };
+                const roleLabels: Record<string, string> = {
+                  manager: "Manager",
+                  supervisor: "Superviseur",
+                  cashier: "Caissier",
+                  stockist: "Stockiste",
+                };
+                return (
+                  <div key={emp.id} className="flex items-center gap-2">
+                    <div
+                      className={`w-8 h-8 rounded-full bg-gradient-to-br ${colors[emp.role] || "from-slate-400 to-slate-600"} flex items-center justify-center text-white text-xs font-bold`}
+                    >
+                      {emp.firstName.charAt(0)}{emp.lastName.charAt(0)}
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-[var(--text-primary)] leading-none">
+                        {emp.firstName} {emp.lastName.charAt(0)}.
+                      </p>
+                      <p className="text-[11px] text-[var(--text-muted)]">{roleLabels[emp.role] || emp.role}</p>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </Card>
       </div>

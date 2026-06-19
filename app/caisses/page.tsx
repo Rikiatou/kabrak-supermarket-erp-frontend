@@ -24,8 +24,9 @@ import {
   useActiveShifts,
   useOpenShift,
   useCloseShift,
+  useEmployees,
 } from "@/lib/hooks/useApi";
-import type { ApiShift } from "@/lib/api";
+import type { ApiShift, ApiEmployee } from "@/lib/api";
 
 // ========================================
 // MOCK DATA
@@ -37,16 +38,10 @@ const REGISTERS = [
   { id: "reg4", name: "Caisse 4" },
 ];
 
-const MOCK_EMPLOYEES = [
-  { id: "emp1", name: "Amina Bello" },
-  { id: "emp2", name: "Jean-Paul Mbarga" },
-  { id: "emp3", name: "Fatou Diallo" },
-];
-
 // ========================================
 // HELPERS
 // ========================================
-function employeeName(shift: ApiShift): string {
+function employeeName(shift: ApiShift, employees: ApiEmployee[]): string {
   if (shift.employee) {
     const e = shift.employee as unknown as {
       firstName?: string;
@@ -58,8 +53,8 @@ function employeeName(shift: ApiShift): string {
     }
     if (e.name) return e.name;
   }
-  const found = MOCK_EMPLOYEES.find((m) => m.id === shift.employeeId);
-  return found?.name ?? shift.employeeId;
+  const found = employees.find((m) => m.id === shift.employeeId);
+  return found ? `${found.firstName} ${found.lastName}` : shift.employeeId;
 }
 
 function formatTime(date: string): string {
@@ -75,12 +70,14 @@ function formatTime(date: string): string {
 function OpenShiftModal({
   registerName,
   defaultEmployeeId,
+  employees,
   opening,
   onConfirm,
   onCancel,
 }: {
   registerName: string;
   defaultEmployeeId: string;
+  employees: ApiEmployee[];
   opening: boolean;
   onConfirm: (employeeId: string, openingCash: number) => void;
   onCancel: () => void;
@@ -127,9 +124,9 @@ function OpenShiftModal({
                 onChange={(e) => setEmployeeId(e.target.value)}
                 className="w-full appearance-none bg-white border border-[var(--border)] rounded-xl pl-9 pr-3 py-2.5 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--brand)] transition-colors"
               >
-                {MOCK_EMPLOYEES.map((emp) => (
+                {employees.map((emp) => (
                   <option key={emp.id} value={emp.id}>
-                    {emp.name}
+                    {emp.firstName} {emp.lastName}
                   </option>
                 ))}
               </select>
@@ -181,12 +178,14 @@ function OpenShiftModal({
 function CloseShiftModal({
   registerName,
   shift,
+  employees,
   closing,
   onConfirm,
   onCancel,
 }: {
   registerName: string;
   shift: ApiShift;
+  employees: ApiEmployee[];
   closing: boolean;
   onConfirm: (closingCash: number, expectedCash: number, notes: string) => void;
   onCancel: () => void;
@@ -216,7 +215,7 @@ function CloseShiftModal({
                 Fermer {registerName}
               </h3>
               <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                Clôturer le shift de {employeeName(shift)}
+                Clôturer le shift de {employeeName(shift, employees)}
               </p>
             </div>
           </div>
@@ -337,11 +336,13 @@ function CloseShiftModal({
 function RegisterCard({
   register,
   shift,
+  employees,
   onOpen,
   onClose,
 }: {
   register: { id: string; name: string };
   shift: ApiShift | undefined;
+  employees: ApiEmployee[];
   onOpen: () => void;
   onClose: (shift: ApiShift) => void;
 }) {
@@ -389,7 +390,7 @@ function RegisterCard({
             <div className="flex items-center gap-2 text-sm">
               <User className="w-3.5 h-3.5 text-[var(--text-muted)]" />
               <span className="text-[var(--text-secondary)] truncate">
-                {employeeName(shift)}
+                {employeeName(shift, employees)}
               </span>
             </div>
             <div className="flex items-center gap-2 text-sm">
@@ -448,6 +449,12 @@ export default function CaissesPage() {
   const { data: shifts, loading, reload } = useActiveShifts();
   const { open, opening } = useOpenShift();
   const { close, closing } = useCloseShift();
+  const { employees } = useEmployees();
+
+  // Filtrer les employés qui peuvent ouvrir une caisse
+  const cashiers = employees.filter((e) =>
+    ["cashier", "supervisor", "manager"].includes(e.role) && e.status === "active"
+  );
 
   const [openRegister, setOpenRegister] = useState<string | null>(null);
   const [closeShift, setCloseShift] = useState<ApiShift | null>(null);
@@ -476,7 +483,7 @@ export default function CaissesPage() {
     return shifts.reduce((sum, s) => sum + (s.difference ?? 0), 0);
   }, [shifts]);
 
-  const defaultEmployeeId = user?.id ?? MOCK_EMPLOYEES[0].id;
+  const defaultEmployeeId = user?.id ?? cashiers[0]?.id ?? "";
 
   const handleOpen = async (employeeId: string, openingCash: number) => {
     if (!openRegister) return;
@@ -570,6 +577,7 @@ export default function CaissesPage() {
             key={register.id}
             register={register}
             shift={shiftByRegister.get(register.id)}
+            employees={employees}
             onOpen={() => setOpenRegister(register.id)}
             onClose={(s) => setCloseShift(s)}
           />
@@ -590,6 +598,7 @@ export default function CaissesPage() {
             REGISTERS.find((r) => r.id === openRegister)?.name ?? openRegister
           }
           defaultEmployeeId={defaultEmployeeId}
+          employees={cashiers}
           opening={opening}
           onConfirm={handleOpen}
           onCancel={() => setOpenRegister(null)}
@@ -604,6 +613,7 @@ export default function CaissesPage() {
             closeShift.registerId
           }
           shift={closeShift}
+          employees={employees}
           closing={closing}
           onConfirm={handleClose}
           onCancel={() => setCloseShift(null)}

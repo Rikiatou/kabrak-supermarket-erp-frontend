@@ -153,6 +153,41 @@ export function useTodayStats() {
 }
 
 // ========================================
+// HOOK: useYesterdayStats (comparaison dashboard)
+// ========================================
+export function useYesterdayStats() {
+  const [stats, setStats] = useState<{
+    transactions: number;
+    revenue: number;
+    itemsSold: number;
+    avgBasket: number;
+  } | null>(null);
+
+  useEffect(() => {
+    transactionsApi.yesterdayStats()
+      .then(setStats)
+      .catch(() => {});
+  }, []);
+
+  return { stats };
+}
+
+// ========================================
+// HOOK: useWeekTrend (graphique 7 jours)
+// ========================================
+export function useWeekTrend() {
+  const [data, setData] = useState<Array<{ date: string; label: string; revenue: number; transactions: number }>>([]);
+
+  useEffect(() => {
+    transactionsApi.weekTrend()
+      .then(setData)
+      .catch(() => {});
+  }, []);
+
+  return { data };
+}
+
+// ========================================
 // HOOK: useProductStats
 // Statistiques produits (dashboard)
 // ========================================

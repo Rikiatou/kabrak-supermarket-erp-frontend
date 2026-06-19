@@ -9,12 +9,26 @@ async function fetchAPI<T>(
   options?: RequestInit
 ): Promise<T> {
   const url = `${API_URL}${endpoint}`;
+
+  // Récupérer le token d'auth depuis localStorage
+  let token: string | null = null;
+  if (typeof window !== "undefined") {
+    token = localStorage.getItem("kabrak_auth_token");
+  }
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(options?.headers as Record<string, string>),
+  };
+
+  // Ajouter le token d'auth si disponible
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   const res = await fetch(url, {
-    headers: {
-      "Content-Type": "application/json",
-      ...options?.headers,
-    },
     ...options,
+    headers,
   });
 
   if (!res.ok) {
@@ -324,6 +338,18 @@ export const transactionsApi = {
   todayStats: () =>
     fetchAPI<{ transactions: number; revenue: number; itemsSold: number; avgBasket: number }>(
       `/transactions/stats/today`
+    ),
+
+  // Stats d'hier (comparaison)
+  yesterdayStats: () =>
+    fetchAPI<{ transactions: number; revenue: number; itemsSold: number; avgBasket: number }>(
+      `/transactions/stats/yesterday`
+    ),
+
+  // Tendance 7 jours
+  weekTrend: () =>
+    fetchAPI<Array<{ date: string; label: string; revenue: number; transactions: number }>>(
+      `/transactions/stats/week-trend`
     ),
 
   // Ventes par caisse

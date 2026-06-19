@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/Button";
 import { useI18n } from "@/lib/i18n/context";
 import { useToast } from "@/components/ui/Toast";
 import { formatCurrency, cn } from "@/lib/utils";
+import { exportToCSV } from "@/lib/export";
 import { useInvoices, useCreateInvoice, useUpdateInvoiceStatus, useAddPayment } from "@/lib/hooks/useApi";
 import type { ApiInvoicePayment } from "@/lib/api";
 import jsPDF from "jspdf";
@@ -447,6 +448,42 @@ export default function FacturesPage() {
           </div>
           <Button icon={<Plus className="w-4 h-4" />} onClick={() => setShowModal(true)}>
             Nouvelle facture
+          </Button>
+          <Button
+            variant="secondary"
+            icon={<Download className="w-4 h-4" />}
+            onClick={() => {
+              if (invoices.length === 0) {
+                toast("Aucune facture à exporter", "warning");
+                return;
+              }
+              exportToCSV(
+                invoices.map((inv) => ({
+                  Numero: inv.number,
+                  Client: inv.clientName,
+                  Date: new Date(inv.date).toLocaleDateString("fr-FR"),
+                  Echeance: inv.dueDate ? new Date(inv.dueDate).toLocaleDateString("fr-FR") : "",
+                  Total: inv.total,
+                  Paye: inv.paidAmount,
+                  Solde: inv.total - inv.paidAmount,
+                  Statut: inv.status,
+                })),
+                `factures_${new Date().toISOString().slice(0, 10)}`,
+                [
+                  { key: "Numero", label: "Numéro" },
+                  { key: "Client", label: "Client" },
+                  { key: "Date", label: "Date" },
+                  { key: "Echeance", label: "Échéance" },
+                  { key: "Total", label: "Total (FCFA)" },
+                  { key: "Paye", label: "Payé (FCFA)" },
+                  { key: "Solde", label: "Solde (FCFA)" },
+                  { key: "Statut", label: "Statut" },
+                ],
+              );
+              toast("Export CSV téléchargé", "success");
+            }}
+          >
+            Export CSV
           </Button>
         </div>
 

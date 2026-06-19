@@ -69,8 +69,11 @@ export default function ImportPage() {
     try {
       const res = await productsApi.importCsv(csvText);
       setResult({
-        ...res,
-        errorDetails: (res as any).errorDetails || [],
+        total: res.total,
+        success: res.success,
+        errors: res.errors,
+        duration: res.duration,
+        errorDetails: [],
       });
 
       if (res.errors === 0) {
@@ -78,8 +81,9 @@ export default function ImportPage() {
       } else {
         toast(`${res.success} réussis, ${res.errors} erreurs sur ${res.total}`, "warning");
       }
-    } catch (e: any) {
-      toast(`Erreur d'import: ${e.message}`, "warning");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Erreur d'import";
+      toast(`Erreur d'import: ${msg}`, "warning");
     } finally {
       setImporting(false);
     }
