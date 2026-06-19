@@ -28,6 +28,10 @@ import {
   useStockAlerts,
   useStockValue,
   useEmployees,
+  useMonthlyGoal,
+  useMonthlyTopProducts,
+  useAverageBasket,
+  useUnpaidInvoices,
 } from "@/lib/hooks/useApi";
 
 export default function DashboardPage() {
@@ -39,6 +43,10 @@ export default function DashboardPage() {
   const { alerts: stockAlertsData } = useStockAlerts();
   const { value: stockValue } = useStockValue();
   const { employees } = useEmployees();
+  const { data: monthlyGoal } = useMonthlyGoal();
+  const { data: topProducts } = useMonthlyTopProducts(5);
+  const { data: averageBasket } = useAverageBasket();
+  const { data: unpaidInvoices } = useUnpaidInvoices();
 
   // Données réelles du backend (fallback sur mock si indisponible)
   const revenue = todayStats?.revenue ?? 0;
@@ -107,11 +115,11 @@ export default function DashboardPage() {
           iconBg="bg-[var(--brand-light)]"
         />
         <KpiCard
-          label={t.dashboard.grossProfit}
-          value={grossProfit}
-          previous={Math.round(grossProfit * 0.85)}
+          label="Panier moyen"
+          value={averageBasket?.average ?? 0}
+          previous={0}
           format="currency"
-          icon={<TrendingUp className="w-5 h-5 text-emerald-600" />}
+          icon={<ShoppingBag className="w-5 h-5 text-emerald-600" />}
           iconBg="bg-[var(--success-light)]"
         />
         <KpiCard
@@ -123,12 +131,12 @@ export default function DashboardPage() {
           iconBg="bg-[var(--info-light)]"
         />
         <KpiCard
-          label={t.dashboard.stockAlerts}
-          value={stockAlertsCount}
+          label="Factures impayées"
+          value={unpaidInvoices?.totalUnpaid ?? 0}
           previous={0}
-          format="number"
-          icon={<Package className="w-5 h-5 text-amber-600" />}
-          iconBg="bg-[var(--warning-light)]"
+          format="currency"
+          icon={<AlertTriangle className="w-5 h-5 text-red-600" />}
+          iconBg="bg-[var(--danger-light)]"
         />
       </div>
 
@@ -195,6 +203,71 @@ export default function DashboardPage() {
           </div>
         </Card>
       )}
+
+      {/* Objectif mensuel + Top produits */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        {/* Objectif mensuel */}
+        {monthlyGoal && (
+          <Card padding="md">
+            <CardHeader
+              title="Objectif mensuel"
+              subtitle={`${monthlyGoal.transactions} transactions ce mois`}
+            />
+            <div className="mt-4">
+              <div className="flex items-end justify-between mb-2">
+                <span className="text-2xl font-bold text-[var(--brand)]">
+                  {(monthlyGoal.current / 1000).toFixed(0)}k FCFA
+                </span>
+                <span className="text-sm text-[var(--text-muted)]">
+                  / {(monthlyGoal.goal / 1000).toFixed(0)}k
+                </span>
+              </div>
+              <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-[var(--brand)] to-blue-400 transition-all duration-500"
+                  style={{ width: `${Math.min(monthlyGoal.progress, 100)}%` }}
+                />
+              </div>
+              <div className="flex items-center justify-between mt-2 text-xs">
+                <span className={`font-medium ${monthlyGoal.progress >= 100 ? "text-emerald-600" : "text-[var(--brand)]"}`}>
+                  {monthlyGoal.progress}% atteint
+                </span>
+                <span className="text-[var(--text-muted)]">
+                  Reste: {(monthlyGoal.remaining / 1000).toFixed(0)}k FCFA
+                </span>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* Top 5 produits */}
+        {topProducts.length > 0 && (
+          <Card padding="md">
+            <CardHeader
+              title="Top 5 produits vendus"
+              subtitle="Ce mois"
+            />
+            <div className="mt-4 space-y-3">
+              {topProducts.map((product, i) => (
+                <div key={product.productId} className="flex items-center gap-3">
+                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[var(--brand-light)] text-[var(--brand)] text-xs font-bold flex items-center justify-center">
+                    {i + 1}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{product.productName}</p>
+                    <p className="text-xs text-[var(--text-muted)]">{product.quantity} vendus</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-[var(--brand)]">
+                      {(product.revenue / 1000).toFixed(1)}k
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+      </div>
 
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-6">

@@ -370,6 +370,24 @@ export const transactionsApi = {
       `/transactions/stats/margin-by-category`
     ),
 
+  // Objectif mensuel
+  monthlyGoal: () =>
+    fetchAPI<{ current: number; goal: number; progress: number; transactions: number; remaining: number }>(
+      `/transactions/stats/monthly-goal`
+    ),
+
+  // Top produits vendus
+  topProducts: (limit?: number) =>
+    fetchAPI<Array<{ productId: string; productName: string; sku: string; quantity: number; revenue: number }>>(
+      `/transactions/stats/top-products${limit ? `?limit=${limit}` : ""}`
+    ),
+
+  // Panier moyen
+  averageBasket: () =>
+    fetchAPI<{ average: number; total: number; transactions: number }>(
+      `/transactions/stats/average-basket`
+    ),
+
   // Rembourser
   refund: (id: string, reason: string) =>
     fetchAPI<ApiTransaction>(`/transactions/${id}/refund`, {
@@ -779,6 +797,7 @@ export const invoicesApi = {
     fetchAPI<{ invoices: ApiInvoice[]; total: number }>(`/invoices${status ? `?status=${status}` : ""}`),
   get: (id: string) => fetchAPI<ApiInvoice>(`/invoices/${id}`),
   stats: () => fetchAPI<{ total: number; paid: number; partial: number; pending: number; overdue: number; totalPaidAmount: number; totalOutstanding: number }>(`/invoices/stats`),
+  unpaidStats: () => fetchAPI<{ totalUnpaid: number; count: number; partial: { amount: number; count: number }; overdue: { amount: number; count: number } }>(`/invoices/stats/unpaid`),
   create: (data: {
     clientName: string;
     clientPhone: string;
