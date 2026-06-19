@@ -40,6 +40,11 @@ export interface ApiProduct {
   price: number;
   costPrice: number;
   taxRate: number;
+  markdownPrice?: number | null;
+  markdownReason?: string | null;
+  markdownNote?: string | null;
+  markdownStartsAt?: string | null;
+  markdownExpiresAt?: string | null;
   stock: number;
   minStock: number;
   unit: string;
@@ -249,6 +254,27 @@ export const productsApi = {
     fetchAPI<{ total: number; success: number; errors: number; duration: number }>(
       `/import/products`,
       { method: "POST", body: JSON.stringify({ csv }) }
+    ),
+
+  // Markdown / Promotions
+  setMarkdown: (id: string, data: { markdownPrice: number; markdownReason: string; markdownNote?: string; markdownExpiresAt?: string }) =>
+    fetchAPI<ApiProduct>(`/products/${id}/markdown`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  removeMarkdown: (id: string) =>
+    fetchAPI<ApiProduct>(`/products/${id}/markdown`, { method: "DELETE" }),
+
+  getMarkdowns: (page = 1, limit = 50) =>
+    fetchAPI<{ data: ApiProduct[]; meta: { total: number; page: number; limit: number; totalPages: number }; summary: { count: number; totalPotentialLoss: number } }>(
+      `/products/markdowns?page=${page}&limit=${limit}`
+    ),
+
+  cleanupExpiredMarkdowns: () =>
+    fetchAPI<{ cleaned: number; products: Array<{ id: string; name: string; restoredPrice: number; wasMarkdownPrice: number }> }>(
+      `/products/markdowns/cleanup`,
+      { method: "POST" }
     ),
 };
 
@@ -615,10 +641,31 @@ export interface AiRecommendation {
   action?: string;
 }
 
+export interface ApiMarkdownSuggestion {
+  productId: string;
+  name: string;
+  sku: string;
+  category: string;
+  stock: number;
+  price: number;
+  costPrice: number;
+  unit: string;
+  expiryDate: string | null;
+  daysToExpiry: number | null;
+  sold30Days: number;
+  dailyVelocity: number;
+  reason: 'expiry' | 'near_expiry' | 'clearance';
+  markdownPercent: number;
+  suggestedMarkdownPrice: number;
+  potentialLoss: number;
+  priority: 'critical' | 'high' | 'medium';
+}
+
 export const aiApi = {
   stockForecast: () => fetchAPI<{ summary: { total: number; critical: number; warning: number; overstock: number; recommendedOrdersValue: number }; forecasts: ApiStockForecast[] }>(`/ai/stock-forecast`),
   recommendations: () => fetchAPI<AiRecommendation[]>(`/ai/recommendations`),
   salesInsights: () => fetchAPI<{ weeklyRevenue: number; weeklyTransactions: number; avgBasket: number; topProducts: any[] }>(`/ai/sales-insights`),
+  markdownSuggestions: () => fetchAPI<{ summary: { total: number; critical: number; high: number; medium: number; totalPotentialLoss: number }; suggestions: ApiMarkdownSuggestion[] }>(`/ai/markdown-suggestions`),
 };
 
 // ========================================
@@ -703,6 +750,10 @@ export function apiProductToFrontend(p: ApiProduct): Product {
     category: p.category,
     price: p.price,
     costPrice: p.costPrice,
+    markdownPrice: p.markdownPrice,
+    markdownReason: p.markdownReason,
+    markdownNote: p.markdownNote,
+    markdownExpiresAt: p.markdownExpiresAt,
     stock: p.stock,
     minStock: p.minStock,
     unit: p.unit,
@@ -711,6 +762,32 @@ export function apiProductToFrontend(p: ApiProduct): Product {
     supplier: p.supplier?.name,
     imageUrl: p.imageUrl,
   };
+}
+
+// Prix effectif d'un produit (markdown si actif, sinon prix normal)
+export function getEffectivePrice(p: Pick<Product, "price" | "markdownPrice" | "markdownExpiresAt">): number {
+  if (p.markdownPrice != null && p.markdownPrice > 0) {
+    // Vérifier si le markdown n'a pas expiré
+    if (p.markdownExpiresAt && new Date(p.markdownExpiresAt) < new Date()) {
+      return p.price; // Markdown expiré → prix normal
+    }
+    return p.markdownPrice;
+  }
+  return p.price;
+}
+
+// Vérifier si un produit a un markdown actif
+export function hasActiveMarkdown(p: Pick<Product, "markdownPrice" | "markdownExpiresAt">): boolean {
+  if (p.markdownPrice == null || p.markdownPrice <= 0) return false;
+  if (p.markdownExpiresAt && new Date(p.markdownExpiresAt) < new Date()) return false;
+  return true;
+}
+
+// Calculer les jours avant expiration
+export function daysToExpiry(expiryDate?: string): number | null {
+  if (!expiryDate) return null;
+  const diff = new Date(expiryDate).getTime() - Date.now();
+  return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }
 
 // Importer les types frontend

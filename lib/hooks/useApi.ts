@@ -183,9 +183,43 @@ export function useProductStats() {
 }
 
 // ========================================
-// HOOK: useStockAlerts
-// Alertes stock (dashboard + stocks)
+// HOOKS: MARKDOWN / PROMOTIONS
 // ========================================
+export function useSetMarkdown() {
+  const [setting, setSetting] = useState(false);
+  const setMarkdown = async (id: string, data: { markdownPrice: number; markdownReason: string; markdownNote?: string; markdownExpiresAt?: string }) => {
+    setSetting(true);
+    try {
+      return await productsApi.setMarkdown(id, data);
+    } catch (e) {
+      console.error("Set markdown failed:", e);
+      return null;
+    } finally {
+      setSetting(false);
+    }
+  };
+  return { setMarkdown, setting };
+}
+
+export function useRemoveMarkdown() {
+  const [removing, setRemoving] = useState(false);
+  const removeMarkdown = async (id: string) => {
+    setRemoving(true);
+    try {
+      return await productsApi.removeMarkdown(id);
+    } catch (e) {
+      console.error("Remove markdown failed:", e);
+      return null;
+    } finally {
+      setRemoving(false);
+    }
+  };
+  return { removeMarkdown, removing };
+}
+
+export function useMarkdowns(page = 1, limit = 50) {
+  return useApi(() => productsApi.getMarkdowns(page, limit), [page, limit]);
+}
 export function useStockAlerts() {
   const [alerts, setAlerts] = useState<{
     lowStock: ApiProduct[];
@@ -643,6 +677,9 @@ export function useAiRecommendations() {
 }
 export function useSalesInsights() {
   return useApi(() => aiApi.salesInsights(), []);
+}
+export function useMarkdownSuggestions() {
+  return useApi(() => aiApi.markdownSuggestions(), []);
 }
 
 // ========================================

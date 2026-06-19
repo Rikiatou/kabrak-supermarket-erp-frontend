@@ -14,6 +14,8 @@ import {
   Lightbulb,
   ShoppingCart,
   ArrowUpRight,
+  TrendingDown,
+  X,
 } from "lucide-react";
 import {
   LineChart,
@@ -32,7 +34,8 @@ import { Button } from "@/components/ui/Button";
 import { formatCurrency, cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/context";
 import { useToast } from "@/components/ui/Toast";
-import { useStockForecast, useAiRecommendations } from "@/lib/hooks/useApi";
+import { useStockForecast, useAiRecommendations, useMarkdownSuggestions, useSetMarkdown } from "@/lib/hooks/useApi";
+import type { ApiMarkdownSuggestion } from "@/lib/api";
 
 const urgencyConfig = {
   critical: { label: "Critique", color: "bg-red-100 text-red-700", border: "border-red-200" },
@@ -76,6 +79,9 @@ export default function IaPage() {
   const { toast } = useToast();
   const { data: forecastData, loading: forecastLoading, reload: reloadForecast } = useStockForecast();
   const { data: recData, loading: recLoading, reload: reloadRecs } = useAiRecommendations();
+  const { data: markdownData, loading: markdownLoading, reload: reloadMarkdown } = useMarkdownSuggestions();
+  const { setMarkdown, setting: settingMarkdown } = useSetMarkdown();
+  const [applyingId, setApplyingId] = useState<string | null>(null);
 
   const forecast = forecastData?.forecasts?.length ? forecastData.forecasts : mockForecast;
   const summary = forecastData?.summary || {
@@ -90,11 +96,28 @@ export default function IaPage() {
   const handleRefresh = () => {
     reloadForecast();
     reloadRecs();
+    reloadMarkdown();
     toast("Analyse IA mise à jour", "info");
   };
 
   const handleAction = (rec: any) => {
     toast(`Action: ${rec.action}`, "info");
+  };
+
+  const handleApplyMarkdown = async (suggestion: ApiMarkdownSuggestion) => {
+    setApplyingId(suggestion.productId);
+    const result = await setMarkdown(suggestion.productId, {
+      markdownPrice: suggestion.suggestedMarkdownPrice,
+      markdownReason: suggestion.reason,
+      markdownNote: `Suggestion IA: ${suggestion.markdownPercent}% de remise`,
+    });
+    if (result) {
+      toast(`Markdown appliqué: ${suggestion.name} → ${formatCurrency(suggestion.suggestedMarkdownPrice)} (-${suggestion.markdownPercent}%)`, "success");
+      reloadMarkdown();
+    } else {
+      toast(`Erreur lors de l'application du markdown`, "warning");
+    }
+    setApplyingId(null);
   };
 
   return (
@@ -280,6 +303,118 @@ export default function IaPage() {
             </div>
           </Card>
         </div>
+
+        {/* Markdown suggestions */}
+        {markdownData && markdownData.suggestions.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
+                  <TrendingDown className="w-4 h-4 text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-[var(--text-primary)]">Suggestions de markdown</h3>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    {markdownData.summary.total} produit(s) · Perte potentielle: {formatCurrency(markdownData.summary.totalPotentialLoss)}
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<RefreshCw className={cn("w-3.5 h-3.5", markdownLoading && "animate-spin")} />}
+                onClick={reloadMarkdown}
+              >
+                Actualiser
+              </Button>
+            </div>
+
+            <Card className="overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-[var(--border)] bg-[var(--background)]">
+                      <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Produit</th>
+                      <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3 hidden md:table-cell">Expiration</th>
+                      <th className="text-right text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Prix actuel</th>
+                      <th className="text-right text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Prix suggéré</th>
+                      <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3 hidden sm:table-cell">Remise</th>
+                      <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Priorité</th>
+                      <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {markdownData.suggestions.map((s) => {
+                      const priorityColors: Record<string, string> = {
+                        critical: "bg-red-100 text-red-700",
+                        high: "bg-amber-100 text-amber-700",
+                        medium: "bg-blue-100 text-blue-700",
+                      };
+                      const reasonLabels: Record<string, string> = {
+                        expiry: "Expiré",
+                        near_expiry: "Exp. proche",
+                        clearance: "Destockage",
+                      };
+                      return (
+                        <tr key={s.productId} className="border-b border-[var(--border-subtle)] hover:bg-[var(--surface-hover)] transition-colors">
+                          <td className="px-4 py-3">
+                            <div>
+                              <p className="text-sm font-medium text-[var(--text-primary)]">{s.name}</p>
+                              <p className="text-xs text-[var(--text-muted)]">
+                                {s.category} · Stock: {s.stock} {s.unit} · {reasonLabels[s.reason] || s.reason}
+                              </p>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-center hidden md:table-cell">
+                            {s.daysToExpiry !== null ? (
+                              <span className={cn(
+                                "text-xs font-medium tabular-nums",
+                                s.daysToExpiry <= 0 ? "text-red-600" :
+                                s.daysToExpiry <= 7 ? "text-amber-600" : "text-[var(--text-muted)]"
+                              )}>
+                                {s.daysToExpiry <= 0 ? "Expiré" : `J-${s.daysToExpiry}`}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-[var(--text-muted)]">—</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-sm tabular-nums text-right text-[var(--text-secondary)]">
+                            {formatCurrency(s.price)}
+                          </td>
+                          <td className="px-4 py-3 text-sm tabular-nums text-right font-bold text-red-600">
+                            {formatCurrency(s.suggestedMarkdownPrice)}
+                          </td>
+                          <td className="px-4 py-3 text-center hidden sm:table-cell">
+                            <span className="text-xs font-bold text-red-600">-{s.markdownPercent}%</span>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <span className={cn("inline-flex px-2 py-0.5 rounded-md text-xs font-medium", priorityColors[s.priority])}>
+                              {s.priority === "critical" ? "Critique" : s.priority === "high" ? "Haute" : "Moyenne"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <button
+                              onClick={() => handleApplyMarkdown(s)}
+                              disabled={settingMarkdown && applyingId === s.productId}
+                              className="px-3 py-1.5 text-xs font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 mx-auto"
+                            >
+                              {settingMarkdown && applyingId === s.productId ? (
+                                <RefreshCw className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <CheckCircle2 className="w-3 h-3" />
+                              )}
+                              Appliquer
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          </div>
+        )}
       </div>
     </AppShell>
   );

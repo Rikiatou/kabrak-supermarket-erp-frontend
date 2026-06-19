@@ -11,6 +11,7 @@ import {
   Package,
   X,
   ChevronDown,
+  Tag,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Card } from "@/components/ui/Card";
@@ -21,7 +22,8 @@ import { formatCurrency, formatDate, cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/context";
 import { useToast } from "@/components/ui/Toast";
 import { NewProductModal } from "@/components/forms/NewProductModal";
-import { useProducts, useStockAlerts } from "@/lib/hooks/useApi";
+import { useProducts, useStockAlerts, useSetMarkdown, useRemoveMarkdown } from "@/lib/hooks/useApi";
+import { getEffectivePrice, hasActiveMarkdown } from "@/lib/api";
 import type { Product } from "@/lib/types";
 
 type SortKey = "name" | "stock" | "price" | "category";
@@ -66,6 +68,12 @@ export default function StocksPage() {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showNewProduct, setShowNewProduct] = useState(false);
+  const [markdownProduct, setMarkdownProduct] = useState<Product | null>(null);
+  const [markdownPrice, setMarkdownPrice] = useState("");
+  const [markdownReason, setMarkdownReason] = useState("near_expiry");
+  const [markdownNote, setMarkdownNote] = useState("");
+  const { setMarkdown, setting: settingMarkdown } = useSetMarkdown();
+  const { removeMarkdown, removing: removingMarkdown } = useRemoveMarkdown();
 
   // Utiliser les vrais produits du backend, fallback sur mock
   useEffect(() => {
@@ -79,6 +87,74 @@ export default function StocksPage() {
   const handleNewProduct = (data: Omit<Product, "id">) => {
     const newProduct: Product = { ...data, id: `p${Date.now()}` };
     setProducts((prev) => [newProduct, ...prev]);
+  };
+
+  const openMarkdownModal = (product: Product) => {
+    setMarkdownProduct(product);
+    setMarkdownPrice(product.markdownPrice ? String(product.markdownPrice) : "");
+    setMarkdownReason(product.markdownReason || "near_expiry");
+    setMarkdownNote(product.markdownNote || "");
+  };
+
+  const closeMarkdownModal = () => {
+    setMarkdownProduct(null);
+    setMarkdownPrice("");
+    setMarkdownNote("");
+  };
+
+  const handleSetMarkdown = async () => {
+    if (!markdownProduct) return;
+    const price = parseInt(markdownPrice);
+    if (!price || price <= 0) {
+      toast("Prix markdown invalide", "warning");
+      return;
+    }
+    if (price >= markdownProduct.price) {
+      toast(`Le prix markdown doit être inférieur à ${formatCurrency(markdownProduct.price)}`, "warning");
+      return;
+    }
+    const result = await setMarkdown(markdownProduct.id, {
+      markdownPrice: price,
+      markdownReason,
+      markdownNote: markdownNote || undefined,
+    });
+    if (result) {
+      // Mettre à jour le produit dans la liste locale
+      setProducts((prev) =>
+        prev.map((p) =>
+          p.id === markdownProduct.id
+            ? { ...p, markdownPrice: price, markdownReason, markdownNote }
+            : p
+        )
+      );
+      toast(`Markdown appliqué: ${markdownProduct.name} → ${formatCurrency(price)}`, "success");
+      closeMarkdownModal();
+    } else {
+      // Fallback local
+      setProducts((prev) =>
+        prev.map((p) =>
+          p.id === markdownProduct.id
+            ? { ...p, markdownPrice: price, markdownReason, markdownNote }
+            : p
+        )
+      );
+      toast(`Markdown local appliqué (backend indisponible)`, "warning");
+      closeMarkdownModal();
+    }
+  };
+
+  const handleRemoveMarkdown = async (product: Product) => {
+    const result = await removeMarkdown(product.id);
+    if (result || !result) {
+      setProducts((prev) =>
+        prev.map((p) =>
+          p.id === product.id
+            ? { ...p, markdownPrice: null, markdownReason: null, markdownNote: null }
+            : p
+        )
+      );
+      toast(`Markdown retiré: ${product.name}`, "success");
+    }
   };
 
   const toggleSort = (key: SortKey) => {
@@ -318,7 +394,16 @@ export default function StocksPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-sm font-medium text-[var(--text-primary)] tabular-nums">
-                      {formatCurrency(product.price)}
+                      {hasActiveMarkdown(product) ? (
+                        <div className="flex flex-col">
+                          <span className="text-xs text-[var(--text-muted)] line-through">{formatCurrency(product.price)}</span>
+                          <span className="text-red-600 font-bold flex items-center gap-0.5">
+                            <TrendingDown className="w-3 h-3" />{formatCurrency(getEffectivePrice(product))}
+                          </span>
+                        </div>
+                      ) : (
+                        formatCurrency(product.price)
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <Badge variant={statusConfig[status].badge} size="sm">
@@ -342,6 +427,21 @@ export default function StocksPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
+                        {hasActiveMarkdown(product) ? (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleRemoveMarkdown(product); }}
+                            className="px-2.5 py-1 text-xs font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                          >
+                            Retirer promo
+                          </button>
+                        ) : (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); openMarkdownModal(product); }}
+                            className="px-2.5 py-1 text-xs font-medium text-amber-600 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors flex items-center gap-0.5"
+                          >
+                            <Tag className="w-3 h-3" /> Markdown
+                          </button>
+                        )}
                         <button
                           onClick={(e) => { e.stopPropagation(); toast(`${t.stocks.restockAction} : ${product.name}`, "info"); }}
                           className="px-2.5 py-1 text-xs font-medium text-[var(--brand)] bg-[var(--brand-light)] rounded-lg hover:bg-blue-100 transition-colors"
@@ -380,6 +480,91 @@ export default function StocksPage() {
           onClose={() => setShowNewProduct(false)}
           onSave={(data) => { handleNewProduct(data); }}
         />
+      )}
+
+      {/* Markdown modal */}
+      {markdownProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={closeMarkdownModal}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Tag className="w-4 h-4 text-amber-600" />
+                <h3 className="text-sm font-bold text-[var(--text-primary)]">Markdown — {markdownProduct.name}</h3>
+              </div>
+              <button onClick={closeMarkdownModal} className="p-1 hover:bg-slate-100 rounded-lg">
+                <X className="w-4 h-4 text-[var(--text-muted)]" />
+              </button>
+            </div>
+
+            <div className="bg-slate-50 rounded-xl p-3 space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span className="text-[var(--text-muted)]">Prix normal</span>
+                <span className="font-semibold tabular-nums">{formatCurrency(markdownProduct.price)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[var(--text-muted)]">Coût d&apos;achat</span>
+                <span className="font-semibold tabular-nums">{formatCurrency(markdownProduct.costPrice)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[var(--text-muted)]">Stock</span>
+                <span className="font-semibold tabular-nums">{markdownProduct.stock} {markdownProduct.unit}</span>
+              </div>
+              {markdownProduct.expiryDate && (
+                <div className="flex justify-between">
+                  <span className="text-[var(--text-muted)]">Expiration</span>
+                  <span className="font-semibold">{formatDate(markdownProduct.expiryDate)}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Nouveau prix (markdown)</label>
+                <input
+                  type="number"
+                  value={markdownPrice}
+                  onChange={(e) => setMarkdownPrice(e.target.value)}
+                  placeholder={String(Math.round(markdownProduct.price * 0.5))}
+                  className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm tabular-nums outline-none focus:border-amber-500"
+                />
+                {markdownPrice && parseInt(markdownPrice) > 0 && (
+                  <p className="text-xs text-[var(--text-muted)] mt-1">
+                    Remise: {Math.round((1 - parseInt(markdownPrice) / markdownProduct.price) * 100)}% · Perte potentielle: {formatCurrency((markdownProduct.price - parseInt(markdownPrice)) * markdownProduct.stock)}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Raison</label>
+                <select
+                  value={markdownReason}
+                  onChange={(e) => setMarkdownReason(e.target.value)}
+                  className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-amber-500 bg-white"
+                >
+                  <option value="expiry">Produit expiré</option>
+                  <option value="near_expiry">Expiration proche</option>
+                  <option value="clearance">Destockage</option>
+                  <option value="promo">Promotion</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Note (optionnel)</label>
+                <input
+                  value={markdownNote}
+                  onChange={(e) => setMarkdownNote(e.target.value)}
+                  placeholder="Raison détaillée..."
+                  className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-amber-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button variant="secondary" className="flex-1" onClick={closeMarkdownModal}>Annuler</Button>
+              <Button className="flex-1" onClick={handleSetMarkdown} disabled={settingMarkdown || !markdownPrice}>
+                {settingMarkdown ? "Application..." : "Appliquer le markdown"}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </AppShell>
   );

@@ -55,6 +55,10 @@ export interface Product {
   category: string;
   price: number;
   costPrice: number;
+  markdownPrice?: number | null;
+  markdownReason?: string | null;
+  markdownNote?: string | null;
+  markdownExpiresAt?: string | null;
   stock: number;
   minStock: number;
   unit: string;

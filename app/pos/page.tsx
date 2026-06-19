@@ -17,6 +17,8 @@ import {
   ScanLine,
   Printer,
   Split,
+  AlertTriangle,
+  TrendingDown,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/Button";
@@ -26,6 +28,7 @@ import { formatCurrency, cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/context";
 import { useProducts, useCreateTransaction } from "@/lib/hooks/useApi";
 import { useAuth } from "@/lib/auth/context";
+import { getEffectivePrice, hasActiveMarkdown, daysToExpiry } from "@/lib/api";
 import type { Product, CartItem } from "@/lib/types";
 
 const CATEGORIES = ["Tous", "Épicerie", "Boissons", "Produits laitiers", "Hygiène", "Boucherie", "Boulangerie", "Surgelés"];
@@ -148,7 +151,7 @@ export default function POSPage() {
     setCheckoutStep("cart");
   };
 
-  const subtotal = cart.reduce((s, i) => s + i.product.price * i.quantity, 0);
+  const subtotal = cart.reduce((s, i) => s + getEffectivePrice(i.product) * i.quantity, 0);
   const discountAmount = Math.round(subtotal * (discountPercent / 100));
   const taxable = subtotal - discountAmount;
   const tax = Math.round(taxable * TAX_RATE);
@@ -179,14 +182,17 @@ export default function POSPage() {
       paymentMethod: recordedMethod,
       cashGiven: effectiveCashGiven,
       change: effectiveChange,
-      items: cart.map((item) => ({
-        productId: item.product.id,
-        quantity: item.quantity,
-        unitPrice: item.product.price,
-        discount: Math.round(item.product.price * item.quantity * (discountPercent / 100)),
-        tax: Math.round(item.product.price * item.quantity * TAX_RATE),
-        total: Math.round(item.product.price * item.quantity * (1 + TAX_RATE)),
-      })),
+      items: cart.map((item) => {
+        const effPrice = getEffectivePrice(item.product);
+        return {
+          productId: item.product.id,
+          quantity: item.quantity,
+          unitPrice: effPrice,
+          discount: Math.round(effPrice * item.quantity * (discountPercent / 100)),
+          tax: Math.round(effPrice * item.quantity * TAX_RATE),
+          total: Math.round(effPrice * item.quantity * (1 + TAX_RATE)),
+        };
+      }),
     });
 
     // Utiliser l'ID du backend si disponible, sinon générer
@@ -228,8 +234,14 @@ export default function POSPage() {
 
     const itemsHtml = receipt.items
       .map(
-        (item) =>
-          `<tr><td style="font-size:11px">${item.product.name.substring(0, 24)} ×${item.quantity}</td><td style="text-align:right;font-size:11px">${formatCurrency(item.product.price * item.quantity)}</td></tr>`
+        (item) => {
+          const effPrice = getEffectivePrice(item.product);
+          const hasMd = hasActiveMarkdown(item.product);
+          const label = hasMd
+            ? `${item.product.name.substring(0, 22)} ×${item.quantity} (PROMO)`
+            : `${item.product.name.substring(0, 24)} ×${item.quantity}`;
+          return `<tr><td style="font-size:11px">${label}</td><td style="text-align:right;font-size:11px">${formatCurrency(effPrice * item.quantity)}</td></tr>`;
+        }
       )
       .join("");
 
@@ -381,9 +393,19 @@ export default function POSPage() {
                       </p>
                       <p className="text-[11px] text-[var(--text-muted)] mb-2">{product.sku}</p>
                       <div className="flex items-end justify-between">
-                        <span className="text-sm font-bold text-[var(--brand)] tabular-nums">
-                          {formatCurrency(product.price)}
-                        </span>
+                        <div className="flex flex-col">
+                          {hasActiveMarkdown(product) && (
+                            <span className="text-[10px] text-[var(--text-muted)] line-through tabular-nums leading-none">
+                              {formatCurrency(product.price)}
+                            </span>
+                          )}
+                          <span className={cn(
+                            "text-sm font-bold tabular-nums leading-tight",
+                            hasActiveMarkdown(product) ? "text-red-600" : "text-[var(--brand)]"
+                          )}>
+                            {formatCurrency(getEffectivePrice(product))}
+                          </span>
+                        </div>
                         <span
                           className={cn(
                             "text-[10px] font-medium tabular-nums",
@@ -467,18 +489,44 @@ export default function POSPage() {
                   </div>
                 ) : (
                   <div className="space-y-0.5">
-                    {cart.map((item) => (
+                    {cart.map((item) => {
+                      const effPrice = getEffectivePrice(item.product);
+                      const hasMarkdown = hasActiveMarkdown(item.product);
+                      const expiryDays = daysToExpiry(item.product.expiryDate);
+                      const isExpired = expiryDays !== null && expiryDays <= 0;
+                      return (
                       <div
                         key={item.product.id}
-                        className="flex items-center gap-2 py-2.5 border-b border-[var(--border-subtle)] last:border-0"
+                        className={cn(
+                          "flex items-center gap-2 py-2.5 border-b border-[var(--border-subtle)] last:border-0",
+                          isExpired && "bg-amber-50/50"
+                        )}
                       >
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium text-[var(--text-primary)] truncate leading-snug">
+                          <p className="text-xs font-medium text-[var(--text-primary)] truncate leading-snug flex items-center gap-1">
                             {item.product.name}
+                            {hasMarkdown && (
+                              <span className="inline-flex items-center gap-0.5 px-1 py-0 rounded text-[9px] font-bold bg-red-100 text-red-700 shrink-0">
+                                <TrendingDown className="w-2.5 h-2.5" /> PROMO
+                              </span>
+                            )}
                           </p>
                           <p className="text-[11px] text-[var(--text-muted)] tabular-nums">
-                            {formatCurrency(item.product.price)} × {item.quantity}
+                            {hasMarkdown ? (
+                              <>
+                                <span className="line-through text-[var(--text-muted)]">{formatCurrency(item.product.price)}</span>{" "}
+                                <span className="text-red-600 font-medium">{formatCurrency(effPrice)}</span>
+                                {" × "}{item.quantity}
+                              </>
+                            ) : (
+                              <>{formatCurrency(item.product.price)} × {item.quantity}</>
+                            )}
                           </p>
+                          {isExpired && (
+                            <p className="text-[10px] text-amber-600 font-medium flex items-center gap-0.5 mt-0.5">
+                              <AlertTriangle className="w-2.5 h-2.5" /> Produit expiré — vente avec markdown
+                            </p>
+                          )}
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
                           <button
@@ -505,12 +553,13 @@ export default function POSPage() {
                           </button>
                         </div>
                         <div className="w-16 text-right shrink-0">
-                          <span className="text-sm font-semibold text-[var(--text-primary)] tabular-nums">
-                            {formatCurrency(item.product.price * item.quantity)}
+                          <span className={cn("text-sm font-semibold tabular-nums", hasMarkdown ? "text-red-600" : "text-[var(--text-primary)]")}>
+                            {formatCurrency(effPrice * item.quantity)}
                           </span>
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -838,14 +887,19 @@ function ReceiptPanel({
             </p>
           </div>
           <div className="border-t border-dashed border-slate-300 my-2" />
-          {receipt.items.map((item) => (
+          {receipt.items.map((item) => {
+            const effPrice = getEffectivePrice(item.product);
+            const hasMd = hasActiveMarkdown(item.product);
+            return (
             <div key={item.product.id} className="flex justify-between">
               <span className="truncate flex-1 pr-2">
                 {item.product.name.substring(0, 18)} ×{item.quantity}
+                {hasMd && <span className="text-red-600 font-bold"> PROMO</span>}
               </span>
-              <span className="tabular-nums shrink-0">{formatCurrency(item.product.price * item.quantity)}</span>
+              <span className="tabular-nums shrink-0">{formatCurrency(effPrice * item.quantity)}</span>
             </div>
-          ))}
+            );
+          })}
           <div className="border-t border-dashed border-slate-300 my-2" />
           {receipt.discount > 0 && (
             <div className="flex justify-between text-emerald-600">
