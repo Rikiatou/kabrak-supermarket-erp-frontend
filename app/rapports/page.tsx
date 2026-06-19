@@ -342,14 +342,14 @@ export default function RapportsPage() {
                     cx="50%"
                     cy="50%"
                     outerRadius={90}
-                    label={(e: { category?: string }) => e.category}
+                    label={true}
                     labelLine={false}
                   >
                     {categories.map((_, i) => (
                       <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(v: number | string) => formatCurrency(Number(v))} />
+                  <Tooltip formatter={(v: unknown) => formatCurrency(Number(v))} />
                 </PieChart>
               </ResponsiveContainer>
             )}
@@ -369,7 +369,7 @@ export default function RapportsPage() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
                 <XAxis dataKey="category" tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={false} tickFormatter={(v) => `${(v / 1_000_000).toFixed(1)}M`} />
-                <Tooltip cursor={{ fill: "#f1f5f9" }} formatter={(v: number | string) => formatCurrency(Number(v))} />
+                <Tooltip cursor={{ fill: "#f1f5f9" }} formatter={(v: unknown) => formatCurrency(Number(v))} />
                 <Legend />
                 <Bar dataKey="revenue" name="CA" fill="#2563eb" radius={[6, 6, 0, 0]} maxBarSize={50} />
               </BarChart>

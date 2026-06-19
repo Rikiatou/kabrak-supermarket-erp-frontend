@@ -23,6 +23,7 @@ import { useI18n } from "@/lib/i18n/context";
 import { useToast } from "@/components/ui/Toast";
 import { NewProductModal } from "@/components/forms/NewProductModal";
 import { useProducts, useStockAlerts, useSetMarkdown, useRemoveMarkdown } from "@/lib/hooks/useApi";
+import { productsApi, apiProductToFrontend } from "@/lib/api";
 import { getEffectivePrice, hasActiveMarkdown } from "@/lib/api";
 import type { Product } from "@/lib/types";
 
@@ -84,9 +85,36 @@ export default function StocksPage() {
     }
   }, [apiProducts]);
 
-  const handleNewProduct = (data: Omit<Product, "id">) => {
-    const newProduct: Product = { ...data, id: `p${Date.now()}` };
-    setProducts((prev) => [newProduct, ...prev]);
+  const [saving, setSaving] = useState(false);
+
+  const handleNewProduct = async (data: Omit<Product, "id">) => {
+    setSaving(true);
+    try {
+      // Sauvegarder dans le backend
+      const created = await productsApi.create({
+        sku: data.sku,
+        barcode: data.barcode || data.sku,
+        name: data.name,
+        category: data.category,
+        price: data.price,
+        costPrice: data.costPrice,
+        stock: data.stock,
+        minStock: data.minStock,
+        unit: data.unit,
+      });
+      // Ajouter le produit créé à la liste locale
+      const newProduct = apiProductToFrontend(created);
+      setProducts((prev) => [newProduct, ...prev]);
+      toast(`${data.name} ajouté au stock`, "success");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Erreur lors de l'ajout";
+      toast(msg, "warning");
+      // Fallback: ajouter en local au moins
+      const newProduct: Product = { ...data, id: `p${Date.now()}` };
+      setProducts((prev) => [newProduct, ...prev]);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const openMarkdownModal = (product: Product) => {
