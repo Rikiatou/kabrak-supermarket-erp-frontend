@@ -120,8 +120,8 @@ export function StockAlertsList() {
 
   return (
     <div className="divide-y divide-transparent">
-      {displayAlerts.map((alert) => (
-        <AlertRow key={alert.id} alert={alert} />
+      {displayAlerts.map((alert, index) => (
+        <AlertRow key={`${alert.id}-${alert.severity}-${index}`} alert={alert} />
       ))}
     </div>
   );
