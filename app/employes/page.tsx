@@ -24,18 +24,11 @@ import { employeesApi } from "@/lib/api";
 import { formatDate, cn } from "@/lib/utils";
 import type { Employee } from "@/lib/types";
 
-const roleLabels: Record<Employee["role"], string> = {
-  manager: "Manager",
-  cashier: "Caissier(ère)",
-  stockist: "Stockiste",
-  supervisor: "Superviseur(e)",
-};
-
 const roleColors: Record<Employee["role"], string> = {
-  manager: "bg-indigo-100 text-indigo-700",
+  boss: "bg-indigo-100 text-indigo-700",
   cashier: "bg-blue-100 text-blue-700",
   stockist: "bg-amber-100 text-amber-700",
-  supervisor: "bg-emerald-100 text-emerald-700",
+  accountant: "bg-emerald-100 text-emerald-700",
 };
 
 const avatarGradients = [
@@ -46,8 +39,6 @@ const avatarGradients = [
   "from-violet-400 to-purple-600",
   "from-cyan-400 to-sky-600",
 ];
-
-const weekSchedule = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
 function getInitials(emp: Employee) {
   return `${emp.firstName[0]}${emp.lastName[0]}`;
@@ -91,7 +82,7 @@ function EmployeeCard({
             roleColors[employee.role]
           )}
         >
-          {roleLabels[employee.role]}
+          {t.employes.roles[employee.role]}
         </span>
       </div>
 
@@ -181,7 +172,7 @@ export default function EmployesPage() {
       setEmployees((prev) => [newEmp, ...prev]);
       toast(`${data.firstName} ${data.lastName} ajouté — PIN: 0000`, "success");
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Erreur lors de l'ajout";
+      const msg = e instanceof Error ? e.message : t.employes.errorAdd;
       toast(msg, "warning");
       // Fallback local
       const newEmp: Employee = { ...data, id: `e${Date.now()}`, status: "active", hoursThisWeek: 0 };
@@ -254,7 +245,7 @@ export default function EmployesPage() {
           >
             {["Tous", "manager", "cashier", "stockist", "supervisor"].map((r) => (
               <option key={r} value={r}>
-                {r === "Tous" ? "Tous les rôles" : roleLabels[r as Employee["role"]]}
+                {r === "Tous" ? t.employes.allRoles : t.employes.roles[r as Employee["role"]]}
               </option>
             ))}
           </select>
@@ -263,9 +254,9 @@ export default function EmployesPage() {
 
         <div className="flex items-center gap-1 bg-[var(--background)] border border-[var(--border)] rounded-xl p-1">
           {[
-            { key: "Tous", label: "Tous" },
-            { key: "active", label: "Actifs" },
-            { key: "on_leave", label: "Congé" },
+            { key: "Tous", label: t.common.all },
+            { key: "active", label: t.employes.status.active },
+            { key: "on_leave", label: t.employes.status.leave },
           ].map(({ key, label }) => (
             <button
               key={key}
@@ -302,7 +293,7 @@ export default function EmployesPage() {
       {/* Weekly schedule preview */}
       <Card padding="md">
         <h3 className="text-[15px] font-semibold text-[var(--text-primary)] mb-4">
-          Planning de la semaine
+          {t.employes.weeklySchedule}
         </h3>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[600px]">
@@ -311,7 +302,15 @@ export default function EmployesPage() {
                 <th className="text-left text-xs font-semibold text-[var(--text-muted)] pb-3 pr-4">
                   Employé
                 </th>
-                {weekSchedule.map((day) => (
+                {[
+                  t.common.monday,
+                  t.common.tuesday,
+                  t.common.wednesday,
+                  t.common.thursday,
+                  t.common.friday,
+                  t.common.saturday,
+                  t.common.sunday,
+                ].map((day) => (
                   <th
                     key={day}
                     className="text-center text-xs font-semibold text-[var(--text-muted)] pb-3 px-2"
@@ -320,7 +319,7 @@ export default function EmployesPage() {
                   </th>
                 ))}
                 <th className="text-center text-xs font-semibold text-[var(--text-muted)] pb-3 pl-4">
-                  Total
+                  {t.common.total}
                 </th>
               </tr>
             </thead>
@@ -392,7 +391,7 @@ export default function EmployesPage() {
 function generateSchedule(emp: Employee): (string | null)[] {
   if (emp.status === "on_leave") return [null, null, null, null, null, null, null];
   const shifts = ["8h-16h", "10h-18h", "14h-22h"];
-  const base = emp.role === "manager" ? [0, 0, 0, 0, 0, null, null] : [0, 0, 1, 1, 0, 2, null];
+  const base = emp.role === "boss" ? [0, 0, 0, 0, 0, null, null] : [0, 0, 1, 1, 0, 2, null];
   return base.map((v) => (v === null ? null : shifts[v]));
 }
 
@@ -417,7 +416,7 @@ function EmployeeDetailPanel({
       />
       <div className="fixed right-0 top-0 h-screen w-[380px] bg-white shadow-[var(--shadow-lg)] z-50 flex flex-col">
         <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
-          <h2 className="font-semibold text-[var(--text-primary)]">Fiche employé</h2>
+          <h2 className="font-semibold text-[var(--text-primary)]">{t.employes.employeeFile}</h2>
           <button
             onClick={onClose}
             className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors"
@@ -444,7 +443,7 @@ function EmployeeDetailPanel({
                   roleColors[employee.role]
                 )}
               >
-                {roleLabels[employee.role]}
+                {t.employes.roles[employee.role]}
               </span>
             </div>
           </div>
@@ -452,7 +451,7 @@ function EmployeeDetailPanel({
           {/* Contact */}
           <div className="space-y-2">
             <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">
-              Contact
+              {t.employes.contact}
             </p>
             <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
               <Phone className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
@@ -467,10 +466,10 @@ function EmployeeDetailPanel({
           {/* Info */}
           <div className="space-y-2">
             {[
-              { label: "Département", value: employee.department },
-              { label: "Date d'embauche", value: formatDate(employee.hireDate) },
-              { label: "Statut", value: employee.status === "active" ? "Actif" : "En congé" },
-              { label: "Heures cette semaine", value: `${employee.hoursThisWeek ?? 0}h` },
+              { label: t.employes.department, value: employee.department },
+              { label: t.employes.hireDate, value: formatDate(employee.hireDate) },
+              { label: t.common.status, value: employee.status === "active" ? t.employes.statusActive : t.employes.statusOnLeave },
+              { label: t.employes.hoursThisWeek, value: `${employee.hoursThisWeek ?? 0}h` },
             ].map(({ label, value }) => (
               <div
                 key={label}

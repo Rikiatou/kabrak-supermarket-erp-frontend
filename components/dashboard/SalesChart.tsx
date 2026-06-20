@@ -12,15 +12,18 @@ import {
 import { salesByHour as mockData } from "@/lib/mock-data";
 import { formatCurrency } from "@/lib/utils";
 import { useSalesByHour } from "@/lib/hooks/useApi";
+import { useI18n } from "@/lib/i18n/context";
 
 const CustomTooltip = ({
   active,
   payload,
   label,
+  transactionsLabel,
 }: {
   active?: boolean;
   payload?: { value: number; name: string }[];
   label?: string;
+  transactionsLabel: string;
 }) => {
   if (!active || !payload?.length) return null;
   return (
@@ -31,7 +34,7 @@ const CustomTooltip = ({
       </p>
       {payload[1] && (
         <p className="text-[var(--text-muted)] text-xs">
-          {payload[1].value} transactions
+          {payload[1].value} {transactionsLabel}
         </p>
       )}
     </div>
@@ -39,6 +42,7 @@ const CustomTooltip = ({
 };
 
 export function SalesChart() {
+  const { t } = useI18n();
   const { data: apiData } = useSalesByHour();
 
   // Fallback sur mock si backend indisponible
@@ -67,7 +71,7 @@ export function SalesChart() {
           tickLine={false}
           tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
         />
-        <Tooltip content={<CustomTooltip />} cursor={{ stroke: "#e2e8f0", strokeWidth: 1 }} />
+        <Tooltip content={<CustomTooltip transactionsLabel={t.charts.transactions} />} cursor={{ stroke: "#e2e8f0", strokeWidth: 1 }} />
         <Area
           type="monotone"
           dataKey="revenue"

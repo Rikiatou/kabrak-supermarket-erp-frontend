@@ -20,14 +20,6 @@ import { useProducts, useStockAdjust } from "@/lib/hooks/useApi";
 import { products as mockProducts } from "@/lib/mock-data";
 import { formatCurrency, cn } from "@/lib/utils";
 
-const lossTypes = [
-  { value: "damage", label: "Cassé", color: "text-red-600 bg-red-50" },
-  { value: "expiry", label: "Expiré", color: "text-amber-600 bg-amber-50" },
-  { value: "theft", label: "Vol", color: "text-purple-600 bg-purple-50" },
-  { value: "loss", label: "Perte", color: "text-slate-600 bg-slate-50" },
-  { value: "other", label: "Autre", color: "text-blue-600 bg-blue-50" },
-];
-
 interface LossEntry {
   id: string;
   productName: string;
@@ -45,6 +37,14 @@ export default function PertesPage() {
   const { products: apiProducts } = useProducts();
   const { adjust, adjusting } = useStockAdjust();
   const products = apiProducts.length > 0 ? apiProducts : mockProducts;
+
+  const lossTypes = [
+    { value: "damage", label: t.pertes.lossTypes.damage, color: "text-red-600 bg-red-50" },
+    { value: "expiry", label: t.pertes.lossTypes.expiry, color: "text-amber-600 bg-amber-50" },
+    { value: "theft", label: t.pertes.lossTypes.theft, color: "text-purple-600 bg-purple-50" },
+    { value: "loss", label: t.pertes.lossTypes.loss, color: "text-slate-600 bg-slate-50" },
+    { value: "other", label: t.pertes.lossTypes.other, color: "text-blue-600 bg-blue-50" },
+  ];
 
   const [losses, setLosses] = useState<LossEntry[]>([]);
   const [showModal, setShowModal] = useState(false);
@@ -66,7 +66,7 @@ export default function PertesPage() {
     if (!product || quantity < 1) return;
 
     // Ajuster le stock via le backend
-    await adjust(product.id, Math.max(0, product.stock - quantity), `${lossType}: ${reason || "Perte déclarée"}`);
+    await adjust(product.id, Math.max(0, product.stock - quantity), `${lossType}: ${reason || t.pertes.lossTypes.loss}`);
 
     const entry: LossEntry = {
       id: `LOSS-${Date.now()}`,
@@ -74,13 +74,13 @@ export default function PertesPage() {
       productId: product.id,
       quantity,
       type: lossType,
-      reason: reason || lossTypes.find((l) => l.value === lossType)?.label || "Perte",
+      reason: reason || lossTypes.find((l) => l.value === lossType)?.label || t.pertes.lossTypes.loss,
       value: product.costPrice * quantity,
       date: new Date().toISOString(),
     };
 
     setLosses([entry, ...losses]);
-    toast(`Perte enregistrée: ${product.name} ×${quantity} - ${formatCurrency(entry.value)}`, "warning");
+    toast(`${t.pertes.lossSaved} ${product.name} ×${quantity} - ${formatCurrency(entry.value)}`, "warning");
     setShowModal(false);
     setSelectedProduct("");
     setQuantity(1);
@@ -92,7 +92,7 @@ export default function PertesPage() {
   const lossTypeColor = (type: string) => lossTypes.find((l) => l.value === type)?.color || "text-slate-600 bg-slate-50";
 
   return (
-    <AppShell title="Gestion des Pertes" subtitle="Déclarer et suivre les pertes de stock">
+    <AppShell title={t.pertes.title} subtitle={t.pertes.subtitle}>
       <div className="space-y-4">
         {/* KPIs */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -102,7 +102,7 @@ export default function PertesPage() {
                 <TrendingDown className="w-5 h-5 text-red-600" />
               </div>
               <div>
-                <p className="text-xs text-[var(--text-muted)]">Valeur totale des pertes</p>
+                <p className="text-xs text-[var(--text-muted)]">{t.pertes.totalLossValue}</p>
                 <p className="text-lg font-bold text-[var(--text-primary)] tabular-nums">{formatCurrency(totalLossValue)}</p>
               </div>
             </div>
@@ -113,7 +113,7 @@ export default function PertesPage() {
                 <AlertTriangle className="w-5 h-5 text-amber-600" />
               </div>
               <div>
-                <p className="text-xs text-[var(--text-muted)]">Nombre de déclarations</p>
+                <p className="text-xs text-[var(--text-muted)]">{t.pertes.lossCount}</p>
                 <p className="text-lg font-bold text-[var(--text-primary)] tabular-nums">{totalLossCount}</p>
               </div>
             </div>
@@ -124,7 +124,7 @@ export default function PertesPage() {
                 <Package className="w-5 h-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-xs text-[var(--text-muted)]">Articles concernés</p>
+                <p className="text-xs text-[var(--text-muted)]">{t.pertes.affectedItems}</p>
                 <p className="text-lg font-bold text-[var(--text-primary)] tabular-nums">
                   {new Set(losses.map((l) => l.productId)).size}
                 </p>
@@ -136,11 +136,11 @@ export default function PertesPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-semibold text-[var(--text-primary)]">Historique des pertes</h2>
-            <p className="text-xs text-[var(--text-muted)]">Toutes les déclarations de perte</p>
+            <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t.pertes.lossHistory}</h2>
+            <p className="text-xs text-[var(--text-muted)]">{t.pertes.allLosses}</p>
           </div>
           <Button icon={<Plus className="w-4 h-4" />} onClick={() => setShowModal(true)}>
-            Déclarer une perte
+            {t.pertes.declareLoss}
           </Button>
         </div>
 
@@ -149,20 +149,20 @@ export default function PertesPage() {
           {losses.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-[var(--text-muted)]">
               <AlertTriangle className="w-10 h-10 mb-3 opacity-20" />
-              <p className="text-sm font-medium">Aucune perte déclarée</p>
-              <p className="text-xs mt-1">Cliquez sur "Déclarer une perte" pour commencer</p>
+              <p className="text-sm font-medium">{t.pertes.noLosses}</p>
+              <p className="text-xs mt-1">{t.pertes.noLossesHint}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-[var(--border)] bg-[var(--background)]">
-                    <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Produit</th>
-                    <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Quantité</th>
-                    <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Type</th>
-                    <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Raison</th>
-                    <th className="text-right text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Valeur</th>
-                    <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Date</th>
+                    <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">{t.pertes.product}</th>
+                    <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">{t.pertes.quantity}</th>
+                    <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">{t.pertes.type}</th>
+                    <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">{t.pertes.reason}</th>
+                    <th className="text-right text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">{t.pertes.value}</th>
+                    <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">{t.pertes.date}</th>
                     <th className="px-4 py-3"></th>
                   </tr>
                 </thead>
@@ -194,7 +194,7 @@ export default function PertesPage() {
                 </tbody>
                 <tfoot>
                   <tr className="bg-[var(--background)] border-t border-[var(--border)]">
-                    <td colSpan={4} className="px-4 py-3 text-xs font-semibold text-[var(--text-muted)] uppercase">Total</td>
+                    <td colSpan={4} className="px-4 py-3 text-xs font-semibold text-[var(--text-muted)] uppercase">{t.pertes.total}</td>
                     <td className="px-4 py-3 text-sm font-bold text-red-600 tabular-nums text-right">{formatCurrency(totalLossValue)}</td>
                     <td colSpan={2}></td>
                   </tr>

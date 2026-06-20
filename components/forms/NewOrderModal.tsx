@@ -1,16 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { X, ShoppingCart, CheckCircle2, Plus, Trash2, ChevronDown } from "lucide-react";
+import { useState, useRef, useEffect, useMemo } from "react";
+import { X, ShoppingCart, CheckCircle2, Plus, Trash2, ChevronDown, Search, ScanLine } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useI18n } from "@/lib/i18n/context";
 import { cn, formatCurrency } from "@/lib/utils";
 import { suppliers as mockSuppliers } from "@/lib/mock-data";
-import { useSuppliers } from "@/lib/hooks/useApi";
-import type { Supplier } from "@/lib/types";
+import { useSuppliers, useProducts } from "@/lib/hooks/useApi";
+import type { Supplier, Product } from "@/lib/types";
 
 type OrderLine = {
   id: number;
+  productId: string;
   productName: string;
   quantity: number;
   unitCost: number;
@@ -20,16 +21,21 @@ type FormData = {
   supplierId: string;
   expectedDate: string;
   notes: string;
+  invoiceNumber: string;
+  directReceive: boolean;
 };
 
 const emptyForm: FormData = {
   supplierId: "",
   expectedDate: "",
   notes: "",
+  invoiceNumber: "",
+  directReceive: false,
 };
 
 const emptyLine = (): OrderLine => ({
   id: Date.now() + Math.random(),
+  productId: "",
   productName: "",
   quantity: 1,
   unitCost: 0,
@@ -43,13 +49,129 @@ interface NewOrderModalProps {
     lines: OrderLine[];
     total: number;
     notes: string;
+    invoiceNumber: string;
+    directReceive: boolean;
   }) => void;
   defaultSupplier?: Supplier;
+  allowDirectReceive?: boolean;
 }
 
-export function NewOrderModal({ onClose, onSave, defaultSupplier }: NewOrderModalProps) {
+// Composant autocomplete pour la sélection de produit
+function ProductAutocomplete({
+  value,
+  products,
+  onSelect,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  products: Product[];
+  onSelect: (product: Product) => void;
+  onChange: (value: string) => void;
+  placeholder: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [highlightIndex, setHighlightIndex] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const filtered = useMemo(() => {
+    if (!value.trim()) return products.slice(0, 20);
+    const q = value.toLowerCase();
+    return products
+      .filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.sku?.toLowerCase().includes(q) ||
+          p.barcode?.toLowerCase().includes(q),
+      )
+      .slice(0, 20);
+  }, [value, products]);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  useEffect(() => {
+    setHighlightIndex(0);
+  }, [value]);
+
+  return (
+    <div ref={containerRef} className="relative w-full">
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => {
+          onChange(e.target.value);
+          setOpen(true);
+        }}
+        onFocus={() => setOpen(true)}
+        onKeyDown={(e) => {
+          if (!open) return;
+          if (e.key === "ArrowDown") {
+            e.preventDefault();
+            setHighlightIndex((i) => Math.min(i + 1, filtered.length - 1));
+          } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            setHighlightIndex((i) => Math.max(i - 1, 0));
+          } else if (e.key === "Enter" && filtered[highlightIndex]) {
+            e.preventDefault();
+            onSelect(filtered[highlightIndex]);
+            setOpen(false);
+          } else if (e.key === "Escape") {
+            setOpen(false);
+          }
+        }}
+        placeholder={placeholder}
+        className="text-sm border-0 outline-none bg-transparent text-[var(--text-primary)] placeholder:text-[var(--text-muted)] w-full"
+      />
+      {open && filtered.length > 0 && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-56 overflow-y-auto bg-white border border-[var(--border)] rounded-lg shadow-lg">
+          {filtered.map((p, i) => (
+            <button
+              key={p.id}
+              type="button"
+              onMouseEnter={() => setHighlightIndex(i)}
+              onClick={() => {
+                onSelect(p);
+                setOpen(false);
+              }}
+              className={cn(
+                "w-full flex items-center justify-between px-3 py-2 text-left text-sm transition-colors",
+                i === highlightIndex ? "bg-[var(--brand-light)]" : "hover:bg-slate-50",
+              )}
+            >
+              <div className="flex flex-col min-w-0">
+                <span className="truncate text-[var(--text-primary)] font-medium">{p.name}</span>
+                <span className="text-xs text-[var(--text-muted)]">
+                  {p.sku} · {p.category}
+                </span>
+              </div>
+              <span className="text-xs text-[var(--text-muted)] tabular-nums shrink-0 ml-2">
+                {formatCurrency(p.costPrice)}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+      {open && filtered.length === 0 && value.trim() && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-[var(--border)] rounded-lg shadow-lg px-3 py-2 text-sm text-[var(--text-muted)]">
+          Aucun produit trouvé
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function NewOrderModal({ onClose, onSave, defaultSupplier, allowDirectReceive = true }: NewOrderModalProps) {
   const { t } = useI18n();
   const { suppliers: apiSuppliers } = useSuppliers();
+  const { products } = useProducts();
 
   // Convertir les suppliers API au format frontend, fallback sur mock
   const suppliers: Supplier[] = apiSuppliers.length > 0
@@ -74,6 +196,10 @@ export function NewOrderModal({ onClose, onSave, defaultSupplier }: NewOrderModa
   const [lines, setLines] = useState<OrderLine[]>([emptyLine()]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState(false);
+  const [barcodeInput, setBarcodeInput] = useState("");
+  const [scanFeedback, setScanFeedback] = useState<{ type: "ok" | "err"; msg: string } | null>(null);
+  const barcodeRef = useRef<HTMLInputElement>(null);
+  const qtyFocusRef = useRef<number | null>(null);
 
   const set = (field: keyof FormData) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -104,6 +230,71 @@ export function NewOrderModal({ onClose, onSave, defaultSupplier }: NewOrderModa
   const removeLine = (id: number) =>
     setLines((prev) => (prev.length > 1 ? prev.filter((l) => l.id !== id) : prev));
 
+  // Sélection d'un produit depuis l'autocomplete - remplit automatiquement productId, nom et prix
+  const selectProduct = (lineId: number, product: Product) => {
+    setLines((prev) =>
+      prev.map((l) =>
+        l.id === lineId
+          ? {
+              ...l,
+              productId: product.id,
+              productName: product.name,
+              unitCost: product.costPrice,
+            }
+          : l,
+      ),
+    );
+  };
+
+  // Scan code-barres: cherche le produit par barcode/SKU et l'ajoute à la liste
+  const handleBarcodeScan = (raw: string) => {
+    const code = raw.trim();
+    if (!code) return;
+
+    const product = products.find(
+      (p) => p.barcode === code || p.sku === code,
+    );
+
+    if (product) {
+      // Vérifier si le produit est déjà dans la liste
+      const existing = lines.find((l) => l.productId === product.id);
+      if (existing) {
+        // Si déjà présent, on incrémente la quantité
+        setLines((prev) =>
+          prev.map((l) =>
+            l.id === existing.id ? { ...l, quantity: l.quantity + 1 } : l,
+          ),
+        );
+        setScanFeedback({ type: "ok", msg: `${t.achats.scanAdded} ${product.name} (x${existing.quantity + 1})` });
+      } else {
+        // Sinon, on remplace la première ligne vide ou on en ajoute une nouvelle
+        const newLine: OrderLine = {
+          id: Date.now() + Math.random(),
+          productId: product.id,
+          productName: product.name,
+          quantity: 1,
+          unitCost: product.costPrice,
+        };
+        setLines((prev) => {
+          const firstEmpty = prev.find((l) => !l.productId && !l.productName.trim());
+          if (firstEmpty) {
+            return prev.map((l) => (l.id === firstEmpty.id ? newLine : l));
+          }
+          return [...prev, newLine];
+        });
+        setScanFeedback({ type: "ok", msg: `${t.achats.scanAdded} ${product.name}` });
+      }
+    } else {
+      setScanFeedback({ type: "err", msg: `${t.achats.scanNotFound} ${code}` });
+    }
+
+    setBarcodeInput("");
+    // Garder le focus sur le champ scan pour enchaîner les scans
+    setTimeout(() => barcodeRef.current?.focus(), 0);
+    // Effacer le feedback après 3s
+    setTimeout(() => setScanFeedback(null), 3000);
+  };
+
   const total = lines.reduce((s, l) => s + l.quantity * l.unitCost, 0);
 
   const validate = (): boolean => {
@@ -121,7 +312,7 @@ export function NewOrderModal({ onClose, onSave, defaultSupplier }: NewOrderModa
     if (!validate()) return;
     const supplier = suppliers.find((s) => s.id === form.supplierId)!;
     const validLines = lines.filter((l) => l.productName.trim() && l.quantity > 0 && l.unitCost > 0);
-    onSave({ supplier, expectedDate: form.expectedDate, lines: validLines, total, notes: form.notes });
+    onSave({ supplier, expectedDate: form.expectedDate, lines: validLines, total, notes: form.notes, invoiceNumber: form.invoiceNumber, directReceive: form.directReceive });
     setSaved(true);
     setTimeout(() => { setSaved(false); onClose(); }, 1400);
   };
@@ -193,28 +384,89 @@ export function NewOrderModal({ onClose, onSave, defaultSupplier }: NewOrderModa
                   </Field>
                 </div>
 
-                {/* Line items */}
+                {/* Direct receive + invoice number */}
+                {allowDirectReceive && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <Field label={t.achats.invoiceNumber} span={1}>
+                      <input
+                        type="text"
+                        value={form.invoiceNumber}
+                        onChange={set("invoiceNumber")}
+                        placeholder={t.achats.invoiceNumberPh}
+                        className={inputClass(false)}
+                      />
+                    </Field>
+                    <div className="flex items-end">
+                      <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)] cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={form.directReceive}
+                          onChange={(e) => setForm((prev) => ({ ...prev, directReceive: e.target.checked }))}
+                          className="w-4 h-4 accent-[var(--brand)]"
+                        />
+                        {t.achats.directReceive}
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                {/* Bordereau line items */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <label className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide">
-                      {t.achats.items}
+                      {t.achats.bordereau}
                     </label>
                     {errors.lines && (
                       <p className="text-xs text-red-500">{errors.lines}</p>
                     )}
                   </div>
 
+                  {/* Barcode scanner input */}
+                  <div className="mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--brand)]" />
+                        <input
+                          ref={barcodeRef}
+                          type="text"
+                          value={barcodeInput}
+                          onChange={(e) => setBarcodeInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              handleBarcodeScan(barcodeInput);
+                            }
+                          }}
+                          placeholder={t.achats.scanBarcodePh}
+                          className="w-full pl-9 pr-3 py-2.5 text-sm border-2 border-[var(--brand)] rounded-lg outline-none focus:border-[var(--brand)] bg-[var(--brand-light)]/30 placeholder:text-[var(--text-muted)]"
+                          autoFocus
+                        />
+                      </div>
+                    </div>
+                    {scanFeedback && (
+                      <p className={cn(
+                        "mt-1.5 text-xs font-medium",
+                        scanFeedback.type === "ok" ? "text-emerald-600" : "text-red-500"
+                      )}>
+                        {scanFeedback.msg}
+                      </p>
+                    )}
+                  </div>
+
                   <div className="border border-[var(--border)] rounded-xl overflow-hidden">
-                    {/* Column headers */}
-                    <div className="grid grid-cols-[1fr_80px_120px_36px] gap-2 px-3 py-2 bg-slate-50 border-b border-[var(--border)]">
+                    {/* Column headers matching the physical bordereau */}
+                    <div className="grid grid-cols-[1fr_80px_100px_110px_36px] gap-2 px-3 py-2 bg-slate-50 border-b border-[var(--border)]">
                       <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">
-                        {t.common.name}
+                        {t.achats.designation}
                       </span>
                       <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide text-center">
-                        {t.common.quantity}
+                        {t.achats.qte}
                       </span>
                       <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide text-right">
-                        {t.common.price} (FCFA)
+                        {t.achats.pu}
+                      </span>
+                      <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide text-right">
+                        {t.achats.ptotal}
                       </span>
                       <span />
                     </div>
@@ -222,13 +474,13 @@ export function NewOrderModal({ onClose, onSave, defaultSupplier }: NewOrderModa
                     {/* Lines */}
                     <div className="divide-y divide-[var(--border-subtle)]">
                       {lines.map((line) => (
-                        <div key={line.id} className="grid grid-cols-[1fr_80px_120px_36px] gap-2 px-3 py-2 items-center">
-                          <input
-                            type="text"
+                        <div key={line.id} className="grid grid-cols-[1fr_80px_100px_110px_36px] gap-2 px-3 py-2 items-center">
+                          <ProductAutocomplete
                             value={line.productName}
-                            onChange={(e) => updateLine(line.id, "productName", e.target.value)}
-                            placeholder="Nom du produit…"
-                            className="text-sm border-0 outline-none bg-transparent text-[var(--text-primary)] placeholder:text-[var(--text-muted)] w-full"
+                            products={products}
+                            onSelect={(product) => selectProduct(line.id, product)}
+                            onChange={(value) => updateLine(line.id, "productName", value)}
+                            placeholder={t.achats.designationPh}
                           />
                           <input
                             type="number"
@@ -245,6 +497,9 @@ export function NewOrderModal({ onClose, onSave, defaultSupplier }: NewOrderModa
                             placeholder="0"
                             className="text-sm border border-[var(--border)] rounded-lg px-2 py-1 text-right outline-none focus:border-[var(--brand)] tabular-nums bg-white"
                           />
+                          <span className="text-sm text-right tabular-nums text-[var(--text-primary)]">
+                            {formatCurrency(line.quantity * line.unitCost)}
+                          </span>
                           <button
                             type="button"
                             onClick={() => removeLine(line.id)}
@@ -269,7 +524,7 @@ export function NewOrderModal({ onClose, onSave, defaultSupplier }: NewOrderModa
                       className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-medium text-[var(--brand)] hover:bg-[var(--brand-light)] transition-colors border-t border-[var(--border-subtle)]"
                     >
                       <Plus className="w-3.5 h-3.5" />
-                      Ajouter une ligne
+                      {t.achats.addLine}
                     </button>
                   </div>
                 </div>
@@ -299,7 +554,7 @@ export function NewOrderModal({ onClose, onSave, defaultSupplier }: NewOrderModa
                     {t.common.cancel}
                   </Button>
                   <Button type="submit" icon={<CheckCircle2 className="w-4 h-4" />}>
-                    {t.common.save}
+                    {form.directReceive ? t.achats.saveAndReceive : t.common.save}
                   </Button>
                 </div>
               </div>

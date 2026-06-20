@@ -536,6 +536,8 @@ export const purchaseOrdersApi = {
   get: (id: string) => fetchAPI<ApiPurchaseOrder>(`/purchase-orders/${id}`),
   create: (data: { supplierId: string; expectedDate: string; notes?: string; items: Array<{ productId: string; quantity: number; unitCost: number }> }) =>
     fetchAPI<ApiPurchaseOrder>(`/purchase-orders`, { method: "POST", body: JSON.stringify(data) }),
+  createDirect: (data: { supplierId: string; expectedDate: string; notes?: string; invoiceNumber?: string; items: Array<{ productId: string; quantity: number; unitCost: number }> }) =>
+    fetchAPI<ApiPurchaseOrder>(`/purchase-orders/direct`, { method: "POST", body: JSON.stringify(data) }),
   updateStatus: (id: string, status: string) =>
     fetchAPI<ApiPurchaseOrder>(`/purchase-orders/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
 };

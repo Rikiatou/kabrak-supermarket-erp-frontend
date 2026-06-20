@@ -48,12 +48,12 @@ const mockMonthlyData = [
 ];
 
 const mockExpenseBreakdown = [
-  { category: "Achats marchandises", amount: 14_200_000, percentage: 62 },
-  { category: "Salaires", amount: 4_800_000, percentage: 21 },
-  { category: "Loyer & charges", amount: 1_900_000, percentage: 8 },
-  { category: "Énergie", amount: 850_000, percentage: 4 },
-  { category: "Maintenance", amount: 420_000, percentage: 2 },
-  { category: "Divers", amount: 730_000, percentage: 3 },
+  { category: "supplies", amount: 14_200_000, percentage: 62 },
+  { category: "salaries", amount: 4_800_000, percentage: 21 },
+  { category: "rent", amount: 1_900_000, percentage: 8 },
+  { category: "utilities", amount: 850_000, percentage: 4 },
+  { category: "other", amount: 420_000, percentage: 2 },
+  { category: "other", amount: 730_000, percentage: 3 },
 ];
 
 const mockExpenses: ApiExpense[] = [
@@ -65,24 +65,6 @@ const mockExpenses: ApiExpense[] = [
 ];
 
 const PIE_COLORS = ["#1a56db", "#6366f1", "#10b981", "#f59e0b", "#ef4444", "#94a3b8"];
-
-const CATEGORY_LABELS: Record<string, string> = {
-  rent: "Loyer",
-  utilities: "Énergie & utilities",
-  salaries: "Salaires",
-  supplies: "Achats marchandises",
-  transport: "Transport",
-  taxes: "Taxes & impôts",
-  other: "Divers",
-};
-
-const PAYMENT_METHOD_LABELS: Record<string, string> = {
-  cash: "Espèces",
-  transfer: "Virement",
-  card: "Carte",
-  mobile: "Mobile money",
-  check: "Chèque",
-};
 
 const MONTH_NAMES = ["Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Août", "Sep", "Oct", "Nov", "Déc"];
 
@@ -137,11 +119,30 @@ interface AddExpenseModalProps {
 }
 
 function AddExpenseModal({ open, onClose, onSubmit, submitting }: AddExpenseModalProps) {
+  const { t } = useI18n();
   const [category, setCategory] = useState("supplies");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [supplier, setSupplier] = useState("");
+
+  const categoryLabels: Record<string, string> = {
+    rent: t.comptabilite.catRent,
+    utilities: t.comptabilite.catUtilities,
+    salaries: t.comptabilite.catSalaries,
+    supplies: t.comptabilite.catSupplies,
+    transport: t.comptabilite.catTransport,
+    marketing: t.comptabilite.catMarketing,
+    other: t.comptabilite.catOther,
+  };
+
+  const paymentMethodLabels: Record<string, string> = {
+    cash: t.comptabilite.pmCash,
+    transfer: t.comptabilite.pmTransfer,
+    card: t.comptabilite.pmCard,
+    mobile: t.comptabilite.pmMobile,
+    check: t.comptabilite.pmCheck,
+  };
 
   if (!open) return null;
 
@@ -165,37 +166,37 @@ function AddExpenseModal({ open, onClose, onSubmit, submitting }: AddExpenseModa
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-5">
-          <h3 className="text-lg font-semibold text-[var(--text-primary)]">Ajouter une dépense</h3>
+          <h3 className="text-lg font-semibold text-[var(--text-primary)]">{t.comptabilite.addExpense}</h3>
           <button onClick={onClose} className="text-[var(--text-muted)] hover:text-[var(--text-primary)]">
             <X className="w-5 h-5" />
           </button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-[var(--text-muted)] mb-1.5">Catégorie</label>
+            <label className="block text-xs font-medium text-[var(--text-muted)] mb-1.5">{t.comptabilite.expenseCategory}</label>
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
               className="w-full border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand)]"
             >
-              {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
+              {Object.entries(categoryLabels).map(([key, label]) => (
                 <option key={key} value={key}>{label}</option>
               ))}
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-[var(--text-muted)] mb-1.5">Description</label>
+            <label className="block text-xs font-medium text-[var(--text-muted)] mb-1.5">{t.comptabilite.expenseDescription}</label>
             <input
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Description de la dépense"
+              placeholder={t.comptabilite.expenseDescriptionPh}
               className="w-full border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]"
               required
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-[var(--text-muted)] mb-1.5">Montant (FCFA)</label>
+            <label className="block text-xs font-medium text-[var(--text-muted)] mb-1.5">{t.comptabilite.expenseAmount}</label>
             <input
               type="number"
               value={amount}
@@ -208,33 +209,33 @@ function AddExpenseModal({ open, onClose, onSubmit, submitting }: AddExpenseModa
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-[var(--text-muted)] mb-1.5">Mode de paiement</label>
+            <label className="block text-xs font-medium text-[var(--text-muted)] mb-1.5">{t.comptabilite.paymentMethod}</label>
             <select
               value={paymentMethod}
               onChange={(e) => setPaymentMethod(e.target.value)}
               className="w-full border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand)]"
             >
-              {Object.entries(PAYMENT_METHOD_LABELS).map(([key, label]) => (
+              {Object.entries(paymentMethodLabels).map(([key, label]) => (
                 <option key={key} value={key}>{label}</option>
               ))}
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-[var(--text-muted)] mb-1.5">Fournisseur (optionnel)</label>
+            <label className="block text-xs font-medium text-[var(--text-muted)] mb-1.5">{t.comptabilite.supplierOptional}</label>
             <input
               type="text"
               value={supplier}
               onChange={(e) => setSupplier(e.target.value)}
-              placeholder="Nom du fournisseur"
+              placeholder={t.comptabilite.supplierPh}
               className="w-full border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]"
             />
           </div>
           <div className="flex gap-3 pt-2">
             <Button type="button" variant="ghost" className="flex-1" onClick={onClose}>
-              Annuler
+              {t.common.cancel}
             </Button>
             <Button type="submit" variant="primary" className="flex-1" disabled={submitting}>
-              {submitting ? "Enregistrement..." : "Enregistrer"}
+              {submitting ? t.common.saving : t.common.save}
             </Button>
           </div>
         </form>
@@ -263,6 +264,26 @@ export default function ComptabilitePage() {
   const { data: expensesData, loading: expensesLoading } = useExpenses(startDate, endDate);
   const { create: createExpense, creating: expenseCreating } = useCreateExpense();
 
+  // Label resolvers (i18n)
+  const categoryLabels: Record<string, string> = {
+    rent: t.comptabilite.catRent,
+    utilities: t.comptabilite.catUtilities,
+    salaries: t.comptabilite.catSalaries,
+    supplies: t.comptabilite.catSupplies,
+    transport: t.comptabilite.catTransport,
+    marketing: t.comptabilite.catMarketing,
+    other: t.comptabilite.catOther,
+  };
+  const paymentMethodLabels: Record<string, string> = {
+    cash: t.comptabilite.pmCash,
+    transfer: t.comptabilite.pmTransfer,
+    card: t.comptabilite.pmCard,
+    mobile: t.comptabilite.pmMobile,
+    check: t.comptabilite.pmCheck,
+  };
+  const categoryLabel = (key: string) => categoryLabels[key] ?? key;
+  const paymentMethodLabel = (key: string) => paymentMethodLabels[key] ?? key;
+
   // Derived data with fallbacks
   const pl = profitLossData ?? { totalRevenue: 34_100_000, totalExpenses: 22_900_000, netProfit: 11_200_000, expenseBreakdown: [] };
 
@@ -275,13 +296,13 @@ export default function ComptabilitePage() {
 
   const expenseBreakdown = useMemo(() => {
     if (breakdownData && breakdownData.length > 0) {
-      return breakdownData.map((b) => ({ name: CATEGORY_LABELS[b.category] ?? b.category, value: b.amount, percentage: b.percentage }));
+      return breakdownData.map((b) => ({ name: categoryLabel(b.category), value: b.amount, percentage: b.percentage }));
     }
     if (profitLossData?.expenseBreakdown && profitLossData.expenseBreakdown.length > 0) {
-      return profitLossData.expenseBreakdown.map((b) => ({ name: CATEGORY_LABELS[b.category] ?? b.category, value: b.amount, percentage: 0 }));
+      return profitLossData.expenseBreakdown.map((b) => ({ name: categoryLabel(b.category), value: b.amount, percentage: 0 }));
     }
-    return mockExpenseBreakdown.map((b) => ({ name: b.category, value: b.amount, percentage: b.percentage }));
-  }, [breakdownData, profitLossData]);
+    return mockExpenseBreakdown.map((b) => ({ name: categoryLabel(b.category), value: b.amount, percentage: b.percentage }));
+  }, [breakdownData, profitLossData, t]);
 
   const expenses = useMemo(() => {
     return expensesData && expensesData.length > 0 ? expensesData : mockExpenses;
@@ -301,14 +322,14 @@ export default function ComptabilitePage() {
   const handleCreateExpense = async (data: { category: string; description: string; amount: number; paymentMethod: string; supplier?: string }) => {
     try {
       await createExpense(data);
-      toast("Dépense enregistrée avec succès", "success");
+      toast(t.comptabilite.expenseSaved, "success");
       setModalOpen(false);
       // Reload by toggling dates (hooks will refetch on dependency change)
       // Force a refetch by re-setting the same dates
       setStartDate((s) => s);
       setEndDate((e) => e);
     } catch (e: any) {
-      toast(e?.message ?? "Erreur lors de l'enregistrement", "warning");
+      toast(e?.message ?? t.comptabilite.expenseError, "warning");
     }
   };
 
@@ -317,7 +338,7 @@ export default function ComptabilitePage() {
       {/* Date Range Selector */}
       <div className="flex flex-wrap items-end gap-3 mb-5">
         <div>
-          <label className="block text-xs font-medium text-[var(--text-muted)] mb-1.5">Date de début</label>
+          <label className="block text-xs font-medium text-[var(--text-muted)] mb-1.5">{t.comptabilite.startDate}</label>
           <input
             type="date"
             value={startDate}
@@ -470,11 +491,11 @@ export default function ComptabilitePage() {
                 <tr key={e.id} className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--bg-subtle)] transition-colors">
                   <td className="px-5 py-3 text-[var(--text-secondary)] whitespace-nowrap">{formatDate(e.date)}</td>
                   <td className="px-5 py-3">
-                    <Badge variant="neutral">{CATEGORY_LABELS[e.category] ?? e.category}</Badge>
+                    <Badge variant="neutral">{categoryLabels[e.category] ?? e.category}</Badge>
                   </td>
                   <td className="px-5 py-3 text-[var(--text-primary)]">{e.description}</td>
                   <td className="px-5 py-3 text-[var(--text-muted)]">{e.supplier ?? "—"}</td>
-                  <td className="px-5 py-3 text-[var(--text-muted)]">{PAYMENT_METHOD_LABELS[e.paymentMethod] ?? e.paymentMethod}</td>
+                  <td className="px-5 py-3 text-[var(--text-muted)]">{paymentMethodLabels[e.paymentMethod] ?? e.paymentMethod}</td>
                   <td className="px-5 py-3 text-right font-semibold tabular-nums text-[var(--text-primary)] whitespace-nowrap">
                     {formatCurrency(e.amount)}
                   </td>

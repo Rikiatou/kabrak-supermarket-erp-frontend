@@ -673,7 +673,12 @@ export function useCreatePurchaseOrder() {
     try { return await purchaseOrdersApi.create(data); }
     finally { setCreating(false); }
   };
-  return { create, creating };
+  const createDirect = async (data: Parameters<typeof purchaseOrdersApi.createDirect>[0]) => {
+    setCreating(true);
+    try { return await purchaseOrdersApi.createDirect(data); }
+    finally { setCreating(false); }
+  };
+  return { create, createDirect, creating };
 }
 
 // ========================================

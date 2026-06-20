@@ -5,33 +5,34 @@ import { stockAlerts as mockAlerts } from "@/lib/mock-data";
 import { Badge } from "@/components/ui/Badge";
 import { formatDate } from "@/lib/utils";
 import { useStockAlerts } from "@/lib/hooks/useApi";
+import { useI18n } from "@/lib/i18n/context";
 import type { StockAlert } from "@/lib/types";
 
-const severityConfig = {
-  critical: {
-    icon: AlertTriangle,
-    badge: "danger" as const,
-    label: "Critique",
-    iconColor: "text-red-500",
-    bg: "bg-red-50",
-  },
-  low: {
-    icon: ArrowDown,
-    badge: "warning" as const,
-    label: "Stock bas",
-    iconColor: "text-amber-500",
-    bg: "bg-amber-50",
-  },
-  expiring: {
-    icon: Clock,
-    badge: "warning" as const,
-    label: "Expire bientôt",
-    iconColor: "text-orange-500",
-    bg: "bg-orange-50",
-  },
-};
-
 function AlertRow({ alert }: { alert: StockAlert }) {
+  const { t } = useI18n();
+  const severityConfig = {
+    critical: {
+      icon: AlertTriangle,
+      badge: "danger" as const,
+      label: t.stockAlerts.critical,
+      iconColor: "text-red-500",
+      bg: "bg-red-50",
+    },
+    low: {
+      icon: ArrowDown,
+      badge: "warning" as const,
+      label: t.stockAlerts.lowStock,
+      iconColor: "text-amber-500",
+      bg: "bg-amber-50",
+    },
+    expiring: {
+      icon: Clock,
+      badge: "warning" as const,
+      label: t.stockAlerts.expiringSoon,
+      iconColor: "text-orange-500",
+      bg: "bg-orange-50",
+    },
+  };
   const config = severityConfig[alert.severity];
   const Icon = config.icon;
   const stockPercent = Math.round((alert.currentStock / alert.minStock) * 100);
@@ -52,11 +53,11 @@ function AlertRow({ alert }: { alert: StockAlert }) {
         </div>
         <div className="flex items-center gap-3 text-xs text-[var(--text-muted)]">
           <span className="tabular-nums">
-            {alert.currentStock} / {alert.minStock} unités
+            {alert.currentStock} / {alert.minStock} {t.stockAlerts.units}
           </span>
           {alert.expiryDate && (
             <span className="text-orange-500 font-medium">
-              Expire le {formatDate(alert.expiryDate)}
+              {t.stockAlerts.expiresOn} {formatDate(alert.expiryDate)}
             </span>
           )}
         </div>

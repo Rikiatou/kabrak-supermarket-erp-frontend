@@ -55,9 +55,9 @@ export default function ScannerPage() {
         videoRef.current.srcObject = stream;
       }
       setScanning(true);
-      toast("Caméra activée - Scannez les codes-barres", "info");
+      toast(t.scanner.cameraEnabled, "info");
     } catch (err) {
-      toast("Impossible d'accéder à la caméra. Utilisez la recherche manuelle.", "warning");
+      toast(t.scanner.cameraError, "warning");
     }
   };
 
@@ -86,7 +86,7 @@ export default function ScannerPage() {
       addScannedItem(product);
       setManualSearch("");
     } else {
-      toast(`Aucun produit trouvé pour "${manualSearch}"`, "warning");
+      toast(`${t.scanner.noProductFound} "${manualSearch}"`, "warning");
     }
   };
 
@@ -112,7 +112,7 @@ export default function ScannerPage() {
         ...scanned,
       ]);
     }
-    toast(`${product.name} scanné`, "success");
+    toast(`${product.name} ${t.scanner.productScanned}`, "success");
   };
 
   const updateCount = (productId: string, count: number) => {
@@ -136,7 +136,7 @@ export default function ScannerPage() {
     : [];
 
   return (
-    <AppShell title="Scanner d'Inventaire" subtitle="Utilisez votre téléphone pour scanner et compter le stock">
+    <AppShell title={t.scanner.title} subtitle={t.scanner.subtitle}>
       <div className="space-y-4">
         {/* KPIs */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -146,7 +146,7 @@ export default function ScannerPage() {
                 <ScanLine className="w-5 h-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-xs text-[var(--text-muted)]">Articles scannés</p>
+                <p className="text-xs text-[var(--text-muted)]">{t.scanner.scannedItems}</p>
                 <p className="text-lg font-bold text-[var(--text-primary)] tabular-nums">{totalScanned}</p>
               </div>
             </div>
@@ -157,7 +157,7 @@ export default function ScannerPage() {
                 <AlertCircle className="w-5 h-5 text-amber-600" />
               </div>
               <div>
-                <p className="text-xs text-[var(--text-muted)]">Écarts détectés</p>
+                <p className="text-xs text-[var(--text-muted)]">{t.scanner.discrepancies}</p>
                 <p className="text-lg font-bold text-[var(--text-primary)] tabular-nums">{totalDiscrepancies}</p>
               </div>
             </div>
@@ -168,7 +168,7 @@ export default function ScannerPage() {
                 <Package className="w-5 h-5 text-red-600" />
               </div>
               <div>
-                <p className="text-xs text-[var(--text-muted)]">Valeur des écarts</p>
+                <p className="text-xs text-[var(--text-muted)]">{t.scanner.discrepancyValue}</p>
                 <p className="text-lg font-bold text-[var(--text-primary)] tabular-nums">{formatCurrency(totalValue)}</p>
               </div>
             </div>
@@ -179,14 +179,14 @@ export default function ScannerPage() {
           {/* Camera section */}
           <Card className="p-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-[var(--text-primary)]">Scanner caméra</h3>
+              <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t.scanner.cameraScanner}</h3>
               <Button
                 size="sm"
                 variant={scanning ? "secondary" : "primary"}
                 icon={scanning ? <CameraOff className="w-4 h-4" /> : <Camera className="w-4 h-4" />}
                 onClick={scanning ? stopCamera : startCamera}
               >
-                {scanning ? "Arrêter" : "Démarrer"}
+                {scanning ? t.scanner.stop : t.scanner.start}
               </Button>
             </div>
 
@@ -206,21 +206,21 @@ export default function ScannerPage() {
                   </div>
                 </div>
                 <p className="absolute bottom-3 left-3 text-white text-xs bg-black/50 px-2 py-1 rounded">
-                  Pointez la caméra vers un code-barres
+                  {t.scanner.pointCamera}
                 </p>
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center aspect-square bg-slate-50 rounded-xl border-2 border-dashed border-[var(--border)]">
                 <Camera className="w-12 h-12 text-[var(--text-muted)] mb-3" />
-                <p className="text-sm text-[var(--text-secondary)]">Caméra désactivée</p>
-                <p className="text-xs text-[var(--text-muted)] mt-1">Cliquez sur "Démarrer" pour scanner</p>
+                <p className="text-sm text-[var(--text-secondary)]">{t.scanner.cameraDisabled}</p>
+                <p className="text-xs text-[var(--text-muted)] mt-1">{t.scanner.cameraStartHint}</p>
               </div>
             )}
 
             {/* Manual search */}
             <div className="mt-3">
               <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">
-                Recherche manuelle (code-barres ou SKU)
+                {t.scanner.manualSearch}
               </label>
               <div className="flex gap-2">
                 <div className="flex-1 relative">
@@ -230,12 +230,12 @@ export default function ScannerPage() {
                     value={manualSearch}
                     onChange={(e) => setManualSearch(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleManualScan()}
-                    placeholder="Entrez un code-barres..."
+                    placeholder={t.scanner.manualSearchPh}
                     className="w-full pl-9 pr-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]"
                   />
                 </div>
                 <Button onClick={handleManualScan} icon={<ScanLine className="w-4 h-4" />}>
-                  Scanner
+                  {t.scanner.scan}
                 </Button>
               </div>
               {filteredProducts.length > 0 && (
@@ -261,13 +261,13 @@ export default function ScannerPage() {
           {/* Scanned items */}
           <Card className="p-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-[var(--text-primary)]">Articles comptés ({scanned.length})</h3>
+              <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t.scanner.scannedCount} ({scanned.length})</h3>
               {scanned.length > 0 && (
                 <button
                   onClick={() => setScanned([])}
                   className="text-xs text-red-500 hover:underline"
                 >
-                  Tout effacer
+                  {t.scanner.clearAll}
                 </button>
               )}
             </div>
@@ -275,8 +275,8 @@ export default function ScannerPage() {
             {scanned.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-[var(--text-muted)]">
                 <Package className="w-10 h-10 mb-3 opacity-20" />
-                <p className="text-sm">Aucun article scanné</p>
-                <p className="text-xs mt-1">Scannez des produits pour commencer l'inventaire</p>
+                <p className="text-sm">{t.scanner.noItemsScanned}</p>
+                <p className="text-xs mt-1">{t.scanner.scanToStart}</p>
               </div>
             ) : (
               <div className="space-y-2 max-h-[400px] overflow-y-auto">
@@ -289,12 +289,12 @@ export default function ScannerPage() {
                       <p className="text-sm font-medium text-[var(--text-primary)] truncate">{item.name}</p>
                       <p className="text-xs text-[var(--text-muted)] font-mono">{item.barcode}</p>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs text-[var(--text-muted)]">Stock: {item.stock}</span>
+                        <span className="text-xs text-[var(--text-muted)]">{t.scanner.stock} {item.stock}</span>
                         <span className={cn(
                           "text-xs font-medium",
                           item.difference === 0 ? "text-emerald-600" : item.difference > 0 ? "text-blue-600" : "text-red-600"
                         )}>
-                          Écart: {item.difference > 0 ? "+" : ""}{item.difference}
+                          {t.scanner.difference}: {item.difference > 0 ? "+" : ""}{item.difference}
                         </span>
                       </div>
                     </div>
@@ -326,7 +326,7 @@ export default function ScannerPage() {
             {scanned.length > 0 && (
               <div className="mt-3 pt-3 border-t border-[var(--border)]">
                 <Button className="w-full" icon={<RefreshCw className="w-4 h-4" />}>
-                  Valider l'inventaire ({scanned.length} articles)
+                  {t.scanner.validateInventory} ({scanned.length} {t.scanner.articlesLabel})
                 </Button>
               </div>
             )}

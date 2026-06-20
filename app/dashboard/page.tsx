@@ -74,7 +74,7 @@ export default function DashboardPage() {
 
   // Tendance 7 jours — trouver le max pour le graphique
   const maxRevenue = Math.max(...weekTrend.map((d) => d.revenue), 1);
-  const todayLabel = weekTrend[weekTrend.length - 1]?.label || "Auj";
+  const todayLabel = weekTrend[weekTrend.length - 1]?.label || t.common.today;
 
   // Employés actifs aujourd'hui
   const activeEmployees = employees.filter((e) => e.status === "active").slice(0, 6);
@@ -115,7 +115,7 @@ export default function DashboardPage() {
           iconBg="bg-[var(--brand-light)]"
         />
         <KpiCard
-          label="Panier moyen"
+          label={t.dashboard.avgBasket}
           value={averageBasket?.average ?? 0}
           previous={0}
           format="currency"
@@ -131,7 +131,7 @@ export default function DashboardPage() {
           iconBg="bg-[var(--info-light)]"
         />
         <KpiCard
-          label="Factures impayées"
+          label={t.dashboard.unpaidInvoices}
           value={unpaidInvoices?.totalUnpaid ?? 0}
           previous={0}
           format="currency"
@@ -143,17 +143,17 @@ export default function DashboardPage() {
       {/* Indicateurs de changement vs hier */}
       {(revenueChange !== 0 || txnChange !== 0) && (
         <div className="flex items-center gap-4 mb-4 text-xs">
-          <span className="text-[var(--text-muted)]">vs hier:</span>
+          <span className="text-[var(--text-muted)]">{t.dashboard.vsYesterdayLabel}</span>
           {revenueChange !== 0 && (
             <span className={`flex items-center gap-1 font-medium ${revenueChange >= 0 ? "text-emerald-600" : "text-red-600"}`}>
               {revenueChange >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-              CA {revenueChange >= 0 ? "+" : ""}{revenueChange}%
+              {t.dashboard.revenueLabel} {revenueChange >= 0 ? "+" : ""}{revenueChange}%
             </span>
           )}
           {txnChange !== 0 && (
             <span className={`flex items-center gap-1 font-medium ${txnChange >= 0 ? "text-emerald-600" : "text-red-600"}`}>
               {txnChange >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-              Transactions {txnChange >= 0 ? "+" : ""}{txnChange}%
+              {t.dashboard.transactionsLabel} {txnChange >= 0 ? "+" : ""}{txnChange}%
             </span>
           )}
         </div>
@@ -163,8 +163,8 @@ export default function DashboardPage() {
       {weekTrend.length > 0 && (
         <Card className="mb-6" padding="md">
           <CardHeader
-            title="Tendance des ventes (7 derniers jours)"
-            subtitle="Comparaison du chiffre d'affaires par jour"
+            title={t.dashboard.salesTrend}
+            subtitle={t.dashboard.salesTrendSub}
             action={
               <span className="text-xs text-[var(--text-muted)] flex items-center gap-1">
                 <Calendar className="w-3 h-3" />
@@ -210,8 +210,8 @@ export default function DashboardPage() {
         {monthlyGoal && (
           <Card padding="md">
             <CardHeader
-              title="Objectif mensuel"
-              subtitle={`${monthlyGoal.transactions} transactions ce mois`}
+              title={t.dashboard.monthlyGoal}
+              subtitle={`${monthlyGoal.transactions} ${t.dashboard.monthlyGoalSub}`}
             />
             <div className="mt-4">
               <div className="flex items-end justify-between mb-2">
@@ -230,10 +230,10 @@ export default function DashboardPage() {
               </div>
               <div className="flex items-center justify-between mt-2 text-xs">
                 <span className={`font-medium ${monthlyGoal.progress >= 100 ? "text-emerald-600" : "text-[var(--brand)]"}`}>
-                  {monthlyGoal.progress}% atteint
+                  {monthlyGoal.progress}% {t.dashboard.monthlyGoalProgress}
                 </span>
                 <span className="text-[var(--text-muted)]">
-                  Reste: {(monthlyGoal.remaining / 1000).toFixed(0)}k FCFA
+                  {t.dashboard.monthlyGoalRemaining} {(monthlyGoal.remaining / 1000).toFixed(0)}k FCFA
                 </span>
               </div>
             </div>
@@ -244,8 +244,8 @@ export default function DashboardPage() {
         {topProducts.length > 0 && (
           <Card padding="md">
             <CardHeader
-              title="Top 5 produits vendus"
-              subtitle="Ce mois"
+              title={t.dashboard.top5Products}
+              subtitle={t.dashboard.top5Sub}
             />
             <div className="mt-4 space-y-3">
               {topProducts.map((product, i) => (
@@ -255,7 +255,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{product.productName}</p>
-                    <p className="text-xs text-[var(--text-muted)]">{product.quantity} vendus</p>
+                    <p className="text-xs text-[var(--text-muted)]">{product.quantity} {t.dashboard.sold}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-semibold text-[var(--brand)]">
@@ -347,7 +347,7 @@ export default function DashboardPage() {
 
           <div className="flex items-center gap-3 mt-4 flex-wrap">
             {activeEmployees.length === 0 ? (
-              <p className="text-xs text-[var(--text-muted)]">Aucun employé actif</p>
+              <p className="text-xs text-[var(--text-muted)]">{t.dashboard.noActiveEmployees}</p>
             ) : (
               activeEmployees.map((emp) => {
                 const colors: Record<string, string> = {
@@ -357,10 +357,10 @@ export default function DashboardPage() {
                   stockist: "from-amber-400 to-orange-600",
                 };
                 const roleLabels: Record<string, string> = {
-                  manager: "Manager",
-                  supervisor: "Superviseur",
-                  cashier: "Caissier",
-                  stockist: "Stockiste",
+                  manager: t.dashboard.roleManager,
+                  supervisor: t.dashboard.roleSupervisor,
+                  cashier: t.dashboard.roleCashier,
+                  stockist: t.dashboard.roleStockist,
                 };
                 return (
                   <div key={emp.id} className="flex items-center gap-2">

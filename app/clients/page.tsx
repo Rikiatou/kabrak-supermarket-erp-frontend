@@ -95,7 +95,7 @@ export default function ClientsPage() {
   };
 
   return (
-    <AppShell title="Fidélité Client" subtitle="Carte de fidélité et programme de points">
+    <AppShell title={t.clients.title} subtitle={t.clients.subtitle}>
       <div className="space-y-4">
         {/* KPIs */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -105,7 +105,7 @@ export default function ClientsPage() {
                 <Users className="w-5 h-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-xs text-[var(--text-muted)]">Clients inscrits</p>
+                <p className="text-xs text-[var(--text-muted)]">{t.clients.registeredClients}</p>
                 <p className="text-lg font-bold text-[var(--text-primary)] tabular-nums">{totalCustomers}</p>
               </div>
             </div>
@@ -116,7 +116,7 @@ export default function ClientsPage() {
                 <Award className="w-5 h-5 text-amber-600" />
               </div>
               <div>
-                <p className="text-xs text-[var(--text-muted)]">Points distribués</p>
+                <p className="text-xs text-[var(--text-muted)]">{t.clients.distributedPoints}</p>
                 <p className="text-lg font-bold text-[var(--text-primary)] tabular-nums">{totalPoints.toLocaleString()}</p>
               </div>
             </div>
@@ -127,7 +127,7 @@ export default function ClientsPage() {
                 <TrendingUp className="w-5 h-5 text-emerald-600" />
               </div>
               <div>
-                <p className="text-xs text-[var(--text-muted)]">CA fidélité</p>
+                <p className="text-xs text-[var(--text-muted)]">{t.clients.loyaltyRevenue}</p>
                 <p className="text-lg font-bold text-[var(--text-primary)] tabular-nums">{formatCurrency(totalSpent)}</p>
               </div>
             </div>
@@ -142,12 +142,12 @@ export default function ClientsPage() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher par nom, téléphone, n° carte..."
+              placeholder={t.clients.searchPh}
               className="w-full pl-9 pr-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)] bg-white"
             />
           </div>
           <Button icon={<Plus className="w-4 h-4" />} onClick={() => setShowModal(true)}>
-            Nouveau client
+            {t.clients.newClient}
           </Button>
         </div>
 
@@ -189,15 +189,15 @@ export default function ClientsPage() {
 
                 <div className="grid grid-cols-3 gap-2 pt-3 border-t border-[var(--border-subtle)]">
                   <div className="text-center">
-                    <p className="text-xs text-[var(--text-muted)]">Points</p>
+                    <p className="text-xs text-[var(--text-muted)]">{t.clients.points}</p>
                     <p className="text-sm font-bold text-amber-600 tabular-nums">{customer.points}</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-xs text-[var(--text-muted)]">Visites</p>
+                    <p className="text-xs text-[var(--text-muted)]">{t.clients.visits}</p>
                     <p className="text-sm font-bold text-[var(--text-primary)] tabular-nums">{customer.visits}</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-xs text-[var(--text-muted)]">Total</p>
+                    <p className="text-xs text-[var(--text-muted)]">{t.clients.total}</p>
                     <p className="text-sm font-bold text-[var(--text-primary)] tabular-nums">{(customer.totalSpent / 1000).toFixed(0)}K</p>
                   </div>
                 </div>
@@ -212,7 +212,7 @@ export default function ClientsPage() {
                     setRedeemPoints(Math.min(customer.points, 100));
                   }}
                 >
-                  Échanger des points
+                  {t.clients.redeemPoints}
                 </Button>
               </Card>
             );
@@ -225,27 +225,27 @@ export default function ClientsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowModal(false)}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-[var(--text-primary)]">Nouveau client fidèle</h3>
+              <h3 className="text-sm font-bold text-[var(--text-primary)]">{t.clients.newLoyalClient}</h3>
               <button onClick={() => setShowModal(false)} className="p-1 hover:bg-slate-100 rounded-lg">
                 <X className="w-4 h-4 text-[var(--text-muted)]" />
               </button>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Prénom *</label>
+                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">{t.clients.firstName}</label>
                 <input value={firstName} onChange={(e) => setFirstName(e.target.value)} className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]" />
               </div>
               <div>
-                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Nom *</label>
+                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">{t.clients.lastName}</label>
                 <input value={lastName} onChange={(e) => setLastName(e.target.value)} className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]" />
               </div>
             </div>
             <div>
-              <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Téléphone *</label>
-              <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+237 6XX XXX XXX" className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]" />
+              <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">{t.clients.phone}</label>
+              <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t.clients.phonePh} className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]" />
             </div>
             <div>
-              <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Email (optionnel)</label>
+              <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">{t.clients.emailOptional}</label>
               <input value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]" />
             </div>
             <div className="flex gap-2 pt-2">

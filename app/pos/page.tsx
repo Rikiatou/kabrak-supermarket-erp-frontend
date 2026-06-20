@@ -31,8 +31,16 @@ import { useAuth } from "@/lib/auth/context";
 import { getEffectivePrice, hasActiveMarkdown, daysToExpiry } from "@/lib/api";
 import type { Product, CartItem } from "@/lib/types";
 
-const CATEGORIES = ["Tous", "Épicerie", "Boissons", "Produits laitiers", "Hygiène", "Boucherie", "Boulangerie", "Surgelés"];
 const TAX_RATE = 0.155;
+// Stable backend category keys (always French in DB) - order matches CATEGORIES labels
+const CATEGORY_KEYS = ["Tous", "Épicerie", "Boissons", "Produits laitiers", "Hygiène", "Boucherie", "Boulangerie", "Surgelés"];
+
+// Magasin info affiché sur le ticket
+const STORE_INFO = {
+  name: "KABRAK MARKET",
+  address: "Supermarket Pro - Yaoundé, Cameroun",
+  phone: "Tel: +237 6XX XXX XXX",
+};
 
 type PaymentMethod = "cash" | "card" | "mobile" | "split";
 type CheckoutStep = "cart" | "payment" | "receipt";
@@ -51,6 +59,8 @@ interface ReceiptData {
   tax: number;
   total: number;
   method: PaymentMethod;
+  cashier: string;
+  discountReason?: string;
   cashGiven?: number;
   change?: number;
   split?: SplitPayment;
@@ -61,14 +71,26 @@ export default function POSPage() {
   const { products: apiProducts, loading } = useProducts();
   const { create: createTransaction, creating } = useCreateTransaction();
   const { user } = useAuth();
+  const CATEGORIES = [
+    t.common.catAll,
+    t.common.catGrocery,
+    t.common.catDrinks,
+    t.common.catDairy,
+    t.common.catHygiene,
+    t.common.catButcher,
+    t.common.catBakery,
+    t.common.catFrozen,
+  ];
   const [cart, setCart] = useState<CartItem[]>([]);
   const [search, setSearch] = useState("");
-  const [activeCategory, setActiveCategory] = useState<string>(t.pos.categories.all);
+  const [activeCategoryIdx, setActiveCategoryIdx] = useState<number>(0);
   const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>("cart");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [cashGiven, setCashGiven] = useState("");
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
-  const [discountPercent, setDiscountPercent] = useState(0);
+  const [cashierDiscountAmount, setCashierDiscountAmount] = useState(0);
+  const [cashierDiscountReason, setCashierDiscountReason] = useState("");
+  const [showDiscountModal, setShowDiscountModal] = useState(false);
   const [splitPayment, setSplitPayment] = useState<SplitPayment>({ cash: 0, mobile: 0, card: 0 });
   const [scanSound] = useState(() => {
     if (typeof Audio !== "undefined") {
@@ -84,7 +106,8 @@ export default function POSPage() {
   const products = apiProducts.length > 0 ? apiProducts : mockProducts;
 
   const filtered = products.filter((p) => {
-    const matchCat = activeCategory === t.pos.categories.all || p.category === activeCategory;
+    const activeCategory = CATEGORY_KEYS[activeCategoryIdx];
+    const matchCat = activeCategoryIdx === 0 || p.category === activeCategory;
     const matchSearch =
       !search ||
       p.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -147,15 +170,16 @@ export default function POSPage() {
 
   const clearCart = () => {
     setCart([]);
-    setDiscountPercent(0);
+    setCashierDiscountAmount(0);
+    setCashierDiscountReason("");
     setCheckoutStep("cart");
   };
 
   const subtotal = cart.reduce((s, i) => s + getEffectivePrice(i.product) * i.quantity, 0);
-  const discountAmount = Math.round(subtotal * (discountPercent / 100));
-  const taxable = subtotal - discountAmount;
-  const tax = Math.round(taxable * TAX_RATE);
-  const total = taxable + tax;
+  const tax = 0;
+  const totalBeforeDiscount = subtotal + tax;
+  const discount = Math.min(cashierDiscountAmount, totalBeforeDiscount);
+  const total = totalBeforeDiscount - discount;
   const cashGivenNum = parseFloat(cashGiven.replace(/\s/g, "")) || 0;
   const change = cashGivenNum - total;
 
@@ -173,24 +197,38 @@ export default function POSPage() {
     const recordedMethod = isSplit ? (splitPayment.cash > 0 ? "cash" : "card") : paymentMethod;
 
     // Essayer d'enregistrer la vente dans le backend
+    // Répartition proportionnelle de la remise sur les articles
+    const totalForAllocation = subtotal;
+    const allocatedDiscount = cart.map((item) => {
+      const effPrice = getEffectivePrice(item.product);
+      const lineTotal = effPrice * item.quantity;
+      const ratio = totalForAllocation > 0 ? lineTotal / totalForAllocation : 0;
+      return Math.round(discount * ratio);
+    });
+    // Ajuste pour éviter les erreurs d'arrondi
+    const allocatedSum = allocatedDiscount.reduce((s, d) => s + d, 0);
+    if (allocatedSum !== discount && cart.length > 0) {
+      allocatedDiscount[0] += discount - allocatedSum;
+    }
+
     const tx = await createTransaction({
       cashierId: defaultCashierId,
       subtotal,
-      discount: discountAmount,
+      discount,
       tax,
       total,
       paymentMethod: recordedMethod,
       cashGiven: effectiveCashGiven,
       change: effectiveChange,
-      items: cart.map((item) => {
+      items: cart.map((item, idx) => {
         const effPrice = getEffectivePrice(item.product);
         return {
           productId: item.product.id,
           quantity: item.quantity,
           unitPrice: effPrice,
-          discount: Math.round(effPrice * item.quantity * (discountPercent / 100)),
-          tax: Math.round(effPrice * item.quantity * TAX_RATE),
-          total: Math.round(effPrice * item.quantity * (1 + TAX_RATE)),
+          discount: allocatedDiscount[idx],
+          tax: 0,
+          total: effPrice * item.quantity - allocatedDiscount[idx],
         };
       }),
     });
@@ -201,10 +239,12 @@ export default function POSPage() {
       id,
       items: [...cart],
       subtotal,
-      discount: discountAmount,
+      discount,
       tax,
       total,
       method: paymentMethod,
+      cashier: `${user?.firstName || ""} ${user?.lastName || ""}`.trim(),
+      discountReason: cashierDiscountReason,
       cashGiven: isSplit ? splitTotal : paymentMethod === "cash" ? cashGivenNum : undefined,
       change: isSplit ? 0 : paymentMethod === "cash" ? change : undefined,
       split: isSplit ? splitPayment : undefined,
@@ -218,6 +258,8 @@ export default function POSPage() {
     setCheckoutStep("cart");
     setCashGiven("");
     setSplitPayment({ cash: 0, mobile: 0, card: 0 });
+    setCashierDiscountAmount(0);
+    setCashierDiscountReason("");
     setTimeout(() => searchRef.current?.focus(), 100);
   };
 
@@ -232,32 +274,31 @@ export default function POSPage() {
     const dateStr = now.toLocaleDateString("fr-FR");
     const timeStr = now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 
-    const itemsHtml = receipt.items
-      .map(
-        (item) => {
-          const effPrice = getEffectivePrice(item.product);
-          const hasMd = hasActiveMarkdown(item.product);
-          const label = hasMd
-            ? `${item.product.name.substring(0, 22)} ×${item.quantity} (PROMO)`
-            : `${item.product.name.substring(0, 24)} ×${item.quantity}`;
-          return `<tr><td style="font-size:11px">${label}</td><td style="text-align:right;font-size:11px">${formatCurrency(effPrice * item.quantity)}</td></tr>`;
-        }
-      )
-      .join("");
-
     const methodLabel =
       receipt.method === "split"
-        ? "Paiement mixte"
+        ? t.pos.split
         : receipt.method === "cash"
-        ? "Espèces"
+        ? t.pos.cash
         : receipt.method === "card"
-        ? "Carte"
-        : "Mobile Money";
+        ? t.pos.card
+        : t.pos.mobile;
+
+    const printItemsHtml = receipt.items
+      .map((item) => {
+        const effPrice = getEffectivePrice(item.product);
+        return `<tr>
+          <td style="font-size:11px;vertical-align:top">${item.product.name}</td>
+          <td style="text-align:center;font-size:11px;vertical-align:top">${item.quantity}</td>
+          <td style="text-align:right;font-size:11px;vertical-align:top">${formatCurrency(effPrice)}</td>
+          <td style="text-align:right;font-size:11px;vertical-align:top">${formatCurrency(effPrice * item.quantity)}</td>
+        </tr>`;
+      })
+      .join("");
 
     printWindow.document.write(`
       <html>
       <head>
-        <title>Ticket ${receipt.id}</title>
+        <title>${t.pos.receipt} ${receipt.id}</title>
         <style>
           @page { size: 80mm auto; margin: 0; }
           body { width: 72mm; margin: 4mm auto; font-family: 'Courier New', monospace; color: #000; }
@@ -273,32 +314,38 @@ export default function POSPage() {
         </style>
       </head>
       <body>
-        <h1>KABRAK MARKET</h1>
+        <h1>${STORE_INFO.name}</h1>
+        <p class="center small">${STORE_INFO.address}</p>
+        <p class="center small">${STORE_INFO.phone}</p>
         <p class="center small">${dateStr} — ${timeStr}</p>
-        <p class="center small">Ticket: ${receipt.id}</p>
-        <p class="center small">Caissier: ${user?.firstName || "Caisse"}</p>
+        <p class="center small">${t.pos.receipt}: ${receipt.id}</p>
+        <p class="center small">${t.pos.cashier}: ${receipt.cashier}</p>
         <div class="dashed"></div>
-        <table>${itemsHtml}</table>
+        <table>
+          <tr><td class="small" style="font-weight:bold">${t.pos.receiptItem}</td><td class="small" style="text-align:center;font-weight:bold">${t.pos.receiptQty}</td><td class="small" style="text-align:right;font-weight:bold">${t.pos.receiptUnit}</td><td class="small" style="text-align:right;font-weight:bold">${t.pos.receiptTotal}</td></tr>
+          ${printItemsHtml}
+        </table>
         <div class="dashed"></div>
-        ${receipt.discount > 0 ? `<table><tr><td class="small">Remise</td><td class="right small">-${formatCurrency(receipt.discount)}</td></tr></table>` : ""}
-        <table><tr><td class="small">TVA (15.5%)</td><td class="right small">${formatCurrency(receipt.tax)}</td></tr></table>
+        <table>
+          <tr><td class="small">${t.pos.subtotal}</td><td class="right small">${formatCurrency(receipt.subtotal)}</td></tr>
+          ${receipt.discount > 0 ? `<tr><td class="small">${t.pos.discount} ${receipt.discountReason ? `(${receipt.discountReason})` : ""}</td><td class="right small">-${formatCurrency(receipt.discount)}</td></tr>` : ""}
+        </table>
         <div class="dashed"></div>
-        <table><tr><td class="total">TOTAL</td><td class="right total">${formatCurrency(receipt.total)}</td></tr></table>
+        <table><tr><td class="total">${t.pos.total.toUpperCase()}</td><td class="right total">${formatCurrency(receipt.total)}</td></tr></table>
         <div class="dashed"></div>
         <table>
           <tr><td class="small">${methodLabel}</td><td class="right small">${formatCurrency(receipt.total)}</td></tr>
-          ${receipt.cashGiven != null ? `<tr><td class="small">Reçu</td><td class="right small">${formatCurrency(receipt.cashGiven)}</td></tr>` : ""}
-          ${receipt.change != null ? `<tr><td class="small">Monnaie</td><td class="right small">${formatCurrency(receipt.change)}</td></tr>` : ""}
+          ${receipt.cashGiven != null ? `<tr><td class="small">${t.pos.amountGiven}</td><td class="right small">${formatCurrency(receipt.cashGiven)}</td></tr>` : ""}
+          ${receipt.change != null ? `<tr><td class="small">${t.pos.change}</td><td class="right small">${formatCurrency(receipt.change)}</td></tr>` : ""}
         </table>
         ${receipt.split ? `<table>
-          <tr><td class="small">- Espèces</td><td class="right small">${formatCurrency(receipt.split.cash)}</td></tr>
-          <tr><td class="small">- Mobile</td><td class="right small">${formatCurrency(receipt.split.mobile)}</td></tr>
-          <tr><td class="small">- Carte</td><td class="right small">${formatCurrency(receipt.split.card)}</td></tr>
+          <tr><td class="small">- ${t.pos.cash}</td><td class="right small">${formatCurrency(receipt.split.cash)}</td></tr>
+          <tr><td class="small">- ${t.pos.mobile}</td><td class="right small">${formatCurrency(receipt.split.mobile)}</td></tr>
+          <tr><td class="small">- ${t.pos.card}</td><td class="right small">${formatCurrency(receipt.split.card)}</td></tr>
         </table>` : ""}
         <div class="dashed"></div>
-        <p class="center small" style="margin-top:8px">Merci pour votre visite!</p>
-        <p class="center small">KABRAK Supermarket Pro</p>
-        <p class="center small">Tel: +237 6XX XXX XXX</p>
+        <p class="center small" style="margin-top:8px">${t.pos.thankYou}</p>
+        <p class="center small">${STORE_INFO.name}</p>
       </body>
       </html>
     `);
@@ -337,13 +384,13 @@ export default function POSPage() {
               )}
             </div>
             <div className="flex gap-1.5 flex-wrap">
-              {CATEGORIES.map((cat) => (
+              {CATEGORIES.map((cat, idx) => (
                 <button
-                  key={cat}
-                  onClick={() => setActiveCategory(cat)}
+                  key={idx}
+                  onClick={() => setActiveCategoryIdx(idx)}
                   className={cn(
                     "px-3 py-1 text-xs font-medium rounded-lg transition-all",
-                    activeCategory === cat
+                    activeCategoryIdx === idx
                       ? "bg-[var(--brand)] text-white shadow-sm"
                       : "bg-[var(--background)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
                   )}
@@ -436,8 +483,9 @@ export default function POSPage() {
             <PaymentPanel
               total={total}
               subtotal={subtotal}
-              discount={discountAmount}
+              discount={discount}
               tax={tax}
+              discountReason={cashierDiscountReason}
               paymentMethod={paymentMethod}
               setPaymentMethod={setPaymentMethod}
               cashGiven={cashGiven}
@@ -567,26 +615,18 @@ export default function POSPage() {
               {/* Discount row */}
               {cart.length > 0 && (
                 <div className="px-4 py-2 border-t border-[var(--border-subtle)] shrink-0">
-                  <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowDiscountModal(true)}
+                    className="flex items-center gap-2 w-full"
+                  >
                     <Tag className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-                    <span className="text-xs text-[var(--text-muted)] flex-1">{t.pos.globalDiscount}</span>
-                    <div className="flex items-center gap-1">
-                      {[0, 5, 10, 15].map((p) => (
-                        <button
-                          key={p}
-                          onClick={() => setDiscountPercent(p)}
-                          className={cn(
-                            "px-2 py-1 text-[11px] font-medium rounded-lg transition-all",
-                            discountPercent === p
-                              ? "bg-[var(--brand)] text-white"
-                              : "bg-slate-100 text-[var(--text-secondary)] hover:bg-slate-200"
-                          )}
-                        >
-                          {p === 0 ? "—" : `${p}%`}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                    <span className="text-xs text-[var(--text-muted)] flex-1 text-left">{t.pos.cashierDiscount}</span>
+                    {cashierDiscountAmount > 0 ? (
+                      <span className="text-xs font-semibold text-emerald-600 tabular-nums">-{formatCurrency(cashierDiscountAmount)}</span>
+                    ) : (
+                      <span className="text-[11px] text-[var(--brand)] font-medium">{t.pos.addDiscount}</span>
+                    )}
+                  </button>
                 </div>
               )}
 
@@ -597,18 +637,14 @@ export default function POSPage() {
                     <span>{t.pos.subtotal}</span>
                     <span className="tabular-nums">{formatCurrency(subtotal)}</span>
                   </div>
-                  {discountAmount > 0 && (
+                  {discount > 0 && (
                     <div className="flex justify-between text-xs text-emerald-600">
-                      <span>{t.pos.discount} ({discountPercent}%)</span>
-                      <span className="tabular-nums">-{formatCurrency(discountAmount)}</span>
+                      <span>{t.pos.discount} {cashierDiscountReason ? `(${cashierDiscountReason})` : ""}</span>
+                      <span className="tabular-nums">-{formatCurrency(discount)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-xs text-[var(--text-muted)]">
-                    <span>{t.pos.tax}</span>
-                    <span className="tabular-nums">{formatCurrency(tax)}</span>
-                  </div>
                   <div className="flex justify-between text-base font-bold text-[var(--text-primary)] pt-1 border-t border-[var(--border)]">
-                    <span>{t.pos.totalTTC}</span>
+                    <span>{t.pos.total}</span>
                     <span className="tabular-nums text-[var(--brand)]">{formatCurrency(total)}</span>
                   </div>
                 </div>
@@ -630,7 +666,79 @@ export default function POSPage() {
           )}
         </div>
       </div>
+      {showDiscountModal && (
+        <DiscountModal
+          current={cashierDiscountAmount}
+          reason={cashierDiscountReason}
+          subtotal={subtotal}
+          onClose={() => setShowDiscountModal(false)}
+          onApply={(amount, reason) => {
+            setCashierDiscountAmount(amount);
+            setCashierDiscountReason(reason);
+            setShowDiscountModal(false);
+          }}
+        />
+      )}
     </AppShell>
+  );
+}
+
+// ── Discount Modal ─────────────────────────────────────────────────────────────
+
+function DiscountModal({
+  current,
+  reason,
+  subtotal,
+  onClose,
+  onApply,
+}: {
+  current: number;
+  reason: string;
+  subtotal: number;
+  onClose: () => void;
+  onApply: (amount: number, reason: string) => void;
+}) {
+  const { t } = useI18n();
+  const [amount, setAmount] = useState(current);
+  const [reasonText, setReasonText] = useState(reason);
+  const max = subtotal;
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-[var(--shadow-lg)] w-full max-w-sm p-5">
+        <h3 className="text-base font-semibold text-[var(--text-primary)] mb-4">{t.pos.discountTitle}</h3>
+        <div className="space-y-4">
+          <div>
+            <label className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-widest mb-1.5 block">
+              {t.pos.discountAmount}
+            </label>
+            <input
+              type="number"
+              value={amount || ""}
+              onChange={(e) => setAmount(Math.max(0, Math.min(max, parseInt(e.target.value) || 0)))}
+              className="w-full border border-[var(--border)] rounded-xl px-4 py-3 text-lg font-bold text-[var(--text-primary)] tabular-nums text-right outline-none focus:border-[var(--brand)] transition-colors bg-white"
+            />
+            <p className="text-[11px] text-[var(--text-muted)] mt-1">{t.pos.maxDiscount}: {formatCurrency(max)}</p>
+          </div>
+          <div>
+            <label className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-widest mb-1.5 block">
+              {t.pos.discountReason}
+            </label>
+            <input
+              type="text"
+              value={reasonText}
+              onChange={(e) => setReasonText(e.target.value)}
+              placeholder={t.pos.discountReasonPh}
+              className="w-full border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--brand)] transition-colors bg-white"
+            />
+          </div>
+          <div className="flex gap-3 pt-2">
+            <Button variant="secondary" className="flex-1" onClick={onClose}>{t.common.cancel}</Button>
+            <Button className="flex-1" onClick={() => onApply(amount, reasonText)}>{t.pos.applyDiscount}</Button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -641,6 +749,7 @@ interface PaymentPanelProps {
   subtotal: number;
   discount: number;
   tax: number;
+  discountReason?: string;
   paymentMethod: PaymentMethod;
   setPaymentMethod: (m: PaymentMethod) => void;
   cashGiven: string;
@@ -659,6 +768,7 @@ function PaymentPanel({
   subtotal,
   discount,
   tax,
+  discountReason,
   paymentMethod,
   setPaymentMethod,
   cashGiven,
@@ -806,7 +916,7 @@ function PaymentPanel({
                 "text-xs font-medium mb-0.5",
                 splitRemaining === 0 ? "text-emerald-600" : "text-amber-600"
               )}>
-                {splitRemaining === 0 ? "Montant complet" : "Reste à payer"}
+                {splitRemaining === 0 ? t.pos.paymentConfirmed : t.factures.remainingBalance}
               </p>
               <p className={cn(
                 "text-xl font-bold tabular-nums",
@@ -826,14 +936,10 @@ function PaymentPanel({
           </div>
           {discount > 0 && (
             <div className="flex justify-between text-emerald-600">
-              <span>{t.pos.discount}</span>
+              <span>{t.pos.discount} {discountReason ? `(${discountReason})` : ""}</span>
               <span className="tabular-nums">-{formatCurrency(discount)}</span>
             </div>
           )}
-          <div className="flex justify-between text-[var(--text-muted)]">
-            <span>{t.pos.tax}</span>
-            <span className="tabular-nums">{formatCurrency(tax)}</span>
-          </div>
         </div>
       </div>
 
@@ -844,7 +950,7 @@ function PaymentPanel({
           onClick={onConfirm}
           icon={creating ? <RotateCcw className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
         >
-          {creating ? "Traitement..." : t.pos.confirmPayment}
+          {creating ? t.common.processing : t.pos.confirmPayment}
         </Button>
       </div>
     </div>
@@ -863,8 +969,10 @@ function ReceiptPanel({
   onPrint: () => void;
 }) {
   const { t } = useI18n();
-  const methodLabels: Record<string, string> = { cash: t.pos.cash, card: t.pos.card, mobile: t.pos.mobile, split: "Mixte" };
+  const methodLabels: Record<string, string> = { cash: t.pos.cash, card: t.pos.card, mobile: t.pos.mobile, split: t.pos.split };
   const now = new Date();
+  const dateStr = now.toLocaleDateString("fr-FR");
+  const timeStr = now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 
   return (
     <div className="flex flex-col h-full">
@@ -881,38 +989,53 @@ function ReceiptPanel({
         {/* Receipt body */}
         <div className="bg-slate-50 rounded-xl p-4 font-mono text-xs space-y-1.5">
           <div className="text-center mb-3">
-            <p className="font-bold text-sm">KABRAK MARKET</p>
-            <p className="text-[var(--text-muted)]">
-              {now.toLocaleDateString("fr-FR")} — {now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+            <p className="font-bold text-sm">{STORE_INFO.name}</p>
+            <p className="text-[var(--text-muted)]">{STORE_INFO.address}</p>
+            <p className="text-[var(--text-muted)]">{STORE_INFO.phone}</p>
+            <p className="text-[var(--text-muted)] mt-1">
+              {dateStr} {timeStr}
             </p>
+            <p className="text-[var(--text-muted)]">{t.pos.cashier}: {receipt.cashier}</p>
           </div>
           <div className="border-t border-dashed border-slate-300 my-2" />
+
+          {/* Table header */}
+          <div className="flex justify-between text-[var(--text-muted)] text-[10px] uppercase tracking-wider">
+            <span className="flex-1">{t.pos.receiptItem}</span>
+            <span className="w-10 text-center">{t.pos.receiptQty}</span>
+            <span className="w-16 text-right">{t.pos.receiptUnit}</span>
+            <span className="w-16 text-right">{t.pos.receiptTotal}</span>
+          </div>
+          <div className="border-t border-dashed border-slate-300 my-1" />
+
           {receipt.items.map((item) => {
             const effPrice = getEffectivePrice(item.product);
             const hasMd = hasActiveMarkdown(item.product);
             return (
-            <div key={item.product.id} className="flex justify-between">
-              <span className="truncate flex-1 pr-2">
-                {item.product.name.substring(0, 18)} ×{item.quantity}
+            <div key={item.product.id} className="flex justify-between items-start">
+              <span className="flex-1 pr-2 leading-tight">
+                {item.product.name}
                 {hasMd && <span className="text-red-600 font-bold"> PROMO</span>}
               </span>
-              <span className="tabular-nums shrink-0">{formatCurrency(effPrice * item.quantity)}</span>
+              <span className="w-10 text-center tabular-nums">{item.quantity}</span>
+              <span className="w-16 text-right tabular-nums">{formatCurrency(effPrice)}</span>
+              <span className="w-16 text-right tabular-nums">{formatCurrency(effPrice * item.quantity)}</span>
             </div>
             );
           })}
           <div className="border-t border-dashed border-slate-300 my-2" />
+          <div className="flex justify-between text-[var(--text-muted)]">
+            <span>{t.pos.subtotal}</span>
+            <span className="tabular-nums">{formatCurrency(receipt.subtotal)}</span>
+          </div>
           {receipt.discount > 0 && (
             <div className="flex justify-between text-emerald-600">
-              <span>{t.pos.discount}</span>
+              <span>{t.pos.discount} {receipt.discountReason ? `(${receipt.discountReason})` : ""}</span>
               <span className="tabular-nums">-{formatCurrency(receipt.discount)}</span>
             </div>
           )}
-          <div className="flex justify-between text-[var(--text-muted)]">
-            <span>{t.pos.tax}</span>
-            <span className="tabular-nums">{formatCurrency(receipt.tax)}</span>
-          </div>
-          <div className="flex justify-between font-bold text-sm mt-1">
-            <span>TOTAL</span>
+          <div className="flex justify-between font-bold text-sm mt-1 pt-1 border-t border-[var(--border)]">
+            <span>{t.pos.total}</span>
             <span className="tabular-nums">{formatCurrency(receipt.total)}</span>
           </div>
           <div className="border-t border-dashed border-slate-300 my-2" />
@@ -932,6 +1055,8 @@ function ReceiptPanel({
               </div>
             </>
           )}
+          <div className="border-t border-dashed border-slate-300 my-2" />
+          <p className="text-center text-[var(--text-muted)] mt-1">{t.pos.thankYou}</p>
         </div>
       </div>
 

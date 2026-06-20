@@ -5,6 +5,7 @@ import { recentTransactions as mockTx } from "@/lib/mock-data";
 import { Badge } from "@/components/ui/Badge";
 import { formatCurrency, formatTime } from "@/lib/utils";
 import { useRecentTransactions } from "@/lib/hooks/useApi";
+import { useI18n } from "@/lib/i18n/context";
 
 const paymentIcons: Record<string, any> = {
   cash: Banknote,
@@ -12,20 +13,21 @@ const paymentIcons: Record<string, any> = {
   mobile: Smartphone,
 };
 
-const paymentLabels: Record<string, string> = {
-  cash: "Espèces",
-  card: "Carte",
-  mobile: "Mobile Money",
-};
-
 export function RecentTransactions() {
+  const { t } = useI18n();
   const { transactions } = useRecentTransactions(10);
+
+  const paymentLabels: Record<string, string> = {
+    cash: t.common.cash,
+    card: t.common.card,
+    mobile: t.common.mobile,
+  };
 
   // Convertir les transactions du backend au format affichable
   const backendTx = transactions.map((tx) => ({
     id: tx.transactionNumber,
     date: tx.date,
-    cashier: tx.cashier ? `${tx.cashier.firstName} ${tx.cashier.lastName}` : "Caissier",
+    cashier: tx.cashier ? `${tx.cashier.firstName} ${tx.cashier.lastName}` : t.recentTx.cashier,
     total: tx.total,
     paymentMethod: tx.paymentMethod as "cash" | "card" | "mobile",
     status: tx.status as "completed" | "refunded" | "pending",
@@ -63,7 +65,7 @@ export function RecentTransactions() {
                   {tx.id.replace("TXN-", "#")}
                 </span>
                 <Badge variant={isRefunded ? "danger" : "success"} size="sm">
-                  {isRefunded ? "Remboursé" : "Validé"}
+                  {isRefunded ? t.recentTx.refunded : t.recentTx.validated}
                 </Badge>
               </div>
               <p className="text-xs text-[var(--text-muted)] truncate">{tx.cashier}</p>

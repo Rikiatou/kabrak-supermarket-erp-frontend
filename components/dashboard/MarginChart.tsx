@@ -13,6 +13,7 @@ import {
 import { marginByCategory as mockData } from "@/lib/mock-data";
 import { formatCurrency } from "@/lib/utils";
 import { useMarginByCategory } from "@/lib/hooks/useApi";
+import { useI18n } from "@/lib/i18n/context";
 
 const COLORS = [
   "#1a56db",
@@ -29,11 +30,13 @@ const CustomTooltip = ({
   payload,
   label,
   data,
+  labels,
 }: {
   active?: boolean;
   payload?: { value: number; name: string }[];
   label?: string;
   data: Array<{ category: string; revenue: number; margin: number; marginRate: number }>;
+  labels: { revenue: string; margin: string; rate: string };
 }) => {
   if (!active || !payload?.length) return null;
   const item = data.find((d) => d.category === label);
@@ -42,19 +45,19 @@ const CustomTooltip = ({
       <p className="font-semibold text-[var(--text-primary)] mb-2 text-xs">{label}</p>
       <div className="space-y-1">
         <div className="flex justify-between gap-4">
-          <span className="text-[var(--text-muted)] text-xs">CA</span>
+          <span className="text-[var(--text-muted)] text-xs">{labels.revenue}</span>
           <span className="font-medium tabular-nums text-xs">{formatCurrency(payload[0].value)}</span>
         </div>
         {item && (
           <>
             <div className="flex justify-between gap-4">
-              <span className="text-[var(--text-muted)] text-xs">Marge</span>
+              <span className="text-[var(--text-muted)] text-xs">{labels.margin}</span>
               <span className="font-medium text-emerald-600 tabular-nums text-xs">
                 {formatCurrency(item.margin)}
               </span>
             </div>
             <div className="flex justify-between gap-4">
-              <span className="text-[var(--text-muted)] text-xs">Taux</span>
+              <span className="text-[var(--text-muted)] text-xs">{labels.rate}</span>
               <span className="font-bold text-[var(--brand)] tabular-nums text-xs">
                 {item.marginRate}%
               </span>
@@ -67,6 +70,7 @@ const CustomTooltip = ({
 };
 
 export function MarginChart() {
+  const { t } = useI18n();
   const { data: apiData } = useMarginByCategory();
 
   // Fallback sur mock si backend indisponible
@@ -94,7 +98,7 @@ export function MarginChart() {
           tickLine={false}
           tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
         />
-        <Tooltip content={<CustomTooltip data={data} />} cursor={{ fill: "#f8fafc" }} />
+        <Tooltip content={<CustomTooltip data={data} labels={{ revenue: t.charts.revenue, margin: t.charts.margin, rate: t.charts.rate }} />} cursor={{ fill: "#f8fafc" }} />
         <Bar dataKey="revenue" radius={[6, 6, 0, 0]}>
           {data.map((_, index) => (
             <Cell

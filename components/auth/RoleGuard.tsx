@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth/context";
 import { canAccess, ROLE_HOME, type Role } from "@/lib/auth/roles";
+import { useI18n } from "@/lib/i18n/context";
 import { ShieldAlert } from "lucide-react";
 
 interface RoleGuardProps {
@@ -19,6 +20,7 @@ export function RoleGuard({ children }: RoleGuardProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { user, loading } = useAuth();
+  const { t } = useI18n();
 
   // Page login = pas de guard
   const isLoginPage = pathname === "/login";
@@ -52,7 +54,7 @@ export function RoleGuard({ children }: RoleGuardProps) {
       <div className="flex items-center justify-center h-screen bg-[var(--background)]">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-[var(--brand)] border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-[var(--text-muted)]">Chargement...</p>
+          <p className="text-sm text-[var(--text-muted)]">{t.roleGuard.loading}</p>
         </div>
       </div>
     );
@@ -72,11 +74,10 @@ export function RoleGuard({ children }: RoleGuardProps) {
             <ShieldAlert className="w-6 h-6 text-red-600" />
           </div>
           <h2 className="text-base font-bold text-[var(--text-primary)] mb-1">
-            Accès refusé
+            {t.roleGuard.accessDenied}
           </h2>
           <p className="text-sm text-[var(--text-muted)]">
-            Votre rôle ({user.role}) ne vous permet pas d&apos;accéder à cette page.
-            Contactez un administrateur.
+            {t.roleGuard.accessDeniedMsg}
           </p>
         </div>
       </div>

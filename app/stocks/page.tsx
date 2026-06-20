@@ -23,15 +23,17 @@ import { useI18n } from "@/lib/i18n/context";
 import { useToast } from "@/components/ui/Toast";
 import { NewProductModal } from "@/components/forms/NewProductModal";
 import { useProducts, useStockAlerts, useSetMarkdown, useRemoveMarkdown } from "@/lib/hooks/useApi";
-import { productsApi, apiProductToFrontend } from "@/lib/api";
+import { productsApi, stockApi, apiProductToFrontend } from "@/lib/api";
 import { getEffectivePrice, hasActiveMarkdown } from "@/lib/api";
 import type { Product } from "@/lib/types";
+import type { ApiStockMovement } from "@/lib/api";
 
 type SortKey = "name" | "stock" | "price" | "category";
 type SortDir = "asc" | "desc";
 type FilterStatus = "all" | "critical" | "low" | "ok" | "expiring";
 
-const CATEGORIES = ["Toutes", "Épicerie", "Boissons", "Produits laitiers", "Hygiène", "Boucherie", "Boulangerie", "Surgelés"];
+// Stable backend category keys (always French in DB) - order matches CATEGORIES labels
+const CATEGORY_KEYS = ["Toutes", "Épicerie", "Boissons", "Produits laitiers", "Hygiène", "Boucherie", "Boulangerie", "Surgelés"];
 
 function stockStatus(product: Product): FilterStatus {
   if (product.stock === 0) return "critical";
@@ -61,9 +63,19 @@ export default function StocksPage() {
   const { toast } = useToast();
   const { products: apiProducts } = useProducts();
   const { alerts: stockAlertsData } = useStockAlerts();
+  const CATEGORIES = [
+    t.common.catAll,
+    t.common.catGrocery,
+    t.common.catDrinks,
+    t.common.catDairy,
+    t.common.catHygiene,
+    t.common.catButcher,
+    t.common.catBakery,
+    t.common.catFrozen,
+  ];
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState("");
-  const [activeCategory, setActiveCategory] = useState("Toutes");
+  const [activeCategoryIdx, setActiveCategoryIdx] = useState(0);
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -107,7 +119,7 @@ export default function StocksPage() {
       setProducts((prev) => [newProduct, ...prev]);
       toast(`${data.name} ajouté au stock`, "success");
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Erreur lors de l'ajout";
+      const msg = e instanceof Error ? e.message : t.stocks.errorAdd;
       toast(msg, "warning");
       // Fallback: ajouter en local au moins
       const newProduct: Product = { ...data, id: `p${Date.now()}` };
@@ -134,11 +146,11 @@ export default function StocksPage() {
     if (!markdownProduct) return;
     const price = parseInt(markdownPrice);
     if (!price || price <= 0) {
-      toast("Prix markdown invalide", "warning");
+      toast(t.stocks.markdownInvalidPrice, "warning");
       return;
     }
     if (price >= markdownProduct.price) {
-      toast(`Le prix markdown doit être inférieur à ${formatCurrency(markdownProduct.price)}`, "warning");
+      toast(`${t.stocks.markdownMustBeLower} ${formatCurrency(markdownProduct.price)}`, "warning");
       return;
     }
     const result = await setMarkdown(markdownProduct.id, {
@@ -155,7 +167,7 @@ export default function StocksPage() {
             : p
         )
       );
-      toast(`Markdown appliqué: ${markdownProduct.name} → ${formatCurrency(price)}`, "success");
+      toast(`${t.stocks.markdownApplied} ${markdownProduct.name} → ${formatCurrency(price)}`, "success");
       closeMarkdownModal();
     } else {
       // Fallback local
@@ -166,7 +178,7 @@ export default function StocksPage() {
             : p
         )
       );
-      toast(`Markdown local appliqué (backend indisponible)`, "warning");
+      toast(t.stocks.markdownAppliedLocal, "warning");
       closeMarkdownModal();
     }
   };
@@ -181,7 +193,7 @@ export default function StocksPage() {
             : p
         )
       );
-      toast(`Markdown retiré: ${product.name}`, "success");
+      toast(`${t.stocks.markdownRemoved} ${product.name}`, "success");
     }
   };
 
@@ -201,7 +213,8 @@ export default function StocksPage() {
         p.name.toLowerCase().includes(search.toLowerCase()) ||
         p.sku.toLowerCase().includes(search.toLowerCase()) ||
         p.barcode.includes(search);
-      const matchCat = activeCategory === "Toutes" || p.category === activeCategory;
+      const activeCategory = CATEGORY_KEYS[activeCategoryIdx];
+      const matchCat = activeCategoryIdx === 0 || p.category === activeCategory;
       const status = stockStatus(p);
       const matchStatus = filterStatus === "all" || status === filterStatus;
       return matchSearch && matchCat && matchStatus;
@@ -293,12 +306,12 @@ export default function StocksPage() {
           {/* Category filter */}
           <div className="relative">
             <select
-              value={activeCategory}
-              onChange={(e) => setActiveCategory(e.target.value)}
+              value={activeCategoryIdx}
+              onChange={(e) => setActiveCategoryIdx(Number(e.target.value))}
               className="appearance-none bg-white border border-[var(--border)] rounded-xl px-3 py-2 pr-8 text-sm text-[var(--text-secondary)] outline-none cursor-pointer hover:border-blue-300 transition-colors"
             >
-              {CATEGORIES.map((c) => (
-                <option key={c}>{c}</option>
+              {CATEGORIES.map((c, idx) => (
+                <option key={idx} value={idx}>{c}</option>
               ))}
             </select>
             <ChevronDown className="w-3.5 h-3.5 text-[var(--text-muted)] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -485,7 +498,7 @@ export default function StocksPage() {
                 <tr>
                   <td colSpan={7} className="px-4 py-12 text-center">
                     <Package className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                    <p className="text-sm text-[var(--text-muted)]">Aucun produit trouvé</p>
+                    <p className="text-sm text-[var(--text-muted)]">{t.stocks.noProductFound}</p>
                   </td>
                 </tr>
               )}
@@ -517,7 +530,7 @@ export default function StocksPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Tag className="w-4 h-4 text-amber-600" />
-                <h3 className="text-sm font-bold text-[var(--text-primary)]">Markdown — {markdownProduct.name}</h3>
+                <h3 className="text-sm font-bold text-[var(--text-primary)]">{t.stocks.markdownTitle} — {markdownProduct.name}</h3>
               </div>
               <button onClick={closeMarkdownModal} className="p-1 hover:bg-slate-100 rounded-lg">
                 <X className="w-4 h-4 text-[var(--text-muted)]" />
@@ -526,15 +539,15 @@ export default function StocksPage() {
 
             <div className="bg-slate-50 rounded-xl p-3 space-y-1 text-sm">
               <div className="flex justify-between">
-                <span className="text-[var(--text-muted)]">Prix normal</span>
+                <span className="text-[var(--text-muted)]">{t.stocks.normalPrice}</span>
                 <span className="font-semibold tabular-nums">{formatCurrency(markdownProduct.price)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[var(--text-muted)]">Coût d&apos;achat</span>
+                <span className="text-[var(--text-muted)]">{t.stocks.costPriceLabel}</span>
                 <span className="font-semibold tabular-nums">{formatCurrency(markdownProduct.costPrice)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[var(--text-muted)]">Stock</span>
+                <span className="text-[var(--text-muted)]">{t.stocks.stockLabel}</span>
                 <span className="font-semibold tabular-nums">{markdownProduct.stock} {markdownProduct.unit}</span>
               </div>
               {markdownProduct.expiryDate && (
@@ -607,6 +620,8 @@ function ProductDetailPanel({
 }) {
   const { t } = useI18n();
   const { toast } = useToast();
+  const [history, setHistory] = useState<ApiStockMovement[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const margin = product.price - product.costPrice;
   const marginRate = Math.round((margin / product.price) * 100);
   const daysLeft = product.expiryDate
@@ -614,6 +629,22 @@ function ProductDetailPanel({
         (new Date(product.expiryDate).getTime() - Date.now()) / 86400000
       )
     : null;
+
+  useEffect(() => {
+    let cancelled = false;
+    setHistoryLoading(true);
+    stockApi.listMovements(1, 100, product.id)
+      .then((res) => {
+        if (!cancelled) setHistory(res.data);
+      })
+      .catch(() => {
+        // fallback: empty history
+      })
+      .finally(() => {
+        if (!cancelled) setHistoryLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [product.id]);
 
   return (
     <>
@@ -684,11 +715,11 @@ function ProductDetailPanel({
           {/* Additional info */}
           <div className="space-y-2">
             {[
-              { label: "Fournisseur", value: product.supplier ?? "—" },
-              { label: "Code-barres", value: product.barcode },
-              { label: "Unité", value: product.unit },
+              { label: t.stocks.supplier, value: product.supplier ?? "—" },
+              { label: t.stocks.barcode, value: product.barcode },
+              { label: t.stocks.unit, value: product.unit },
               ...(daysLeft !== null
-                ? [{ label: "Date d'expiry", value: `${formatDate(product.expiryDate!)} (J-${daysLeft})` }]
+                ? [{ label: t.stocks.expiryDate, value: `${formatDate(product.expiryDate!)} (J-${daysLeft})` }]
                 : []),
             ].map(({ label, value }) => (
               <div key={label} className="flex justify-between py-2 border-b border-[var(--border-subtle)] last:border-0">
@@ -696,6 +727,42 @@ function ProductDetailPanel({
                 <span className="text-xs font-medium text-[var(--text-primary)]">{value}</span>
               </div>
             ))}
+          </div>
+
+          {/* Product history */}
+          <div>
+            <h4 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-widest mb-3">{t.stocks.historyTitle}</h4>
+            <div className="bg-slate-50 rounded-xl p-3 max-h-[260px] overflow-y-auto">
+              {historyLoading ? (
+                <p className="text-xs text-[var(--text-muted)] text-center py-4">{t.common.loading}</p>
+              ) : history.length === 0 ? (
+                <p className="text-xs text-[var(--text-muted)] text-center py-4">{t.stocks.noHistory}</p>
+              ) : (
+                <div className="space-y-2">
+                  {history.map((m) => (
+                    <div key={m.id} className="flex items-start justify-between text-xs py-1 border-b border-[var(--border-subtle)] last:border-0">
+                      <div className="flex-1">
+                        <p className="font-medium text-[var(--text-primary)]">
+                          {m.type === "in" ? "+" : m.type === "out" ? "" : ""}
+                          {m.quantity} {product.unit}
+                        </p>
+                        <p className="text-[var(--text-muted)]">
+                          {formatDate(m.createdAt)} — {movementReasonLabel(t, m.reason)}
+                        </p>
+                        {m.reference && <p className="text-[var(--text-muted)]">{t.stocks.reference}: {m.reference}</p>}
+                        {m.notes && <p className="text-[var(--text-muted)]">{m.notes}</p>}
+                      </div>
+                      <span className={cn(
+                        "font-bold tabular-nums shrink-0",
+                        m.type === "in" ? "text-emerald-600" : m.type === "out" ? "text-red-600" : "text-amber-600"
+                      )}>
+                        {m.type === "in" ? "+" : m.type === "out" ? "-" : ""}{Math.abs(m.quantity)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -710,6 +777,20 @@ function ProductDetailPanel({
       </div>
     </>
   );
+}
+
+function movementReasonLabel(t: ReturnType<typeof useI18n>["t"], reason?: string) {
+  if (!reason) return t.stocks.movementReasonOther;
+  switch (reason) {
+    case "sale": return t.stocks.movementReasonSale;
+    case "purchase": return t.stocks.movementReasonPurchase;
+    case "refund": return t.stocks.movementReasonRefund;
+    case "adjustment": return t.stocks.movementReasonAdjustment;
+    case "expiry": return t.stocks.movementReasonExpiry;
+    case "damage": return t.stocks.movementReasonDamage;
+    case "theft": return t.stocks.movementReasonTheft;
+    default: return t.stocks.movementReasonOther;
+  }
 }
 
 function getCategoryEmoji(category: string): string {

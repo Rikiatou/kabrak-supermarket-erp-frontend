@@ -37,7 +37,7 @@ export default function ImportPage() {
 
   const handleFile = (file: File) => {
     if (!file.name.endsWith(".csv")) {
-      toast("Veuillez sélectionner un fichier CSV", "warning");
+      toast(t.import.selectCsv, "warning");
       return;
     }
 
@@ -45,7 +45,7 @@ export default function ImportPage() {
     reader.onload = (e) => {
       const text = e.target?.result as string;
       setCsvText(text);
-      toast(`Fichier chargé: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`, "success");
+      toast(`${t.import.fileLoadedToast} ${file.name} (${(file.size / 1024).toFixed(1)} KB)`, "success");
     };
     reader.readAsText(file);
   };
@@ -59,7 +59,7 @@ export default function ImportPage() {
 
   const handleImport = async () => {
     if (!csvText) {
-      toast("Veuillez d'abord charger un fichier CSV", "warning");
+      toast(t.import.csvRequired, "warning");
       return;
     }
 
@@ -77,13 +77,13 @@ export default function ImportPage() {
       });
 
       if (res.errors === 0) {
-        toast(`${res.success} produits importés en ${(res.duration / 1000).toFixed(1)}s`, "success");
+        toast(`${res.success} ${t.import.products} ${t.import.importSuccess} ${(res.duration / 1000).toFixed(1)}s`, "success");
       } else {
-        toast(`${res.success} réussis, ${res.errors} erreurs sur ${res.total}`, "warning");
+        toast(`${res.success} ${t.import.success}, ${res.errors} ${t.import.errors} / ${res.total} ${t.import.total}`, "warning");
       }
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Erreur d'import";
-      toast(`Erreur d'import: ${msg}`, "warning");
+      const msg = e instanceof Error ? e.message : t.import.importError;
+      toast(`${t.import.importError}: ${msg}`, "warning");
     } finally {
       setImporting(false);
     }
@@ -112,30 +112,30 @@ RIZ-25-002,0640055667788,Riz Parfumé 25kg,Épicerie,Riz,Import Asie,22000,17500
 
   return (
     <AppShell
-      title="Import de Produits"
-      subtitle="Importez en masse vos produits depuis un fichier CSV"
+      title={t.import.title}
+      subtitle={t.import.subtitle}
     >
       <div className="max-w-4xl mx-auto space-y-4">
         {/* Instructions */}
         <Card padding="md">
           <CardHeader
-            title="Format CSV requis"
-            subtitle="Votre fichier doit contenir ces colonnes (les colonnes en gras sont obligatoires)"
+            title={t.import.csvFormat}
+            subtitle={t.import.csvFormatSub}
           />
           <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-2">
             {[
-              { name: "sku", required: true, desc: "Référence unique" },
-              { name: "barcode", required: true, desc: "Code-barres" },
-              { name: "name", required: true, desc: "Nom du produit" },
-              { name: "category", required: true, desc: "Catégorie" },
-              { name: "price", required: true, desc: "Prix en FCFA" },
-              { name: "stock", required: true, desc: "Stock actuel" },
-              { name: "costPrice", required: false, desc: "Prix d'achat" },
-              { name: "minStock", required: false, desc: "Stock min (défaut: 10)" },
-              { name: "unit", required: false, desc: "Unité (défaut: pièce)" },
-              { name: "expiryDate", required: false, desc: "YYYY-MM-DD" },
-              { name: "brand", required: false, desc: "Marque" },
-              { name: "imageUrl", required: false, desc: "URL image" },
+              { name: "sku", required: true, desc: t.import.colSku },
+              { name: "barcode", required: true, desc: t.import.colBarcode },
+              { name: "name", required: true, desc: t.import.colName },
+              { name: "category", required: true, desc: t.import.colCategory },
+              { name: "price", required: true, desc: t.import.colPrice },
+              { name: "stock", required: true, desc: t.import.colStock },
+              { name: "costPrice", required: false, desc: t.import.colCostPrice },
+              { name: "minStock", required: false, desc: t.import.colMinStock },
+              { name: "unit", required: false, desc: t.import.colUnit },
+              { name: "expiryDate", required: false, desc: t.import.colExpiryDate },
+              { name: "brand", required: false, desc: t.import.colBrand },
+              { name: "imageUrl", required: false, desc: t.import.colImageUrl },
             ].map((col) => (
               <div
                 key={col.name}
@@ -144,7 +144,7 @@ RIZ-25-002,0640055667788,Riz Parfumé 25kg,Épicerie,Riz,Import Asie,22000,17500
                 <code className="text-xs font-mono text-[var(--text-primary)]">{col.name}</code>
                 {col.required && (
                   <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full font-bold">
-                    requis
+                    {t.import.required}
                   </span>
                 )}
               </div>
@@ -157,7 +157,7 @@ RIZ-25-002,0640055667788,Riz Parfumé 25kg,Épicerie,Riz,Import Asie,22000,17500
               icon={<Download className="w-3.5 h-3.5" />}
               onClick={downloadTemplate}
             >
-              Télécharger le template
+              {t.import.downloadTemplate}
             </Button>
           </div>
         </Card>
@@ -165,8 +165,8 @@ RIZ-25-002,0640055667788,Riz Parfumé 25kg,Épicerie,Riz,Import Asie,22000,17500
         {/* Upload zone */}
         <Card padding="md">
           <CardHeader
-            title="Charger votre fichier CSV"
-            subtitle="Glissez-déposez votre fichier ou cliquez pour parcourir"
+            title={t.import.uploadCsv}
+            subtitle={t.import.uploadCsvSub}
           />
 
           <div
@@ -198,10 +198,10 @@ RIZ-25-002,0640055667788,Riz Parfumé 25kg,Épicerie,Riz,Import Asie,22000,17500
               <div className="flex flex-col items-center gap-2">
                 <CheckCircle2 className="w-10 h-10 text-emerald-500" />
                 <p className="text-sm font-medium text-[var(--text-primary)]">
-                  Fichier chargé
+                  {t.import.fileLoaded}
                 </p>
                 <p className="text-xs text-[var(--text-muted)]">
-                  {csvText.split("\n").length - 1} lignes détectées
+                  {csvText.split("\n").length - 1} {t.import.linesDetected}
                 </p>
                 <button
                   onClick={(e) => {
@@ -210,7 +210,7 @@ RIZ-25-002,0640055667788,Riz Parfumé 25kg,Épicerie,Riz,Import Asie,22000,17500
                   }}
                   className="mt-2 text-xs text-red-500 hover:text-red-600 flex items-center gap-1"
                 >
-                  <X className="w-3 h-3" /> Retirer
+                  <X className="w-3 h-3" /> {t.import.remove}
                 </button>
               </div>
             ) : (

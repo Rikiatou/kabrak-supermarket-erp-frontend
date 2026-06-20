@@ -106,26 +106,26 @@ const mockInvoices: Invoice[] = [
   },
 ];
 
-const statusConfig: Record<string, { label: string; color: string }> = {
-  draft: { label: "Brouillon", color: "bg-slate-100 text-slate-600" },
-  sent: { label: "Envoyée", color: "bg-blue-100 text-blue-700" },
-  partial: { label: "Partiel", color: "bg-amber-100 text-amber-700" },
-  paid: { label: "Payée", color: "bg-emerald-100 text-emerald-700" },
-  overdue: { label: "En retard", color: "bg-red-100 text-red-700" },
-  cancelled: { label: "Annulée", color: "bg-slate-100 text-slate-400" },
-};
-
-const paymentMethodLabels: Record<string, string> = {
-  cash: "Espèces",
-  card: "Carte",
-  mobile: "Mobile Money",
-  bank: "Virement",
-  check: "Chèque",
-};
-
 export default function FacturesPage() {
   const { t } = useI18n();
   const { toast } = useToast();
+
+  const statusConfig: Record<string, { label: string; color: string }> = {
+    draft: { label: t.factures.status.draft, color: "bg-slate-100 text-slate-600" },
+    sent: { label: t.factures.status.sent, color: "bg-blue-100 text-blue-700" },
+    partial: { label: t.factures.status.partial, color: "bg-amber-100 text-amber-700" },
+    paid: { label: t.factures.status.paid, color: "bg-emerald-100 text-emerald-700" },
+    overdue: { label: t.factures.status.overdue, color: "bg-red-100 text-red-700" },
+    cancelled: { label: t.factures.status.cancelled, color: "bg-slate-100 text-slate-400" },
+  };
+
+  const paymentMethodLabels: Record<string, string> = {
+    cash: t.common.cash,
+    card: t.common.card,
+    mobile: t.common.mobile,
+    bank: t.common.bank,
+    check: t.common.check,
+  };
   const { data: apiInvoices, reload } = useInvoices();
   const { create: createInvoice, creating: creatingInvoice } = useCreateInvoice();
   const { update: updateStatus } = useUpdateInvoiceStatus();
@@ -210,10 +210,10 @@ export default function FacturesPage() {
       })),
     });
     if (result) {
-      toast(`Facture ${result.number} créée`, "success");
+      toast(`${t.factures.invoiceCreated}: ${result.number}`, "success");
       reload();
     } else {
-      toast(`Facture créée localement (backend indisponible)`, "warning");
+      toast(t.factures.invoiceCreatedLocal, "warning");
     }
     setShowModal(false);
     setClientName("");
@@ -240,11 +240,11 @@ export default function FacturesPage() {
     if (!paymentInvoice) return;
     const amount = parseFloat(paymentAmount);
     if (!amount || amount <= 0) {
-      toast("Montant invalide", "warning");
+      toast(t.factures.invalidAmount, "warning");
       return;
     }
     if (amount > paymentInvoice.balance) {
-      toast(`Montant supérieur au reste à payer (${formatCurrency(paymentInvoice.balance)})`, "warning");
+      toast(`${t.factures.amountTooHigh} (${formatCurrency(paymentInvoice.balance)})`, "warning");
       return;
     }
     const result = await addPayment(paymentInvoice.id, {
@@ -253,7 +253,7 @@ export default function FacturesPage() {
       note: paymentNote || undefined,
     });
     if (result) {
-      toast(`Paiement de ${formatCurrency(amount)} enregistré`, "success");
+      toast(`${t.factures.paymentSaved} ${formatCurrency(amount)}`, "success");
       reload();
       // Mettre à jour la facture affichée dans le modal
       setPaymentInvoice({
@@ -292,7 +292,7 @@ export default function FacturesPage() {
         status: newBalance <= 0 ? "paid" : "partial",
         payments: [...paymentInvoice.payments, newPayment],
       });
-      toast(`Paiement local enregistré (backend indisponible)`, "warning");
+      toast(t.factures.paymentSavedLocal, "warning");
       setPaymentAmount("");
       setPaymentNote("");
     }
@@ -415,13 +415,13 @@ export default function FacturesPage() {
     pdf.text("Signature & cachet", margin + 5, y + 62);
 
     pdf.save(`${invoice.number}.pdf`);
-    toast(`PDF généré: ${invoice.number}.pdf`, "success");
+    toast(`${t.factures.pdfGenerated} ${invoice.number}.pdf`, "success");
   };
 
   const sendWhatsApp = (invoice: Invoice) => {
     const msg = `Bonjour ${invoice.clientName},%0A%0AVoici votre facture ${invoice.number} de KABRAK MARKET.%0A%0AMontant total: ${formatCurrency(invoice.total)}%0ADate: ${new Date(invoice.date).toLocaleDateString("fr-FR")}%0A%0AMerci pour votre confiance!`;
     window.open(`https://wa.me/${invoice.clientPhone.replace(/[^0-9]/g, "")}?text=${msg}`, "_blank");
-    toast(`WhatsApp ouvert pour ${invoice.clientName}`, "info");
+    toast(`${t.factures.whatsappOpened} ${invoice.clientName}`, "info");
   };
 
   const sendEmail = (invoice: Invoice) => {
@@ -432,7 +432,7 @@ export default function FacturesPage() {
   };
 
   return (
-    <AppShell title="Factures A4" subtitle="Factures professionnelles pour clients entreprises">
+    <AppShell title={t.factures.title} subtitle={t.factures.subtitle}>
       <div className="space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between gap-3">
@@ -442,12 +442,12 @@ export default function FacturesPage() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher par numéro ou client..."
+              placeholder={t.factures.search}
               className="w-full pl-9 pr-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)] bg-white"
             />
           </div>
           <Button icon={<Plus className="w-4 h-4" />} onClick={() => setShowModal(true)}>
-            Nouvelle facture
+            {t.factures.newInvoice}
           </Button>
           <Button
             variant="secondary"
@@ -493,14 +493,14 @@ export default function FacturesPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-[var(--border)] bg-[var(--background)]">
-                  <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">N° Facture</th>
-                  <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Client</th>
-                  <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Date</th>
-                  <th className="text-right text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Total</th>
-                  <th className="text-right text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Payé</th>
-                  <th className="text-right text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Reste</th>
-                  <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Statut</th>
-                  <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Actions</th>
+                  <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">{t.factures.invoiceNumber}</th>
+                  <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">{t.factures.client}</th>
+                  <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">{t.factures.date}</th>
+                  <th className="text-right text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">{t.factures.total}</th>
+                  <th className="text-right text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">{t.factures.paidAmount}</th>
+                  <th className="text-right text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">{t.factures.remainingBalance}</th>
+                  <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">{t.common.status}</th>
+                  <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">{t.factures.actions}</th>
                 </tr>
               </thead>
               <tbody>

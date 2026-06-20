@@ -97,11 +97,11 @@ export default function IaPage() {
     reloadForecast();
     reloadRecs();
     reloadMarkdown();
-    toast("Analyse IA mise à jour", "info");
+    toast(t.ia.analysisUpdated, "info");
   };
 
   const handleAction = (rec: any) => {
-    toast(`Action: ${rec.action}`, "info");
+    toast(`${t.ia.actionLabel} ${rec.action}`, "info");
   };
 
   const handleApplyMarkdown = async (suggestion: ApiMarkdownSuggestion) => {
@@ -112,16 +112,16 @@ export default function IaPage() {
       markdownNote: `Suggestion IA: ${suggestion.markdownPercent}% de remise`,
     });
     if (result) {
-      toast(`Markdown appliqué: ${suggestion.name} → ${formatCurrency(suggestion.suggestedMarkdownPrice)} (-${suggestion.markdownPercent}%)`, "success");
+      toast(`${t.ia.markdownApplied} ${suggestion.name} → ${formatCurrency(suggestion.suggestedMarkdownPrice)} (-${suggestion.markdownPercent}%)`, "success");
       reloadMarkdown();
     } else {
-      toast(`Erreur lors de l'application du markdown`, "warning");
+      toast(t.ia.markdownError, "warning");
     }
     setApplyingId(null);
   };
 
   return (
-    <AppShell title="Intelligence Artificielle" subtitle="Prévisions de stock et recommandations">
+    <AppShell title={t.ia.title} subtitle={t.ia.subtitle}>
       <div className="space-y-5">
         {/* Header avec refresh */}
         <div className="flex items-center justify-between">
@@ -130,7 +130,7 @@ export default function IaPage() {
               <Brain className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-[var(--text-primary)]">Analyse prédictive</h2>
+              <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t.ia.predictiveAnalysis}</h2>
               <p className="text-xs text-[var(--text-muted)]">
                 {summary.total} produits analysés
               </p>
@@ -142,7 +142,7 @@ export default function IaPage() {
             icon={<RefreshCw className={cn("w-3.5 h-3.5", forecastLoading && "animate-spin")} />}
             onClick={handleRefresh}
           >
-            Actualiser
+            {t.common.refresh}
           </Button>
         </div>
 
@@ -151,26 +151,26 @@ export default function IaPage() {
           <Card className={cn("p-4 border-l-4", urgencyConfig.critical.border)}>
             <div className="flex items-center gap-2 mb-1">
               <AlertTriangle className="w-4 h-4 text-red-600" />
-              <span className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide">Critiques</span>
+              <span className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide">{t.ia.critical}</span>
             </div>
             <p className="text-2xl font-bold text-red-600 tabular-nums">{summary.critical}</p>
-            <p className="text-[11px] text-[var(--text-muted)] mt-0.5">Rupture &lt; 3 jours</p>
+            <p className="text-[11px] text-[var(--text-muted)] mt-0.5">{t.ia.criticalSub}</p>
           </Card>
           <Card className={cn("p-4 border-l-4", urgencyConfig.warning.border)}>
             <div className="flex items-center gap-2 mb-1">
               <Clock className="w-4 h-4 text-amber-600" />
-              <span className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide">Alertes</span>
+              <span className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide">{t.ia.alerts}</span>
             </div>
             <p className="text-2xl font-bold text-amber-600 tabular-nums">{summary.warning}</p>
-            <p className="text-[11px] text-[var(--text-muted)] mt-0.5">Rupture &lt; 7 jours</p>
+            <p className="text-[11px] text-[var(--text-muted)] mt-0.5">{t.ia.alertsSub}</p>
           </Card>
           <Card className={cn("p-4 border-l-4", urgencyConfig.overstock.border)}>
             <div className="flex items-center gap-2 mb-1">
               <TrendingUp className="w-4 h-4 text-blue-600" />
-              <span className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide">Surstock</span>
+              <span className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide">{t.ia.overstock}</span>
             </div>
             <p className="text-2xl font-bold text-blue-600 tabular-nums">{summary.overstock}</p>
-            <p className="text-[11px] text-[var(--text-muted)] mt-0.5">Stock &gt; 60 jours</p>
+            <p className="text-[11px] text-[var(--text-muted)] mt-0.5">{t.ia.overstockSub}</p>
           </Card>
           <Card className="p-4 border-l-4 border-l-emerald-200">
             <div className="flex items-center gap-2 mb-1">
@@ -178,7 +178,7 @@ export default function IaPage() {
               <span className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide">À commander</span>
             </div>
             <p className="text-2xl font-bold text-emerald-600 tabular-nums">{formatCurrency(summary.recommendedOrdersValue)}</p>
-            <p className="text-[11px] text-[var(--text-muted)] mt-0.5">Valeur estimée</p>
+            <p className="text-[11px] text-[var(--text-muted)] mt-0.5">{t.ia.estimatedValue}</p>
           </Card>
         </div>
 
@@ -186,7 +186,7 @@ export default function IaPage() {
         <div>
           <div className="flex items-center gap-2 mb-3">
             <Zap className="w-4 h-4 text-amber-500" />
-            <h3 className="text-sm font-semibold text-[var(--text-primary)]">Recommandations intelligentes</h3>
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t.ia.smartRecs}</h3>
             <Badge variant="neutral">{recommendations.length}</Badge>
           </div>
           <div className="space-y-2">

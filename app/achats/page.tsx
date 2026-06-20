@@ -27,7 +27,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { suppliers as mockSuppliers } from "@/lib/mock-data";
 import { useSuppliers, usePurchaseOrders, useCreatePurchaseOrder } from "@/lib/hooks/useApi";
-import { suppliersApi } from "@/lib/api";
+import { suppliersApi, purchaseOrdersApi } from "@/lib/api";
 import { formatCurrency, cn } from "@/lib/utils";
 import type { Supplier } from "@/lib/types";
 
@@ -188,9 +188,9 @@ export default function AchatsPage() {
         pendingOrders: 0,
       };
       setSupplierList((prev) => [newSup, ...prev]);
-      toast(`Fournisseur ajouté: ${data.name}`, "success");
+      toast(`${t.achats.supplierAdded} ${data.name}`, "success");
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Erreur lors de l'ajout";
+      const msg = e instanceof Error ? e.message : t.achats.errorAdd;
       toast(msg, "warning");
       // Fallback local
       const newSup: Supplier = { ...data, id: `s${Date.now()}`, rating: 0, totalOrders: 0, pendingOrders: 0 };
@@ -204,7 +204,7 @@ export default function AchatsPage() {
         const supplier = suppliers.find((s) => s.id === o.supplierId);
         return {
           id: o.orderNumber,
-          supplier: supplier || { id: o.supplierId, name: "Fournisseur", contact: "", phone: "", email: "", address: "", paymentTerms: "", rating: 0, totalOrders: 0, pendingOrders: 0 },
+          supplier: supplier || { id: o.supplierId, name: t.achats.suppliers, contact: "", phone: "", email: "", address: "", paymentTerms: "", rating: 0, totalOrders: 0, pendingOrders: 0 },
           date: new Date(o.date).toISOString().split("T")[0],
           expectedDate: new Date(o.expectedDate).toISOString().split("T")[0],
           total: o.total,
@@ -533,27 +533,48 @@ export default function AchatsPage() {
         <NewOrderModal
           onClose={() => { setShowNewOrder(false); setOrderSupplier(undefined); }}
           onSave={async (order) => {
-            // Créer le bon de commande dans le backend
-            const result = await createOrder({
-              supplierId: order.supplier.id,
-              expectedDate: new Date(order.expectedDate).toISOString(),
-              notes: order.notes,
-              items: order.lines
-                .filter((l) => l.productName && l.quantity > 0)
-                .map((l) => ({
-                  productId: l.productName, // TODO: mapper au vrai productId
-                  quantity: l.quantity,
-                  unitCost: l.unitCost,
-                })),
-            });
-            if (result) {
-              toast(`Bon de commande ${result.orderNumber} créé — ${order.supplier.name} — ${formatCurrency(order.total)}`, "success");
+            try {
+              const orderData = {
+                supplierId: order.supplier.id,
+                expectedDate: new Date(order.expectedDate).toISOString(),
+                notes: order.notes,
+                items: order.lines
+                  .filter((l) => l.productId && l.quantity > 0)
+                  .map((l) => ({
+                    productId: l.productId,
+                    quantity: l.quantity,
+                    unitCost: l.unitCost,
+                  })),
+              };
+
+              let result;
+              
+              // Si "Direct Receive" est coché, utiliser createDirect pour mettre à jour le stock automatiquement
+              if (order.directReceive) {
+                result = await purchaseOrdersApi.createDirect({
+                  ...orderData,
+                  invoiceNumber: order.invoiceNumber,
+                });
+                toast(
+                  `${t.achats.orderReceived} ${result.orderNumber} — ${order.supplier.name} — ${formatCurrency(order.total)} — ${t.achats.invoice}: ${order.invoiceNumber}`,
+                  "success"
+                );
+              } else {
+                // Sinon, créer juste un bon de commande (sans mettre à jour le stock)
+                result = await createOrder(orderData);
+                toast(
+                  `${t.achats.orderCreated} ${result.orderNumber} — ${order.supplier.name} — ${formatCurrency(order.total)}`,
+                  "success"
+                );
+              }
+
               reloadOrders();
-            } else {
-              toast(`${t.achats.newOrder} — ${order.supplier.name} — ${formatCurrency(order.total)}`, "success");
+            } catch (error) {
+              toast("Erreur: " + (error instanceof Error ? error.message : "Erreur inconnue"), "warning");
             }
           }}
           defaultSupplier={orderSupplier}
+          allowDirectReceive={true}
         />
       )}
     </AppShell>

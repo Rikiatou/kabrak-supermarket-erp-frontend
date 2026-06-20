@@ -31,11 +31,11 @@ import type { ApiShift, ApiEmployee } from "@/lib/api";
 // ========================================
 // MOCK DATA
 // ========================================
-const REGISTERS = [
-  { id: "reg1", name: "Caisse 1" },
-  { id: "reg2", name: "Caisse 2" },
-  { id: "reg3", name: "Caisse 3" },
-  { id: "reg4", name: "Caisse 4" },
+const REGISTER_KEYS = [
+  { id: "reg1", nameKey: "register1" as const },
+  { id: "reg2", nameKey: "register2" as const },
+  { id: "reg3", nameKey: "register3" as const },
+  { id: "reg4", nameKey: "register4" as const },
 ];
 
 // ========================================
@@ -84,6 +84,7 @@ function OpenShiftModal({
 }) {
   const [employeeId, setEmployeeId] = useState(defaultEmployeeId);
   const [openingCash, setOpeningCash] = useState("50000");
+  const { t } = useI18n();
 
   const cash = Number(openingCash) || 0;
 
@@ -97,10 +98,10 @@ function OpenShiftModal({
             </div>
             <div>
               <h3 className="text-base font-semibold text-[var(--text-primary)]">
-                Ouvrir {registerName}
+                {t.caisses.open} {registerName}
               </h3>
               <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                Démarrer un nouveau shift de caisse
+                {t.caisses.startNewShift}
               </p>
             </div>
           </div>
@@ -115,7 +116,7 @@ function OpenShiftModal({
         <div className="space-y-4">
           <div>
             <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">
-              Employé responsable
+              {t.caisses.responsibleEmployee}
             </label>
             <div className="relative">
               <User className="w-4 h-4 text-[var(--text-muted)] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -135,7 +136,7 @@ function OpenShiftModal({
 
           <div>
             <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">
-              Fonds de caisse d&apos;ouverture
+              {t.caisses.openingCash}
             </label>
             <div className="relative">
               <Wallet className="w-4 h-4 text-[var(--text-muted)] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -155,7 +156,7 @@ function OpenShiftModal({
 
         <div className="flex items-center gap-3 mt-6">
           <Button variant="secondary" className="flex-1" onClick={onCancel}>
-            Annuler
+            {t.common.cancel}
           </Button>
           <Button
             variant="success"
@@ -164,7 +165,7 @@ function OpenShiftModal({
             disabled={!employeeId || cash <= 0}
             onClick={() => onConfirm(employeeId, cash)}
           >
-            Ouvrir la caisse
+            {t.caisses.openCashier}
           </Button>
         </div>
       </Card>
@@ -197,6 +198,7 @@ function CloseShiftModal({
     String(shift.openingCash + 50000),
   );
   const [notes, setNotes] = useState("");
+  const { t } = useI18n();
 
   const closingNum = Number(closingCash) || 0;
   const expectedNum = Number(expectedCash) || 0;
@@ -212,10 +214,10 @@ function CloseShiftModal({
             </div>
             <div>
               <h3 className="text-base font-semibold text-[var(--text-primary)]">
-                Fermer {registerName}
+                {t.caisses.close} {registerName}
               </h3>
               <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                Clôturer le shift de {employeeName(shift, employees)}
+                {t.caisses.closeShiftOf} {employeeName(shift, employees)}
               </p>
             </div>
           </div>
@@ -230,7 +232,7 @@ function CloseShiftModal({
         <div className="space-y-4">
           <div className="bg-slate-50 rounded-xl p-3 flex items-center justify-between">
             <span className="text-xs text-[var(--text-muted)]">
-              Fonds d&apos;ouverture
+              {t.caisses.openingFund}
             </span>
             <span className="text-sm font-semibold text-[var(--text-primary)] tabular-nums">
               {formatCurrency(shift.openingCash)}
@@ -450,6 +452,9 @@ export default function CaissesPage() {
   const { open, opening } = useOpenShift();
   const { close, closing } = useCloseShift();
   const { employees } = useEmployees();
+
+  // Build REGISTERS with translated names
+  const REGISTERS = REGISTER_KEYS.map(rk => ({ id: rk.id, name: t.common[rk.nameKey] }));
 
   // Filtrer les employés qui peuvent ouvrir une caisse
   const cashiers = employees.filter((e) =>

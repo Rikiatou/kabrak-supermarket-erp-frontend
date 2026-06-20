@@ -6,17 +6,18 @@ import { LayoutDashboard, ShoppingCart, Package, BarChart3, Menu } from "lucide-
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth/context";
 import { canAccess } from "@/lib/auth/roles";
-
-const allTabs = [
-  { href: "/dashboard", label: "Accueil", icon: LayoutDashboard },
-  { href: "/pos", label: "Caisse", icon: ShoppingCart },
-  { href: "/stocks", label: "Stock", icon: Package },
-  { href: "/rapports", label: "Rapports", icon: BarChart3 },
-];
+import { useI18n } from "@/lib/i18n/context";
 
 export function MobileNav() {
   const pathname = usePathname();
   const { user } = useAuth();
+  const { t } = useI18n();
+  const allTabs = [
+    { href: "/dashboard", label: t.mobileNav.home, icon: LayoutDashboard },
+    { href: "/pos", label: t.mobileNav.pos, icon: ShoppingCart },
+    { href: "/stocks", label: t.mobileNav.stock, icon: Package },
+    { href: "/rapports", label: t.mobileNav.reports, icon: BarChart3 },
+  ];
   const tabs = allTabs.filter((tab) => canAccess(user?.role, tab.href));
 
   return (

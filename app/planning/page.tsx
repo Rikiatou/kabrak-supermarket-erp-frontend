@@ -17,6 +17,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { useToast } from "@/components/ui/Toast";
+import { useI18n } from "@/lib/i18n/context";
 import { cn } from "@/lib/utils";
 import {
   useEmployees,
@@ -25,23 +26,6 @@ import {
   useDeleteSchedule,
 } from "@/lib/hooks/useApi";
 import type { ApiSchedule, ApiEmployee } from "@/lib/api";
-
-const DAYS = [
-  { num: 1, label: "Lundi", short: "Lun" },
-  { num: 2, label: "Mardi", short: "Mar" },
-  { num: 3, label: "Mercredi", short: "Mer" },
-  { num: 4, label: "Jeudi", short: "Jeu" },
-  { num: 5, label: "Vendredi", short: "Ven" },
-  { num: 6, label: "Samedi", short: "Sam" },
-  { num: 0, label: "Dimanche", short: "Dim" },
-];
-
-const REGISTERS = [
-  { id: "reg1", name: "Caisse 1" },
-  { id: "reg2", name: "Caisse 2" },
-  { id: "reg3", name: "Caisse 3" },
-  { id: "reg4", name: "Caisse 4" },
-];
 
 const REGISTER_COLORS: Record<string, string> = {
   reg1: "bg-blue-100 text-blue-700 border-blue-200",
@@ -57,7 +41,26 @@ const TIME_SLOTS = [
 ];
 
 export default function PlanningPage() {
+  const { t } = useI18n();
   const { toast } = useToast();
+
+  const DAYS = [
+    { num: 1, label: t.common.monday },
+    { num: 2, label: t.common.tuesday },
+    { num: 3, label: t.common.wednesday },
+    { num: 4, label: t.common.thursday },
+    { num: 5, label: t.common.friday },
+    { num: 6, label: t.common.saturday },
+    { num: 0, label: t.common.sunday },
+  ];
+
+  const REGISTERS = [
+    { id: "reg1", name: t.common.register1 },
+    { id: "reg2", name: t.common.register2 },
+    { id: "reg3", name: t.common.register3 },
+    { id: "reg4", name: t.common.register4 },
+  ];
+
   const { employees } = useEmployees();
   const { data: scheduleData, loading, reload } = useSchedules();
   const { create, creating } = useCreateSchedule();
@@ -114,7 +117,7 @@ export default function PlanningPage() {
   const handleSubmit = async () => {
     if (!addEmployee) return;
     if (form.startTime >= form.endTime) {
-      toast("L'heure de début doit être avant l'heure de fin", "warning");
+      toast(t.planning.errorTime, "warning");
       return;
     }
     try {
@@ -128,11 +131,11 @@ export default function PlanningPage() {
         breakEnd: form.breakEnd || undefined,
         notes: form.notes || undefined,
       });
-      toast(`Créneau ajouté: ${addEmployee.firstName} ${DAYS.find(d => d.num === addDay)?.label}`, "success");
+      toast(`${t.planning.slotAdded} ${addEmployee.firstName} ${DAYS.find(d => d.num === addDay)?.label}`, "success");
       setShowAddModal(false);
       reload();
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Erreur lors de l'ajout du créneau";
+      const msg = e instanceof Error ? e.message : t.planning.errorAdd;
       toast(msg, "warning");
     }
   };
@@ -140,10 +143,10 @@ export default function PlanningPage() {
   const handleDelete = async (id: string, name: string) => {
     try {
       await remove(id);
-      toast(`Créneau supprimé: ${name}`, "info");
+      toast(`${t.planning.slotDeleted} ${name}`, "info");
       reload();
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Erreur lors de la suppression";
+      const msg = e instanceof Error ? e.message : t.planning.errorDelete;
       toast(msg, "warning");
     }
   };
@@ -151,16 +154,16 @@ export default function PlanningPage() {
   const today = new Date().getDay();
 
   return (
-    <AppShell title="Planning des caisses" subtitle="Assignation hebdomadaire des employés aux caisses">
+    <AppShell title={t.planning.title} subtitle={t.planning.subtitle}>
       <div className="space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Calendar className="w-5 h-5 text-[var(--brand)]" />
             <div>
-              <h2 className="text-sm font-semibold text-[var(--text-primary)]">Planning hebdomadaire</h2>
+              <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t.planning.weeklyPlanning}</h2>
               <p className="text-xs text-[var(--text-muted)]">
-                {cashiers.length} employé(s) éligible(s) · {scheduleData?.total || 0} créneau(x) planifié(s)
+                {cashiers.length} {t.planning.employeesEligible} · {scheduleData?.total || 0} {t.planning.slotsPlanned}
               </p>
             </div>
           </div>
@@ -169,13 +172,13 @@ export default function PlanningPage() {
             size="sm"
             onClick={() => reload()}
           >
-            Actualiser
+            {t.planning.refresh}
           </Button>
         </div>
 
         {/* Légende caisses */}
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs text-[var(--text-muted)] font-medium">Caisses:</span>
+          <span className="text-xs text-[var(--text-muted)] font-medium">{t.planning.registers}</span>
           {REGISTERS.map((reg) => (
             <span
               key={reg.id}
@@ -197,7 +200,7 @@ export default function PlanningPage() {
               <thead>
                 <tr className="border-b border-[var(--border)] bg-[var(--background)]">
                   <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-3 py-3 sticky left-0 bg-[var(--background)] z-10">
-                    Employé
+                    {t.planning.employee}
                   </th>
                   {DAYS.map((day) => (
                     <th

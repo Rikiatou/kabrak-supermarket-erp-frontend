@@ -2,12 +2,12 @@
 // RBAC — Permissions par rôle
 // ========================================
 
-export type Role = "manager" | "supervisor" | "cashier" | "stockist";
+export type Role = "boss" | "accountant" | "cashier" | "stockist";
 
 // Routes accessibles par chaque rôle
-// manager = tout, les autres = sous-ensemble
+// boss = tout, les autres = sous-ensemble
 export const ROLE_PERMISSIONS: Record<Role, string[]> = {
-  manager: [
+  boss: [
     "/dashboard",
     "/pos",
     "/stocks",
@@ -24,7 +24,7 @@ export const ROLE_PERMISSIONS: Record<Role, string[]> = {
     "/rapports",
     "/ia",
   ],
-  supervisor: [
+  accountant: [
     "/dashboard",
     "/pos",
     "/stocks",
@@ -35,6 +35,7 @@ export const ROLE_PERMISSIONS: Record<Role, string[]> = {
     "/clients",
     "/pertes",
     "/scanner",
+    "/comptabilite",
     "/rapports",
   ],
   cashier: [
@@ -56,8 +57,8 @@ export const ROLE_PERMISSIONS: Record<Role, string[]> = {
 
 // Page d'accueil par rôle (après login)
 export const ROLE_HOME: Record<Role, string> = {
-  manager: "/dashboard",
-  supervisor: "/dashboard",
+  boss: "/dashboard",
+  accountant: "/dashboard",
   cashier: "/pos",
   stockist: "/stocks",
 };

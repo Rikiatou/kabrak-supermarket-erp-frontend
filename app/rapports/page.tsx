@@ -174,7 +174,7 @@ export default function RapportsPage() {
 
   const kpis = [
     {
-      label: "CA total",
+      label: t.rapports.weekRevenue,
       value: formatCurrency(sales.totalRevenue),
       icon: DollarSign,
       delta: +8.4,
@@ -188,21 +188,21 @@ export default function RapportsPage() {
       sublabel: "sur la période",
     },
     {
-      label: "Panier moyen",
+      label: t.rapports.avgBasket,
       value: formatCurrency(sales.avgBasket),
       icon: TrendingUp,
       delta: +3.2,
       sublabel: "par transaction",
     },
     {
-      label: "Bénéfice brut",
+      label: t.rapports.grossProfit,
       value: formatCurrency(profitData.grossProfit),
       icon: BarChart2,
       delta: +5.1,
       sublabel: `Coût : ${formatCurrency(profitData.totalCost)}`,
     },
     {
-      label: "Marge %",
+      label: t.rapports.achievementRate,
       value: `${marginPct.toFixed(1)}%`,
       icon: Percent,
       delta: marginPct >= 30 ? +2.4 : -1.2,
@@ -212,7 +212,7 @@ export default function RapportsPage() {
 
   const handleExportPDF = () => {
     printSection("rapports-content");
-    toast("Impression en cours...", "info");
+    toast(t.rapports.printing, "info");
   };
   const handleExportExcel = () => {
     // Exporter les top produits en CSV
@@ -226,15 +226,15 @@ export default function RapportsPage() {
         })),
         `rapports_ventes_${startDate}_${endDate}`,
         [
-          { key: "Produit", label: "Produit" },
-          { key: "Quantite", label: "Quantité" },
-          { key: "CA", label: "Chiffre d'affaires" },
-          { key: "Marge", label: "Marge" },
+          { key: "Produit", label: t.rapports.colProduct },
+          { key: "Quantite", label: t.rapports.colQty },
+          { key: "CA", label: t.rapports.revenueLabel },
+          { key: "Marge", label: t.rapports.colMargin },
         ],
       );
-      toast("Export Excel téléchargé", "success");
+      toast(t.rapports.excelDownloaded, "success");
     } else {
-      toast("Aucune donnée à exporter", "warning");
+      toast(t.rapports.noDataToExport, "warning");
     }
   };
 
@@ -308,10 +308,10 @@ export default function RapportsPage() {
       {/* Charts row: Sales by day (Line) + Sales by category (Pie) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
         <Card className="lg:col-span-2">
-          <CardHeader title="Évolution du CA par jour" subtitle="Chiffre d'affaires quotidien" />
+          <CardHeader title={t.rapports.revenueEvolution} subtitle={t.rapports.revenueEvolutionSub} />
           <div className="h-72 px-2 pb-2">
             {loadingSales ? (
-              <div className="h-full flex items-center justify-center text-sm text-[var(--text-muted)]">Chargement…</div>
+              <div className="h-full flex items-center justify-center text-sm text-[var(--text-muted)]">{t.common.loading}</div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={sales.byDay} margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
@@ -328,10 +328,10 @@ export default function RapportsPage() {
         </Card>
 
         <Card>
-          <CardHeader title="Ventes par catégorie" subtitle="Répartition du CA" />
+          <CardHeader title={t.rapports.salesByCategory} subtitle={t.rapports.salesByCategorySub} />
           <div className="h-72 px-2 pb-2">
             {loadingCat ? (
-              <div className="h-full flex items-center justify-center text-sm text-[var(--text-muted)]">Chargement…</div>
+              <div className="h-full flex items-center justify-center text-sm text-[var(--text-muted)]">{t.common.loading}</div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -359,10 +359,10 @@ export default function RapportsPage() {
 
       {/* Sales by category bar chart */}
       <Card className="mb-5">
-        <CardHeader title="Détail des ventes par catégorie" subtitle="Chiffre d'affaires et quantités" />
+        <CardHeader title={t.rapports.salesByCategoryDetail} subtitle={t.rapports.salesByCategoryDetailSub} />
         <div className="h-64 px-2 pb-2">
           {loadingCat ? (
-            <div className="h-full flex items-center justify-center text-sm text-[var(--text-muted)]">Chargement…</div>
+            <div className="h-full flex items-center justify-center text-sm text-[var(--text-muted)]">{t.common.loading}</div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={categories} margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
@@ -382,21 +382,21 @@ export default function RapportsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
         {/* Top 10 products */}
         <Card>
-          <CardHeader title="Top 10 produits" subtitle="Par chiffre d'affaires" />
+          <CardHeader title={t.rapports.top10Products} subtitle={t.rapports.top10Sub} />
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--border)] text-left">
                   <th className="px-4 py-2.5 text-xs font-semibold text-[var(--text-muted)]">#</th>
-                  <th className="px-4 py-2.5 text-xs font-semibold text-[var(--text-muted)]">Produit</th>
-                  <th className="px-4 py-2.5 text-xs font-semibold text-[var(--text-muted)] text-right">Qté</th>
-                  <th className="px-4 py-2.5 text-xs font-semibold text-[var(--text-muted)] text-right">CA</th>
+                  <th className="px-4 py-2.5 text-xs font-semibold text-[var(--text-muted)]">{t.rapports.colProduct}</th>
+                  <th className="px-4 py-2.5 text-xs font-semibold text-[var(--text-muted)] text-right">{t.rapports.colQty}</th>
+                  <th className="px-4 py-2.5 text-xs font-semibold text-[var(--text-muted)] text-right">{t.rapports.colRevenue}</th>
                 </tr>
               </thead>
               <tbody>
                 {loadingTop ? (
                   <tr>
-                    <td colSpan={4} className="px-4 py-8 text-center text-sm text-[var(--text-muted)]">Chargement…</td>
+                    <td colSpan={4} className="px-4 py-8 text-center text-sm text-[var(--text-muted)]">{t.common.loading}</td>
                   </tr>
                 ) : (
                   top.map((p, i) => (
@@ -417,21 +417,21 @@ export default function RapportsPage() {
 
         {/* Sales by employee */}
         <Card>
-          <CardHeader title="Ventes par employé" subtitle="Performance des caissiers" />
+          <CardHeader title={t.rapports.salesByEmployee} subtitle={t.rapports.salesByEmployeeSub} />
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--border)] text-left">
-                  <th className="px-4 py-2.5 text-xs font-semibold text-[var(--text-muted)]">Employé</th>
-                  <th className="px-4 py-2.5 text-xs font-semibold text-[var(--text-muted)] text-right">Transactions</th>
-                  <th className="px-4 py-2.5 text-xs font-semibold text-[var(--text-muted)] text-right">CA</th>
-                  <th className="px-4 py-2.5 text-xs font-semibold text-[var(--text-muted)] text-right">Panier moy.</th>
+                  <th className="px-4 py-2.5 text-xs font-semibold text-[var(--text-muted)]">{t.rapports.colEmployee}</th>
+                  <th className="px-4 py-2.5 text-xs font-semibold text-[var(--text-muted)] text-right">{t.rapports.colTransactions}</th>
+                  <th className="px-4 py-2.5 text-xs font-semibold text-[var(--text-muted)] text-right">{t.rapports.colRevenue}</th>
+                  <th className="px-4 py-2.5 text-xs font-semibold text-[var(--text-muted)] text-right">{t.rapports.colAvgBasket}</th>
                 </tr>
               </thead>
               <tbody>
                 {loadingEmp ? (
                   <tr>
-                    <td colSpan={4} className="px-4 py-8 text-center text-sm text-[var(--text-muted)]">Chargement…</td>
+                    <td colSpan={4} className="px-4 py-8 text-center text-sm text-[var(--text-muted)]">{t.common.loading}</td>
                   </tr>
                 ) : (
                   employees.map((e) => (
@@ -460,32 +460,32 @@ export default function RapportsPage() {
 
       {/* Inventory valuation summary */}
       <Card>
-        <CardHeader title="Valorisation du stock" subtitle="Valeur d'inventaire et marge potentielle" />
+        <CardHeader title={t.rapports.stockValuation} subtitle={t.rapports.stockValuationSub} />
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 p-4">
           {[
             {
-              label: "Nombre de produits",
+              label: t.rapports.productCount,
               value: inventoryData.productCount.toLocaleString("fr-FR"),
               icon: Package,
               color: "text-blue-600",
               bg: "bg-blue-50",
             },
             {
-              label: "Valeur de coût",
+              label: t.rapports.costValue,
               value: formatCurrency(inventoryData.totalCostValue),
               icon: Boxes,
               color: "text-amber-600",
               bg: "bg-amber-50",
             },
             {
-              label: "Valeur de vente",
+              label: t.rapports.saleValue,
               value: formatCurrency(inventoryData.totalSaleValue),
               icon: DollarSign,
               color: "text-emerald-600",
               bg: "bg-emerald-50",
             },
             {
-              label: "Marge potentielle",
+              label: t.rapports.potentialMargin,
               value: formatCurrency(inventoryData.potentialMargin),
               icon: TrendingUp,
               color: "text-indigo-600",
@@ -504,7 +504,7 @@ export default function RapportsPage() {
           ))}
         </div>
         {loadingInv && (
-          <div className="px-4 pb-4 text-xs text-[var(--text-muted)]">Chargement de la valorisation…</div>
+          <div className="px-4 pb-4 text-xs text-[var(--text-muted)]">{t.rapports.loadingValuation}</div>
         )}
       </Card>
       </div>

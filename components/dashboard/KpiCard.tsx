@@ -2,6 +2,7 @@
 
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { cn, formatCurrency, formatNumber, formatPercent } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n/context";
 
 interface KpiCardProps {
   label: string;
@@ -23,6 +24,7 @@ export function KpiCard({
   iconBg,
   suffix,
 }: KpiCardProps) {
+  const { t } = useI18n();
   const delta = previous > 0 ? ((value - previous) / previous) * 100 : 0;
   const isUp = delta > 0;
   const isFlat = delta === 0;
@@ -72,7 +74,7 @@ export function KpiCard({
       </p>
       <p className="text-xs text-[var(--text-muted)] font-medium">{label}</p>
       <p className="text-[11px] text-[var(--text-muted)] mt-1">
-        vs hier :{" "}
+        {t.kpiCard.vsYesterday}{" "}
         <span className="tabular-nums">
           {format === "currency" ? formatCurrency(previous) : formatNumber(previous)}
         </span>
