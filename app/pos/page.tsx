@@ -19,6 +19,7 @@ import {
   Split,
   AlertTriangle,
   TrendingDown,
+  Users,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/Button";
@@ -26,21 +27,16 @@ import { Badge } from "@/components/ui/Badge";
 import { products as mockProducts } from "@/lib/mock-data";
 import { formatCurrency, cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/context";
-import { useProducts, useCreateTransaction } from "@/lib/hooks/useApi";
+import { useProducts, useCreateTransaction, useCustomers } from "@/lib/hooks/useApi";
+import type { ApiCustomer } from "@/lib/api";
 import { useAuth } from "@/lib/auth/context";
 import { getEffectivePrice, hasActiveMarkdown, daysToExpiry } from "@/lib/api";
 import type { Product, CartItem } from "@/lib/types";
+import { STORE_INFO } from "./store-info";
 
 const TAX_RATE = 0.155;
 // Stable backend category keys (always French in DB) - order matches CATEGORIES labels
 const CATEGORY_KEYS = ["Tous", "Épicerie", "Boissons", "Produits laitiers", "Hygiène", "Boucherie", "Boulangerie", "Surgelés"];
-
-// Magasin info affiché sur le ticket
-const STORE_INFO = {
-  name: "KABRAK MARKET",
-  address: "Supermarket Pro - Yaoundé, Cameroun",
-  phone: "Tel: +237 6XX XXX XXX",
-};
 
 type PaymentMethod = "cash" | "card" | "mobile" | "split";
 type CheckoutStep = "cart" | "payment" | "receipt";
@@ -69,6 +65,7 @@ interface ReceiptData {
 export default function POSPage() {
   const { t } = useI18n();
   const { products: apiProducts, loading } = useProducts();
+  const { data: apiCustomers } = useCustomers();
   const { create: createTransaction, creating } = useCreateTransaction();
   const { user } = useAuth();
   const CATEGORIES = [
@@ -92,6 +89,8 @@ export default function POSPage() {
   const [cashierDiscountReason, setCashierDiscountReason] = useState("");
   const [showDiscountModal, setShowDiscountModal] = useState(false);
   const [splitPayment, setSplitPayment] = useState<SplitPayment>({ cash: 0, mobile: 0, card: 0 });
+  const [selectedCustomer, setSelectedCustomer] = useState<ApiCustomer | null>(null);
+  const [showCustomerSearch, setShowCustomerSearch] = useState(false);
   const [scanSound] = useState(() => {
     if (typeof Audio !== "undefined") {
       const audio = new Audio("data:audio/wav;base64,UklGRnoFAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoFAACAhYqFBAEBAQEBAAA=");
@@ -183,6 +182,96 @@ export default function POSPage() {
   const cashGivenNum = parseFloat(cashGiven.replace(/\s/g, "")) || 0;
   const change = cashGivenNum - total;
 
+  // Raccourcis clavier pour le POS (F1-F4 modes de paiement, Enter confirmer, Echap retour)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      // Ignorer les raccourcis si l'utilisateur tape dans un input (sauf le champ scan)
+      const target = e.target as HTMLElement;
+      const isInput = target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable;
+      const isSearchInput = isInput && target === searchRef.current;
+
+      if (checkoutStep === "cart" && !isSearchInput && e.key === "Enter") {
+        // Enter dans le panier : aller au paiement
+        if (cart.length > 0) {
+          e.preventDefault();
+          setCheckoutStep("payment");
+        }
+        return;
+      }
+
+      if (checkoutStep === "payment") {
+        // F1-F4 : modes de paiement
+        if (["F1", "F2", "F3", "F4"].includes(e.key)) {
+          e.preventDefault();
+          const map: Record<string, PaymentMethod> = {
+            F1: "cash",
+            F2: "card",
+            F3: "mobile",
+            F4: "split",
+          };
+          setPaymentMethod(map[e.key]);
+          return;
+        }
+
+        // Echap : retour au panier
+        if (e.key === "Escape") {
+          e.preventDefault();
+          setCheckoutStep("cart");
+          return;
+        }
+
+        // Enter : confirmer le paiement (sauf si on est dans un input)
+        if (e.key === "Enter" && !isInput) {
+          e.preventDefault();
+          const splitTotal = splitPayment.cash + splitPayment.mobile + splitPayment.card;
+          const canConfirmNow =
+            paymentMethod === "cash" ? cashGivenNum >= total :
+            paymentMethod === "card" ? true :
+            paymentMethod === "mobile" ? true :
+            paymentMethod === "split" ? splitTotal >= total :
+            false;
+          if (canConfirmNow) {
+            handleConfirmPayment();
+          }
+          return;
+        }
+      }
+    };
+
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [checkoutStep, cart, paymentMethod, cashGivenNum, total, splitPayment, setPaymentMethod, setCheckoutStep]);
+
+  // Mise à jour de l'écran client via localStorage
+  useEffect(() => {
+    const state = {
+      type: checkoutStep === "receipt" ? "thanks" : checkoutStep,
+      items: cart.map((item) => {
+        const effPrice = getEffectivePrice(item.product);
+        return {
+          name: item.product.name,
+          quantity: item.quantity,
+          price: effPrice,
+          total: effPrice * item.quantity,
+        };
+      }),
+      subtotal,
+      discount,
+      total,
+      itemCount: cart.reduce((s, i) => s + i.quantity, 0),
+      lastUpdate: Date.now(),
+      customer: selectedCustomer
+        ? {
+            name: `${selectedCustomer.firstName} ${selectedCustomer.lastName}`,
+            points: selectedCustomer.points,
+          }
+        : undefined,
+    };
+    localStorage.setItem("kabrak_pos_display", JSON.stringify(state));
+    // Déclencher un événement pour les autres onglets (écran client)
+    window.dispatchEvent(new StorageEvent("storage", { key: "kabrak_pos_display" }));
+  }, [cart, checkoutStep, subtotal, discount, total, selectedCustomer]);
+
   const handleConfirmPayment = async () => {
     // ID caissier depuis l'auth, fallback sur le premier employé
     const defaultCashierId = user?.id || "cmqk34t550003j81mc4vb6bow";
@@ -220,6 +309,7 @@ export default function POSPage() {
       paymentMethod: recordedMethod,
       cashGiven: effectiveCashGiven,
       change: effectiveChange,
+      customerId: selectedCustomer?.id,
       items: cart.map((item, idx) => {
         const effPrice = getEffectivePrice(item.product);
         return {
@@ -630,6 +720,26 @@ export default function POSPage() {
                 </div>
               )}
 
+              {/* Customer selection */}
+              {cart.length > 0 && (
+                <div className="px-4 py-2 border-t border-[var(--border-subtle)] shrink-0">
+                  <button
+                    onClick={() => setShowCustomerSearch(true)}
+                    className="flex items-center gap-2 w-full"
+                  >
+                    <Users className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+                    <span className="text-xs text-[var(--text-muted)] flex-1 text-left">
+                      {selectedCustomer ? `${selectedCustomer.firstName} ${selectedCustomer.lastName}` : t.pos.addCustomer}
+                    </span>
+                    {selectedCustomer ? (
+                      <span className="text-[11px] text-emerald-600 font-medium">{t.pos.loyaltyPoints}: {selectedCustomer.points}</span>
+                    ) : (
+                      <span className="text-[11px] text-[var(--brand)] font-medium">{t.pos.selectCustomer}</span>
+                    )}
+                  </button>
+                </div>
+              )}
+
               {/* Totals */}
               {cart.length > 0 && (
                 <div className="px-4 py-3 bg-slate-50 border-t border-[var(--border)] shrink-0 space-y-1.5">
@@ -676,6 +786,21 @@ export default function POSPage() {
             setCashierDiscountAmount(amount);
             setCashierDiscountReason(reason);
             setShowDiscountModal(false);
+          }}
+        />
+      )}
+      {showCustomerSearch && (
+        <CustomerSearchModal
+          customers={apiCustomers || []}
+          selected={selectedCustomer}
+          onClose={() => setShowCustomerSearch(false)}
+          onSelect={(c) => {
+            setSelectedCustomer(c);
+            setShowCustomerSearch(false);
+          }}
+          onClear={() => {
+            setSelectedCustomer(null);
+            setShowCustomerSearch(false);
           }}
         />
       )}
@@ -736,6 +861,99 @@ function DiscountModal({
             <Button variant="secondary" className="flex-1" onClick={onClose}>{t.common.cancel}</Button>
             <Button className="flex-1" onClick={() => onApply(amount, reasonText)}>{t.pos.applyDiscount}</Button>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Customer Search Modal ──────────────────────────────────────────────────────────────
+
+function CustomerSearchModal({
+  customers,
+  selected,
+  onClose,
+  onSelect,
+  onClear,
+}: {
+  customers: ApiCustomer[];
+  selected: ApiCustomer | null;
+  onClose: () => void;
+  onSelect: (c: ApiCustomer) => void;
+  onClear: () => void;
+}) {
+  const { t } = useI18n();
+  const [query, setQuery] = useState("");
+  const filtered = customers.filter(
+    (c) =>
+      c.firstName.toLowerCase().includes(query.toLowerCase()) ||
+      c.lastName.toLowerCase().includes(query.toLowerCase()) ||
+      c.phone.includes(query) ||
+      c.customerNumber.toLowerCase().includes(query.toLowerCase())
+  );
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-[var(--shadow-lg)] w-full max-w-md p-5 flex flex-col max-h-[80vh]">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-base font-semibold text-[var(--text-primary)]">{t.pos.selectCustomer}</h3>
+          <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded-lg transition-colors">
+            <X className="w-4 h-4 text-slate-500" />
+          </button>
+        </div>
+        <div className="relative mb-3">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t.pos.searchCustomer}
+            className="w-full border border-[var(--border)] rounded-xl pl-9 pr-4 py-2.5 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--brand)] transition-colors bg-white"
+            autoFocus
+          />
+        </div>
+        <div className="flex-1 overflow-y-auto -mx-2 px-2">
+          {selected && (
+            <div className="mb-3 p-3 bg-emerald-50 rounded-xl border border-emerald-100">
+              <p className="text-sm font-semibold text-emerald-800">
+                {selected.firstName} {selected.lastName}
+              </p>
+              <p className="text-xs text-emerald-600">{selected.phone} · {selected.points} points</p>
+            </div>
+          )}
+          {filtered.length === 0 ? (
+            <p className="text-sm text-[var(--text-muted)] text-center py-8">{t.pos.noCustomerFound}</p>
+          ) : (
+            <div className="space-y-1">
+              {filtered.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => onSelect(c)}
+                  className={cn(
+                    "w-full flex items-center justify-between p-3 rounded-xl text-left transition-colors",
+                    selected?.id === c.id
+                      ? "bg-[var(--brand-light)] border border-[var(--brand)]"
+                      : "hover:bg-slate-50 border border-transparent"
+                  )}
+                >
+                  <div>
+                    <p className="text-sm font-medium text-[var(--text-primary)]">
+                      {c.firstName} {c.lastName}
+                    </p>
+                    <p className="text-xs text-[var(--text-muted)]">{c.phone} · {c.customerNumber}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-[var(--text-muted)]">{t.pos.loyaltyPoints}</p>
+                    <p className="text-sm font-bold text-[var(--brand)] tabular-nums">{c.points}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="flex gap-3 pt-4 mt-2 border-t border-[var(--border)]">
+          <Button variant="secondary" className="flex-1" onClick={onClear}>{t.pos.clearCustomer}</Button>
+          <Button className="flex-1" onClick={onClose}>{t.common.confirm}</Button>
         </div>
       </div>
     </div>
@@ -841,6 +1059,9 @@ function PaymentPanel({
                 >
                   <Icon className="w-5 h-5" />
                   {labels[m]}
+                  <span className="text-[10px] opacity-60 mt-0.5">
+                    {m === "cash" ? "F1" : m === "card" ? "F2" : m === "mobile" ? "F3" : "F4"}
+                  </span>
                 </button>
               );
             })}
@@ -943,7 +1164,7 @@ function PaymentPanel({
         </div>
       </div>
 
-      <div className="p-3 border-t border-[var(--border)] shrink-0">
+      <div className="p-3 border-t border-[var(--border)] shrink-0 space-y-2">
         <Button
           className="w-full h-11 text-sm"
           disabled={!canConfirm || creating}
@@ -952,6 +1173,10 @@ function PaymentPanel({
         >
           {creating ? t.common.processing : t.pos.confirmPayment}
         </Button>
+        <div className="flex justify-between text-[10px] text-[var(--text-muted)] px-1">
+          <span>F1=Cash · F2=Carte · F3=Mobile · F4=Mixte</span>
+          <span>Enter=Valider · Esc=Retour</span>
+        </div>
       </div>
     </div>
   );
