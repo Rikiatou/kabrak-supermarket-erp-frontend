@@ -20,6 +20,7 @@ import {
   AlertTriangle,
   TrendingDown,
   Users,
+  History,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/Button";
@@ -27,8 +28,8 @@ import { Badge } from "@/components/ui/Badge";
 import { products as mockProducts } from "@/lib/mock-data";
 import { formatCurrency, cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/context";
-import { useProducts, useCreateTransaction, useCustomers } from "@/lib/hooks/useApi";
-import type { ApiCustomer } from "@/lib/api";
+import { useProducts, useCreateTransaction, useCustomers, useRecentTransactions } from "@/lib/hooks/useApi";
+import type { ApiCustomer, ApiTransaction } from "@/lib/api";
 import { useAuth } from "@/lib/auth/context";
 import { getEffectivePrice, hasActiveMarkdown, daysToExpiry } from "@/lib/api";
 import type { Product, CartItem } from "@/lib/types";
@@ -66,6 +67,7 @@ export default function POSPage() {
   const { t } = useI18n();
   const { products: apiProducts, loading } = useProducts();
   const { data: apiCustomers } = useCustomers();
+  const { transactions: recentTransactions, reload: reloadRecentTransactions } = useRecentTransactions(10);
   const { create: createTransaction, creating } = useCreateTransaction();
   const { user } = useAuth();
   const CATEGORIES = [
@@ -91,9 +93,21 @@ export default function POSPage() {
   const [splitPayment, setSplitPayment] = useState<SplitPayment>({ cash: 0, mobile: 0, card: 0 });
   const [selectedCustomer, setSelectedCustomer] = useState<ApiCustomer | null>(null);
   const [showCustomerSearch, setShowCustomerSearch] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [autoPrint, setAutoPrint] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("kabrak_pos_auto_print") === "true";
+  });
   const [scanSound] = useState(() => {
     if (typeof Audio !== "undefined") {
       const audio = new Audio("data:audio/wav;base64,UklGRnoFAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoFAACAhYqFBAEBAQEBAAA=");
+      return audio;
+    }
+    return null;
+  });
+  const [successSound] = useState(() => {
+    if (typeof Audio !== "undefined") {
+      const audio = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YQAAAAA=");
       return audio;
     }
     return null;
@@ -340,6 +354,19 @@ export default function POSPage() {
       split: isSplit ? splitPayment : undefined,
     });
     setCheckoutStep("receipt");
+
+    // Son de confirmation de paiement
+    if (successSound) {
+      successSound.currentTime = 0;
+      successSound.play().catch(() => {});
+    }
+
+    // Impression automatique si activée
+    if (autoPrint) {
+      setTimeout(() => {
+        handlePrintReceipt();
+      }, 400);
+    }
   };
 
   const handleNewSale = () => {
@@ -447,6 +474,93 @@ export default function POSPage() {
     }, 250);
   }, [receipt, user]);
 
+  // Réimprimer un ticket à partir d'une transaction de l'historique
+  const handleReprintTransaction = useCallback((tx: ApiTransaction) => {
+    const printWindow = window.open("", "_blank", "width=400,height=600");
+    if (!printWindow) return;
+
+    const date = new Date(tx.date);
+    const dateStr = date.toLocaleDateString("fr-FR");
+    const timeStr = date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+
+    const methodLabel =
+      tx.paymentMethod === "cash"
+        ? t.pos.cash
+        : tx.paymentMethod === "card"
+        ? t.pos.card
+        : tx.paymentMethod === "mobile"
+        ? t.pos.mobile
+        : t.pos.split;
+
+    const printItemsHtml = (tx.items || [])
+      .map((item) => {
+        const unitPrice = item.unitPrice;
+        return `<tr>
+          <td style="font-size:11px;vertical-align:top">${item.product?.name || "Produit"}</td>
+          <td style="text-align:center;font-size:11px;vertical-align:top">${item.quantity}</td>
+          <td style="text-align:right;font-size:11px;vertical-align:top">${formatCurrency(unitPrice)}</td>
+          <td style="text-align:right;font-size:11px;vertical-align:top">${formatCurrency(unitPrice * item.quantity)}</td>
+        </tr>`;
+      })
+      .join("");
+
+    printWindow.document.write(`
+      <html>
+      <head>
+        <title>${t.pos.receipt} ${tx.transactionNumber}</title>
+        <style>
+          @page { size: 80mm auto; margin: 0; }
+          body { width: 72mm; margin: 4mm auto; font-family: 'Courier New', monospace; color: #000; }
+          h1 { font-size: 14px; text-align: center; margin: 0 0 2px; }
+          .center { text-align: center; }
+          .dashed { border-top: 1px dashed #000; margin: 4px 0; }
+          table { width: 100%; border-collapse: collapse; }
+          td { padding: 1px 0; vertical-align: top; }
+          .total { font-size: 14px; font-weight: bold; }
+          .right { text-align: right; }
+          .small { font-size: 10px; }
+          @media print { body { width: 72mm; } }
+        </style>
+      </head>
+      <body>
+        <h1>${STORE_INFO.name}</h1>
+        <p class="center small">${STORE_INFO.address}</p>
+        <p class="center small">${STORE_INFO.phone}</p>
+        <p class="center small">${dateStr} — ${timeStr}</p>
+        <p class="center small">${t.pos.receipt}: ${tx.transactionNumber}</p>
+        <div class="dashed"></div>
+        <table>
+          <tr><td class="small" style="font-weight:bold">${t.pos.receiptItem}</td><td class="small" style="text-align:center;font-weight:bold">${t.pos.receiptQty}</td><td class="small" style="text-align:right;font-weight:bold">${t.pos.receiptUnit}</td><td class="small" style="text-align:right;font-weight:bold">${t.pos.receiptTotal}</td></tr>
+          ${printItemsHtml}
+        </table>
+        <div class="dashed"></div>
+        <table>
+          <tr><td class="small">${t.pos.subtotal}</td><td class="right small">${formatCurrency(tx.subtotal)}</td></tr>
+          ${tx.discount > 0 ? `<tr><td class="small">${t.pos.discount}</td><td class="right small">-${formatCurrency(tx.discount)}</td></tr>` : ""}
+        </table>
+        <div class="dashed"></div>
+        <table><tr><td class="total">${t.pos.total.toUpperCase()}</td><td class="right total">${formatCurrency(tx.total)}</td></tr></table>
+        <div class="dashed"></div>
+        <table>
+          <tr><td class="small">${methodLabel}</td><td class="right small">${formatCurrency(tx.total)}</td></tr>
+          ${tx.cashGiven != null ? `<tr><td class="small">${t.pos.amountGiven}</td><td class="right small">${formatCurrency(tx.cashGiven)}</td></tr>` : ""}
+          ${tx.change != null ? `<tr><td class="small">${t.pos.change}</td><td class="right small">${formatCurrency(tx.change)}</td></tr>` : ""}
+        </table>
+        <div class="dashed"></div>
+        <p class="center small" style="margin-top:8px">${t.pos.thankYou}</p>
+        <p class="center small">${STORE_INFO.name}</p>
+        <p class="center small">(RÉIMPRESSION)</p>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 250);
+  }, [t]);
+
   return (
     <AppShell title={t.pos.title} subtitle={t.pos.subtitle}>
       <div className="flex gap-4 h-[calc(100vh-64px-48px)]">
@@ -455,23 +569,35 @@ export default function POSPage() {
         <div className="flex-1 flex flex-col gap-3 min-w-0">
           {/* Search + categories */}
           <div className="bg-white border border-[var(--border)] rounded-2xl p-3 shadow-[var(--shadow-sm)]">
-            <div className="flex items-center gap-2 bg-[var(--background)] border border-[var(--border)] rounded-xl px-3 py-2 mb-3 focus-within:border-[var(--brand)] transition-colors">
-              <Search className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
-              <input
-                ref={searchRef}
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={handleSearchSubmit}
-                placeholder={t.pos.searchProduct + " (ou scannez un code-barres)"}
-                className="flex-1 bg-transparent text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none"
-                autoFocus
-              />
-              {search && (
-                <button onClick={() => setSearch("")}>
-                  <X className="w-3.5 h-3.5 text-[var(--text-muted)] hover:text-[var(--text-primary)]" />
-                </button>
-              )}
+            <div className="flex items-center gap-2 mb-3">
+              <div className="flex-1 flex items-center gap-2 bg-[var(--background)] border border-[var(--border)] rounded-xl px-3 py-2 focus-within:border-[var(--brand)] transition-colors">
+                <Search className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
+                <input
+                  ref={searchRef}
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onKeyDown={handleSearchSubmit}
+                  placeholder={t.pos.searchProduct + " (ou scannez un code-barres)"}
+                  className="flex-1 bg-transparent text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none"
+                  autoFocus
+                />
+                {search && (
+                  <button onClick={() => setSearch("")}>
+                    <X className="w-3.5 h-3.5 text-[var(--text-muted)] hover:text-[var(--text-primary)]" />
+                  </button>
+                )}
+              </div>
+              <button
+                onClick={() => {
+                  reloadRecentTransactions();
+                  setShowHistoryModal(true);
+                }}
+                className="h-10 px-3 flex items-center gap-1.5 text-xs font-medium text-[var(--text-secondary)] bg-white border border-[var(--border)] rounded-xl hover:bg-[var(--surface-hover)] transition-colors"
+              >
+                <History className="w-4 h-4" />
+                <span className="hidden sm:inline">{t.pos.salesHistory}</span>
+              </button>
             </div>
             <div className="flex gap-1.5 flex-wrap">
               {CATEGORIES.map((cat, idx) => (
@@ -568,7 +694,16 @@ export default function POSPage() {
         <div className="w-[340px] shrink-0 flex flex-col bg-white border border-[var(--border)] rounded-2xl shadow-[var(--shadow-sm)] overflow-hidden">
 
           {checkoutStep === "receipt" && receipt ? (
-            <ReceiptPanel receipt={receipt} onNewSale={handleNewSale} onPrint={handlePrintReceipt} />
+            <ReceiptPanel
+              receipt={receipt}
+              onNewSale={handleNewSale}
+              onPrint={handlePrintReceipt}
+              autoPrint={autoPrint}
+              onAutoPrintChange={(v) => {
+                setAutoPrint(v);
+                localStorage.setItem("kabrak_pos_auto_print", String(v));
+              }}
+            />
           ) : checkoutStep === "payment" ? (
             <PaymentPanel
               total={total}
@@ -804,6 +939,16 @@ export default function POSPage() {
           }}
         />
       )}
+      {showHistoryModal && (
+        <HistoryModal
+          transactions={recentTransactions}
+          onClose={() => setShowHistoryModal(false)}
+          onReprint={(tx) => {
+            handleReprintTransaction(tx);
+            setShowHistoryModal(false);
+          }}
+        />
+      )}
     </AppShell>
   );
 }
@@ -861,6 +1006,66 @@ function DiscountModal({
             <Button variant="secondary" className="flex-1" onClick={onClose}>{t.common.cancel}</Button>
             <Button className="flex-1" onClick={() => onApply(amount, reasonText)}>{t.pos.applyDiscount}</Button>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Customer Search Modal ──────────────────────────────────────────────────────────────
+
+function HistoryModal({
+  transactions,
+  onClose,
+  onReprint,
+}: {
+  transactions: ApiTransaction[];
+  onClose: () => void;
+  onReprint: (tx: ApiTransaction) => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-[var(--shadow-lg)] w-full max-w-md p-5 flex flex-col max-h-[80vh]">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-base font-semibold text-[var(--text-primary)]">{t.pos.salesHistory}</h3>
+          <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded-lg transition-colors">
+            <X className="w-4 h-4 text-slate-500" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto -mx-2 px-2">
+          {transactions.length === 0 ? (
+            <p className="text-sm text-[var(--text-muted)] text-center py-8">{t.pos.noHistory}</p>
+          ) : (
+            <div className="space-y-2">
+              {transactions.map((tx) => (
+                <div
+                  key={tx.id}
+                  className="flex items-center justify-between p-3 rounded-xl border border-[var(--border)] hover:bg-slate-50 transition-colors"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-[var(--text-primary)]">{tx.transactionNumber}</p>
+                    <p className="text-xs text-[var(--text-muted)]">
+                      {new Date(tx.date).toLocaleString("fr-FR", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })} · {tx.paymentMethod}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <p className="text-sm font-bold text-[var(--text-primary)] tabular-nums">{formatCurrency(tx.total)}</p>
+                    <button
+                      onClick={() => onReprint(tx)}
+                      className="p-2 text-[var(--brand)] hover:bg-[var(--brand-light)] rounded-lg transition-colors"
+                      title={t.pos.reprint}
+                    >
+                      <Printer className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="flex gap-3 pt-4 mt-2 border-t border-[var(--border)]">
+          <Button variant="secondary" className="w-full" onClick={onClose}>{t.common.close}</Button>
         </div>
       </div>
     </div>
@@ -1188,10 +1393,14 @@ function ReceiptPanel({
   receipt,
   onNewSale,
   onPrint,
+  autoPrint,
+  onAutoPrintChange,
 }: {
   receipt: ReceiptData;
   onNewSale: () => void;
   onPrint: () => void;
+  autoPrint: boolean;
+  onAutoPrintChange: (v: boolean) => void;
 }) {
   const { t } = useI18n();
   const methodLabels: Record<string, string> = { cash: t.pos.cash, card: t.pos.card, mobile: t.pos.mobile, split: t.pos.split };
@@ -1285,13 +1494,24 @@ function ReceiptPanel({
         </div>
       </div>
 
-      <div className="p-3 border-t border-[var(--border)] flex gap-2 shrink-0">
-        <Button variant="secondary" size="md" className="flex-1" icon={<Printer className="w-3.5 h-3.5" />} onClick={onPrint}>
-          {t.common.print}
-        </Button>
-        <Button className="flex-1" onClick={onNewSale} icon={<Plus className="w-3.5 h-3.5" />}>
-          {t.common.newSale}
-        </Button>
+      <div className="p-3 border-t border-[var(--border)] shrink-0 space-y-3">
+        <label className="flex items-center gap-2 text-xs text-[var(--text-muted)] cursor-pointer">
+          <input
+            type="checkbox"
+            checked={autoPrint}
+            onChange={(e) => onAutoPrintChange(e.target.checked)}
+            className="w-4 h-4 accent-[var(--brand)]"
+          />
+          {t.pos.enableAutoPrint}
+        </label>
+        <div className="flex gap-2">
+          <Button variant="secondary" size="md" className="flex-1" icon={<Printer className="w-3.5 h-3.5" />} onClick={onPrint}>
+            {t.common.print}
+          </Button>
+          <Button className="flex-1" onClick={onNewSale} icon={<Plus className="w-3.5 h-3.5" />}>
+            {t.common.newSale}
+          </Button>
+        </div>
       </div>
     </div>
   );
