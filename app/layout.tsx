@@ -48,7 +48,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full`}
     >
       <body className="h-full bg-[var(--background)]">
-          <I18nProvider><LangAttribute /><ToastProvider><LicenseProvider><AuthProvider><RoleGuard><LicenseGate>{children}</LicenseGate></RoleGuard></AuthProvider></LicenseProvider></ToastProvider></I18nProvider>
+          <I18nProvider><LangAttribute /><ToastProvider><LicenseProvider><LicenseGate><AuthProvider><RoleGuard>{children}</RoleGuard></AuthProvider></LicenseGate></LicenseProvider></ToastProvider></I18nProvider>
           <script
             dangerouslySetInnerHTML={{
               __html: `if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').catch(()=>{})})}`,

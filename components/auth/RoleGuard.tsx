@@ -22,8 +22,9 @@ export function RoleGuard({ children }: RoleGuardProps) {
   const { user, loading } = useAuth();
   const { t } = useI18n();
 
-  // Page login = pas de guard
-  const isLoginPage = pathname === "/login";
+  // Pages publiques = pas de guard
+  const PUBLIC_PAGES = ["/login", "/activate", "/pricing", "/"];
+  const isPublicPage = PUBLIC_PAGES.some(p => pathname === p || pathname.startsWith(p + "/"));
 
   // Vérifier l'accès (dérivé, pas de state)
   const hasAccess = user ? canAccess(user.role, pathname) : false;
@@ -31,7 +32,7 @@ export function RoleGuard({ children }: RoleGuardProps) {
   const isDenied = user && !hasAccess && pathname === home; // Cas extrême: aucune page accessible
 
   useEffect(() => {
-    if (loading || isLoginPage) return;
+    if (loading || isPublicPage) return;
 
     if (!user) {
       router.replace("/login");
@@ -41,10 +42,10 @@ export function RoleGuard({ children }: RoleGuardProps) {
     if (!hasAccess && !isDenied) {
       router.replace(home);
     }
-  }, [user, loading, isLoginPage, hasAccess, isDenied, home, router]);
+  }, [user, loading, isPublicPage, hasAccess, isDenied, home, router, pathname]);
 
-  // Page login = pas de guard
-  if (isLoginPage) {
+  // Pages publiques = pas de guard
+  if (isPublicPage) {
     return <>{children}</>;
   }
 
