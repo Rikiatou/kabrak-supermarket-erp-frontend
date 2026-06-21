@@ -19,17 +19,20 @@ import {
   AlertTriangle,
   ScanLine,
   Calendar,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/context";
 import { useAuth } from "@/lib/auth/context";
 import { canAccess } from "@/lib/auth/roles";
+import { useLicense } from "@/lib/license/context";
 import { LanguageToggle } from "./LanguageToggle";
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const { t } = useI18n();
   const { user, logout } = useAuth();
+  const { config, license } = useLicense();
 
   const allNavItems = [
     { href: "/dashboard", label: t.nav.dashboard, icon: LayoutDashboard, badge: null },
@@ -47,6 +50,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     { href: "/comptabilite", label: t.nav.comptabilite, icon: BookOpen, badge: null },
     { href: "/rapports", label: t.nav.rapports, icon: BarChart3, badge: null },
     { href: "/ia", label: t.nav.ia, icon: Cpu, badge: null },
+    { href: "/settings", label: "Paramètres", icon: Settings, badge: null },
   ];
 
   // Filtrer par rôle
@@ -54,18 +58,28 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-[260px] bg-[#0f172a] flex flex-col z-40">
-      {/* Logo */}
+      {/* Logo — Personnalisé selon la config client */}
       <div className="h-16 flex items-center px-4 border-b border-white/[0.06] shrink-0 justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-[var(--brand)] rounded-lg flex items-center justify-center shrink-0">
-            <Store className="w-4 h-4 text-white" />
-          </div>
-          <div>
-            <span className="text-white font-semibold text-[15px] leading-none tracking-tight">
-              KABRAK
+          {config?.logoUrl ? (
+            // Logo personnalisé du client
+            <img
+              src={config.logoUrl}
+              alt={config.supermarketName}
+              className="w-8 h-8 rounded-lg object-cover shrink-0"
+            />
+          ) : (
+            // Logo par défaut KABRAK
+            <div className="w-8 h-8 bg-[var(--brand)] rounded-lg flex items-center justify-center shrink-0">
+              <Store className="w-4 h-4 text-white" />
+            </div>
+          )}
+          <div className="min-w-0">
+            <span className="text-white font-semibold text-[15px] leading-none tracking-tight truncate block">
+              {config?.supermarketName || "KABRAK"}
             </span>
             <span className="block text-[10px] text-slate-400 tracking-widest uppercase mt-0.5">
-              Market ERP
+              {license?.type === "MULTI_STORE" ? "Multi-Store ERP" : "Market ERP"}
             </span>
           </div>
         </div>

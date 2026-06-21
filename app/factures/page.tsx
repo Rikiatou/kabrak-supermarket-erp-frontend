@@ -26,6 +26,7 @@ import { useInvoices, useCreateInvoice, useUpdateInvoiceStatus, useAddPayment } 
 import type { ApiInvoicePayment } from "@/lib/api";
 import jsPDF from "jspdf";
 import QRCode from "qrcode";
+import { useLicense } from "@/lib/license/context";
 
 interface InvoiceItem {
   description: string;
@@ -109,6 +110,11 @@ const mockInvoices: Invoice[] = [
 export default function FacturesPage() {
   const { t } = useI18n();
   const { toast } = useToast();
+  const { config: licenseConfig } = useLicense();
+  const supermarketName = licenseConfig?.supermarketName || "KABRAK MARKET";
+  const supermarketAddress = licenseConfig?.address || "Supermarket Pro - Yaoundé, Cameroun";
+  const supermarketPhone = licenseConfig?.phone ? `Tel: ${licenseConfig.phone}` : "Tel: +237 6XX XXX XXX";
+  const invoiceFooter = licenseConfig?.invoiceFooter || `${supermarketName} - ${supermarketAddress} - ${supermarketPhone}`;
 
   const statusConfig: Record<string, { label: string; color: string }> = {
     draft: { label: t.factures.status.draft, color: "bg-slate-100 text-slate-600" },
@@ -311,11 +317,11 @@ export default function FacturesPage() {
     pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(22);
     pdf.setFont("helvetica", "bold");
-    pdf.text("KABRAK MARKET", margin, 20);
+    pdf.text(supermarketName, margin, 20);
     pdf.setFontSize(10);
     pdf.setFont("helvetica", "normal");
-    pdf.text("Supermarket Pro - Yaoundé, Cameroun", margin, 28);
-    pdf.text("Tel: +237 6XX XXX XXX | N° RC: CM/YDE/2024/B/123", margin, 34);
+    pdf.text(supermarketAddress, margin, 28);
+    pdf.text(`${supermarketPhone} | N° RC: CM/YDE/2024/B/123`, margin, 34);
 
     // Invoice title
     pdf.setTextColor(30, 64, 175);
@@ -406,7 +412,7 @@ export default function FacturesPage() {
     pdf.setFontSize(8);
     pdf.setFont("helvetica", "normal");
     pdf.text("Merci pour votre confiance!", pageWidth / 2, y + 30, { align: "center" });
-    pdf.text("KABRAK Supermarket Pro - SIRET: CM-2024-12345 - Tel: +237 6XX XXX XXX", pageWidth / 2, y + 36, { align: "center" });
+    pdf.text(invoiceFooter, pageWidth / 2, y + 36, { align: "center" });
     pdf.text("Conditions de paiement: 30 jours. Litiges: Tribunal de Commerce de Yaoundé.", pageWidth / 2, y + 42, { align: "center" });
 
     // Signature area
@@ -419,14 +425,14 @@ export default function FacturesPage() {
   };
 
   const sendWhatsApp = (invoice: Invoice) => {
-    const msg = `Bonjour ${invoice.clientName},%0A%0AVoici votre facture ${invoice.number} de KABRAK MARKET.%0A%0AMontant total: ${formatCurrency(invoice.total)}%0ADate: ${new Date(invoice.date).toLocaleDateString("fr-FR")}%0A%0AMerci pour votre confiance!`;
+    const msg = `Bonjour ${invoice.clientName},%0A%0AVoici votre facture ${invoice.number} de ${supermarketName}.%0A%0AMontant total: ${formatCurrency(invoice.total)}%0ADate: ${new Date(invoice.date).toLocaleDateString("fr-FR")}%0A%0AMerci pour votre confiance!`;
     window.open(`https://wa.me/${invoice.clientPhone.replace(/[^0-9]/g, "")}?text=${msg}`, "_blank");
     toast(`${t.factures.whatsappOpened} ${invoice.clientName}`, "info");
   };
 
   const sendEmail = (invoice: Invoice) => {
-    const subject = `Facture ${invoice.number} - KABRAK MARKET`;
-    const body = `Bonjour ${invoice.clientName},\n\nVeuillez trouver ci-joint votre facture ${invoice.number}.\n\nMontant total: ${formatCurrency(invoice.total)}\nDate: ${new Date(invoice.date).toLocaleDateString("fr-FR")}\n\nMerci pour votre confiance.\n\nKABRAK MARKET`;
+    const subject = `Facture ${invoice.number} - ${supermarketName}`;
+    const body = `Bonjour ${invoice.clientName},\n\nVeuillez trouver ci-joint votre facture ${invoice.number}.\n\nMontant total: ${formatCurrency(invoice.total)}\nDate: ${new Date(invoice.date).toLocaleDateString("fr-FR")}\n\nMerci pour votre confiance.\n\n${supermarketName}`;
     window.location.href = `mailto:${invoice.clientEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     toast(`Email préparé pour ${invoice.clientEmail}`, "info");
   };

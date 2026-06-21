@@ -5,6 +5,8 @@ import { ToastProvider } from "@/components/ui/Toast";
 import { AuthProvider } from "@/lib/auth/context";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 import { LangAttribute } from "@/components/layout/LangAttribute";
+import { LicenseProvider } from "@/lib/license/context";
+import { LicenseGate } from "@/lib/license/LicenseGate";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -46,7 +48,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full`}
     >
       <body className="h-full bg-[var(--background)]">
-          <I18nProvider><LangAttribute /><ToastProvider><AuthProvider><RoleGuard>{children}</RoleGuard></AuthProvider></ToastProvider></I18nProvider>
+          <I18nProvider><LangAttribute /><ToastProvider><LicenseProvider><AuthProvider><RoleGuard><LicenseGate>{children}</LicenseGate></RoleGuard></AuthProvider></LicenseProvider></ToastProvider></I18nProvider>
           <script
             dangerouslySetInnerHTML={{
               __html: `if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').catch(()=>{})})}`,

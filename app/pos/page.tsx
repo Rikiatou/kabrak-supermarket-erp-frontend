@@ -33,7 +33,8 @@ import type { ApiCustomer, ApiTransaction } from "@/lib/api";
 import { useAuth } from "@/lib/auth/context";
 import { getEffectivePrice, hasActiveMarkdown, daysToExpiry } from "@/lib/api";
 import type { Product, CartItem } from "@/lib/types";
-import { STORE_INFO } from "./store-info";
+import { STORE_INFO, getStoreInfo } from "./store-info";
+import { useLicense } from "@/lib/license/context";
 
 const TAX_RATE = 0.155;
 // Stable backend category keys (always French in DB) - order matches CATEGORIES labels
@@ -70,6 +71,8 @@ export default function POSPage() {
   const { transactions: recentTransactions, reload: reloadRecentTransactions } = useRecentTransactions(10);
   const { create: createTransaction, creating } = useCreateTransaction();
   const { user } = useAuth();
+  const { config: licenseConfig } = useLicense();
+  const storeInfo = getStoreInfo(licenseConfig);
   const CATEGORIES = [
     t.common.catAll,
     t.common.catGrocery,
@@ -431,9 +434,9 @@ export default function POSPage() {
         </style>
       </head>
       <body>
-        <h1>${STORE_INFO.name}</h1>
-        <p class="center small">${STORE_INFO.address}</p>
-        <p class="center small">${STORE_INFO.phone}</p>
+        <h1>${storeInfo.name}</h1>
+        <p class="center small">${storeInfo.address}</p>
+        <p class="center small">${storeInfo.phone}</p>
         <p class="center small">${dateStr} — ${timeStr}</p>
         <p class="center small">${t.pos.receipt}: ${receipt.id}</p>
         <p class="center small">${t.pos.cashier}: ${receipt.cashier}</p>
@@ -461,8 +464,8 @@ export default function POSPage() {
           <tr><td class="small">- ${t.pos.card}</td><td class="right small">${formatCurrency(receipt.split.card)}</td></tr>
         </table>` : ""}
         <div class="dashed"></div>
-        <p class="center small" style="margin-top:8px">${t.pos.thankYou}</p>
-        <p class="center small">${STORE_INFO.name}</p>
+        <p class="center small" style="margin-top:8px">${storeInfo.receiptFooter || t.pos.thankYou}</p>
+        <p class="center small">${storeInfo.name}</p>
       </body>
       </html>
     `);
@@ -523,9 +526,9 @@ export default function POSPage() {
         </style>
       </head>
       <body>
-        <h1>${STORE_INFO.name}</h1>
-        <p class="center small">${STORE_INFO.address}</p>
-        <p class="center small">${STORE_INFO.phone}</p>
+        <h1>${storeInfo.name}</h1>
+        <p class="center small">${storeInfo.address}</p>
+        <p class="center small">${storeInfo.phone}</p>
         <p class="center small">${dateStr} — ${timeStr}</p>
         <p class="center small">${t.pos.receipt}: ${tx.transactionNumber}</p>
         <div class="dashed"></div>
@@ -547,8 +550,8 @@ export default function POSPage() {
           ${tx.change != null ? `<tr><td class="small">${t.pos.change}</td><td class="right small">${formatCurrency(tx.change)}</td></tr>` : ""}
         </table>
         <div class="dashed"></div>
-        <p class="center small" style="margin-top:8px">${t.pos.thankYou}</p>
-        <p class="center small">${STORE_INFO.name}</p>
+        <p class="center small" style="margin-top:8px">${storeInfo.receiptFooter || t.pos.thankYou}</p>
+        <p class="center small">${storeInfo.name}</p>
         <p class="center small">(RÉIMPRESSION)</p>
       </body>
       </html>
@@ -1403,6 +1406,8 @@ function ReceiptPanel({
   onAutoPrintChange: (v: boolean) => void;
 }) {
   const { t } = useI18n();
+  const { config: licenseConfig } = useLicense();
+  const storeInfo = getStoreInfo(licenseConfig);
   const methodLabels: Record<string, string> = { cash: t.pos.cash, card: t.pos.card, mobile: t.pos.mobile, split: t.pos.split };
   const now = new Date();
   const dateStr = now.toLocaleDateString("fr-FR");
@@ -1423,9 +1428,9 @@ function ReceiptPanel({
         {/* Receipt body */}
         <div className="bg-slate-50 rounded-xl p-4 font-mono text-xs space-y-1.5">
           <div className="text-center mb-3">
-            <p className="font-bold text-sm">{STORE_INFO.name}</p>
-            <p className="text-[var(--text-muted)]">{STORE_INFO.address}</p>
-            <p className="text-[var(--text-muted)]">{STORE_INFO.phone}</p>
+            <p className="font-bold text-sm">{storeInfo.name}</p>
+            <p className="text-[var(--text-muted)]">{storeInfo.address}</p>
+            <p className="text-[var(--text-muted)]">{storeInfo.phone}</p>
             <p className="text-[var(--text-muted)] mt-1">
               {dateStr} {timeStr}
             </p>

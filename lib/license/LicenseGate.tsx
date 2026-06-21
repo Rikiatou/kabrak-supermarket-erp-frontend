@@ -1,0 +1,96 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import { useLicense } from "@/lib/license/context";
+import { useAuth } from "@/lib/auth/context";
+import { useI18n } from "@/lib/i18n/context";
+import { ShieldAlert, Loader2 } from "lucide-react";
+
+// Pages qui ne nécessitent PAS de licence
+const PUBLIC_PAGES = ["/login", "/activate", "/pricing", "/"];
+
+interface LicenseGateProps {
+  children: React.ReactNode;
+}
+
+/**
+ * Vérifie qu'une licence valide est active avant d'afficher l'app.
+ * - Si pas de licence → redirect /activate
+ * - Si licence expirée → redirect /renew
+ * - Si licence valide → afficher children
+ * - Mode offline: la licence reste valide jusqu'à expiration (vérification locale)
+ */
+export function LicenseGate({ children }: LicenseGateProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const { license, loading, isExpired, daysRemaining } = useLicense();
+  const { user } = useAuth();
+  const { t } = useI18n();
+
+  const isPublicPage = PUBLIC_PAGES.some(
+    (p) => pathname === p || pathname.startsWith(p + "/")
+  );
+
+  // Afficher un warning si la licence expire bientôt (< 30 jours)
+  const showWarning = license && !isExpired && daysRemaining <= 30 && daysRemaining > 0;
+
+  useEffect(() => {
+    if (loading || isPublicPage) return;
+
+    // Pas de licence → page d'activation
+    if (!license) {
+      router.replace("/activate");
+      return;
+    }
+
+    // Licence expirée → page de renouvellement
+    if (isExpired) {
+      router.replace("/activate?expired=1");
+      return;
+    }
+  }, [license, loading, isExpired, isPublicPage, router]);
+
+  // Page publique = pas de gate
+  if (isPublicPage) {
+    return <>{children}</>;
+  }
+
+  // Pendant le chargement
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-[var(--background)]">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 text-[var(--brand)] animate-spin" />
+          <p className="text-sm text-[var(--text-muted)]">Vérification de la licence...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Pas de licence
+  if (!license) {
+    return null; // Redirect en cours
+  }
+
+  // Licence expirée
+  if (isExpired) {
+    return null; // Redirect en cours
+  }
+
+  return (
+    <>
+      {showWarning && (
+        <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 text-center">
+          <p className="text-sm text-amber-800">
+            ⚠️ Votre licence expire dans <strong>{daysRemaining} jours</strong>.{" "}
+            <a href="/activate?renew=1" className="underline font-medium">
+              Renouveler maintenant
+            </a>
+          </p>
+        </div>
+      )}
+      {children}
+    </>
+  );
+}

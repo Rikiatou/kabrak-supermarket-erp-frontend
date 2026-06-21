@@ -23,6 +23,7 @@ export const ROLE_PERMISSIONS: Record<Role, string[]> = {
     "/comptabilite",
     "/rapports",
     "/ia",
+    "/settings",
   ],
   accountant: [
     "/dashboard",
