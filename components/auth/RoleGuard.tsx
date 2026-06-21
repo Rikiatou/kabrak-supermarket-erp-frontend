@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth/context";
 import { canAccess, ROLE_HOME, type Role } from "@/lib/auth/roles";
@@ -19,8 +19,18 @@ interface RoleGuardProps {
 export function RoleGuard({ children }: RoleGuardProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const [mounted, setMounted] = useState(false);
   const { user, loading } = useAuth();
   const { t } = useI18n();
+
+  // Éviter les erreurs SSR
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <>{children}</>;
+  }
 
   // Pages publiques = pas de guard
   const PUBLIC_PAGES = ["/login", "/activate", "/pricing", "/"];
