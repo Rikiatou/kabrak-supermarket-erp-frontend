@@ -18,6 +18,9 @@ export default function LoginPage() {
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [attemptsLeft, setAttemptsLeft] = useState<number | null>(null);
+  const [lockedUntil, setLockedUntil] = useState<number | null>(null); // timestamp ms
+  const [lockRemaining, setLockRemaining] = useState(0); // secondes restantes
 
   // Rediriger si déjà connecté
   useEffect(() => {
@@ -32,11 +35,33 @@ export default function LoginPage() {
     authApi.listCashiers().then(setCashiers).catch(() => {});
   }, []);
 
+  // Compte à rebours si verrouillé
+  useEffect(() => {
+    if (!lockedUntil) return;
+    const tick = () => {
+      const remaining = Math.ceil((lockedUntil - Date.now()) / 1000);
+      if (remaining <= 0) {
+        setLockedUntil(null);
+        setLockRemaining(0);
+        setAttemptsLeft(null);
+        setError("");
+      } else {
+        setLockRemaining(remaining);
+      }
+    };
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [lockedUntil]);
+
+  const isLocked = lockedUntil !== null && lockRemaining > 0;
+
   const handleLogin = async () => {
     if (!selectedCashier || !pin) {
       setError(t.login.errorSelectEmployee);
       return;
     }
+    if (isLocked) return;
 
     setLoading(true);
     setError("");
@@ -44,9 +69,12 @@ export default function LoginPage() {
     const success = await login(selectedCashier.employeeNumber, pin);
 
     if (success) {
+      setAttemptsLeft(null);
       const role = selectedCashier.role as Role;
       router.push(ROLE_HOME[role] || "/dashboard");
     } else {
+      // Tentative échouée — afficher tentatives restantes
+      setAttemptsLeft((prev) => (prev === null ? 4 : Math.max(0, prev - 1)));
       setError(t.login.errorIncorrectPin);
       setPin("");
     }
@@ -54,6 +82,7 @@ export default function LoginPage() {
   };
 
   const handlePinClick = (digit: string) => {
+    if (isLocked) return;
     if (pin.length < 4) {
       const newPin = pin + digit;
       setPin(newPin);
@@ -66,14 +95,27 @@ export default function LoginPage() {
 
   const handleLoginWithPin = async (pinValue: string) => {
     if (!selectedCashier) return;
+    if (isLocked) return;
     setLoading(true);
     setError("");
     const success = await login(selectedCashier.employeeNumber, pinValue);
     if (success) {
+      setAttemptsLeft(null);
       const role = selectedCashier.role as Role;
       router.push(ROLE_HOME[role] || "/dashboard");
     } else {
-      setError(t.login.errorPin);
+      // Après 5 tentatives: verrouiller 10 min
+      setAttemptsLeft((prev) => {
+        const newCount = prev === null ? 4 : Math.max(0, prev - 1);
+        if (newCount === 0) {
+          // Verrouiller 10 minutes
+          setLockedUntil(Date.now() + 10 * 60 * 1000);
+          setError("Trop de tentatives. Compte verrouillé 10 minutes.");
+        } else {
+          setError(`PIN incorrect — ${newCount} tentative${newCount > 1 ? "s" : ""} restante${newCount > 1 ? "s" : ""}`);
+        }
+        return newCount;
+      });
       setPin("");
     }
     setLoading(false);
@@ -178,9 +220,25 @@ export default function LoginPage() {
               </div>
 
               {error && (
-                <div className="flex items-center gap-2 text-red-600 text-xs mb-4 justify-center">
+                <div className={`flex items-center gap-2 text-xs mb-4 justify-center ${isLocked ? "text-red-700" : "text-red-600"}`}>
                   <AlertCircle className="w-4 h-4" />
                   {error}
+                  {isLocked && (
+                    <span className="font-mono font-bold">
+                      {Math.floor(lockRemaining / 60)}:{String(lockRemaining % 60).padStart(2, "0")}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {!isLocked && attemptsLeft !== null && attemptsLeft > 0 && (
+                <div className="flex justify-center gap-1 mb-3">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className={`w-2 h-2 rounded-full ${i < attemptsLeft ? "bg-amber-400" : "bg-slate-200"}`}
+                    />
+                  ))}
                 </div>
               )}
 
@@ -190,7 +248,7 @@ export default function LoginPage() {
                   <button
                     key={d}
                     onClick={() => handlePinClick(d)}
-                    disabled={loading}
+                    disabled={loading || isLocked}
                     className="h-14 rounded-xl bg-slate-50 hover:bg-slate-100 active:scale-95 transition-all text-xl font-semibold text-slate-700 disabled:opacity-50"
                   >
                     {d}
@@ -198,21 +256,21 @@ export default function LoginPage() {
                 ))}
                 <button
                   onClick={handleBackspace}
-                  disabled={loading || !pin}
+                  disabled={loading || !pin || isLocked}
                   className="h-14 rounded-xl bg-slate-50 hover:bg-slate-100 active:scale-95 transition-all text-sm font-medium text-slate-500 disabled:opacity-50"
                 >
                   ⌫
                 </button>
                 <button
                   onClick={() => handlePinClick("0")}
-                  disabled={loading}
+                  disabled={loading || isLocked}
                   className="h-14 rounded-xl bg-slate-50 hover:bg-slate-100 active:scale-95 transition-all text-xl font-semibold text-slate-700 disabled:opacity-50"
                 >
                   0
                 </button>
                 <button
                   onClick={handleClear}
-                  disabled={loading || !pin}
+                  disabled={loading || !pin || isLocked}
                   className="h-14 rounded-xl bg-slate-50 hover:bg-slate-100 active:scale-95 transition-all text-sm font-medium text-slate-500 disabled:opacity-50"
                 >
                   {t.login.clear}

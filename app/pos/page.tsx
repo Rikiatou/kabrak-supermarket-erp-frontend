@@ -18,12 +18,14 @@ import {
   Printer,
   Split,
   AlertTriangle,
+  AlertCircle,
   TrendingDown,
   Users,
   History,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/Button";
+import { BarcodeScanner } from "@/components/pos/BarcodeScanner";
 import { Badge } from "@/components/ui/Badge";
 import { products as mockProducts } from "@/lib/mock-data";
 import { formatCurrency, cn } from "@/lib/utils";
@@ -90,6 +92,7 @@ export default function POSPage() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [cashGiven, setCashGiven] = useState("");
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
+  const [showScanner, setShowScanner] = useState(false);
   const [cashierDiscountAmount, setCashierDiscountAmount] = useState(0);
   const [cashierDiscountReason, setCashierDiscountReason] = useState("");
   const [showDiscountModal, setShowDiscountModal] = useState(false);
@@ -133,9 +136,12 @@ export default function POSPage() {
   });
 
   const addToCart = useCallback((product: Product) => {
+    if (product.stock <= 0) return; // Bloquer si stock épuisé
     setCart((prev) => {
       const existing = prev.find((i) => i.product.id === product.id);
       if (existing) {
+        // Ne pas dépasser le stock disponible
+        if (existing.quantity >= product.stock) return prev;
         return prev.map((i) =>
           i.product.id === product.id
             ? { ...i, quantity: Math.min(i.quantity + 1, product.stock) }
@@ -168,6 +174,27 @@ export default function POSPage() {
     [search, products, addToCart]
   );
 
+  // Scan via caméra (ZXing)
+  const handleBarcodeScan = useCallback(
+    (code: string) => {
+      const found = products.find(
+        (p) => p.barcode === code.trim() || p.sku.toLowerCase() === code.trim().toLowerCase()
+      );
+      if (found && found.stock > 0) {
+        addToCart(found);
+        if (beepRef.current) {
+          beepRef.current.currentTime = 0;
+          beepRef.current.play().catch(() => {});
+        }
+        setShowScanner(false);
+      } else if (found && found.stock <= 0) {
+        // Produit trouvé mais stock épuisé — fermer le scanner
+        setShowScanner(false);
+      }
+    },
+    [products, addToCart]
+  );
+
   const updateQty = (productId: string, delta: number) => {
     setCart((prev) =>
       prev
@@ -198,6 +225,10 @@ export default function POSPage() {
   const total = totalBeforeDiscount - discount;
   const cashGivenNum = parseFloat(cashGiven.replace(/\s/g, "")) || 0;
   const change = cashGivenNum - total;
+
+  // Vérifier si un article du panier a un stock insuffisant
+  const stockIssues = cart.filter((i) => i.quantity > i.product.stock);
+  const hasStockIssues = stockIssues.length > 0;
 
   // Raccourcis clavier pour le POS (F1-F4 modes de paiement, Enter confirmer, Echap retour)
   useEffect(() => {
@@ -592,6 +623,14 @@ export default function POSPage() {
                 )}
               </div>
               <button
+                onClick={() => setShowScanner(true)}
+                className="h-10 px-3 flex items-center gap-1.5 text-xs font-medium text-white bg-emerald-600 border border-emerald-700 rounded-xl hover:bg-emerald-700 transition-colors"
+                title="Scanner avec la caméra"
+              >
+                <ScanLine className="w-4 h-4" />
+                <span className="hidden sm:inline">Scanner</span>
+              </button>
+              <button
                 onClick={() => {
                   reloadRecentTransactions();
                   setShowHistoryModal(true);
@@ -899,10 +938,18 @@ export default function POSPage() {
               )}
 
               {/* CTA */}
-              <div className="p-3 shrink-0">
+              <div className="p-3 shrink-0 space-y-2">
+                {hasStockIssues && (
+                  <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    <span>
+                      Stock insuffisant: {stockIssues.map(i => `${i.product.name} (dispo: ${i.product.stock})`).join(", ")}
+                    </span>
+                  </div>
+                )}
                 <Button
                   className="w-full h-11 text-sm"
-                  disabled={cart.length === 0}
+                  disabled={cart.length === 0 || hasStockIssues}
                   onClick={() => setCheckoutStep("payment")}
                   icon={<ChevronRight className="w-4 h-4" />}
                   iconPosition="right"
@@ -914,6 +961,12 @@ export default function POSPage() {
           )}
         </div>
       </div>
+      {showScanner && (
+        <BarcodeScanner
+          onScan={handleBarcodeScan}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
       {showDiscountModal && (
         <DiscountModal
           current={cashierDiscountAmount}
