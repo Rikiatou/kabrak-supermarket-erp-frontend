@@ -26,19 +26,6 @@ import { formatCurrency, formatDate, cn } from "@/lib/utils";
 
 type MovementType = "in" | "out" | "adjustment";
 
-const MOVEMENT_CONFIG: Record<
-  MovementType,
-  { label: string; variant: "success" | "danger" | "warning"; icon: typeof ArrowDownToLine }
-> = {
-  in: { label: "Entrée", variant: "success", icon: ArrowDownToLine },
-  out: { label: "Sortie", variant: "danger", icon: ArrowUpFromLine },
-  adjustment: { label: "Ajustement", variant: "warning", icon: RefreshCw },
-};
-
-function getMovementConfig(type: string) {
-  return MOVEMENT_CONFIG[type as MovementType] ?? MOVEMENT_CONFIG.adjustment;
-}
-
 function getCategoryDot(category: string) {
   const dots: Record<string, string> = {
     Grocery: "bg-green-400",
@@ -82,6 +69,20 @@ export default function HistoriquePage() {
   const { t } = useI18n();
   const { toast } = useToast();
 
+  // MOVEMENT_CONFIG must live inside the component to access t
+  const MOVEMENT_CONFIG: Record<
+    MovementType,
+    { label: string; variant: "success" | "danger" | "warning"; icon: typeof ArrowDownToLine }
+  > = {
+    in:         { label: t.stocks.movementInLabel,  variant: "success", icon: ArrowDownToLine },
+    out:        { label: t.stocks.movementOutLabel,  variant: "danger",  icon: ArrowUpFromLine },
+    adjustment: { label: t.stocks.movementReasonAdjustment, variant: "warning", icon: RefreshCw },
+  };
+
+  function getMovementConfig(type: string) {
+    return MOVEMENT_CONFIG[type as MovementType] ?? MOVEMENT_CONFIG.adjustment;
+  }
+
   const { products, loading: loadingProducts } = useProducts();
 
   const [search, setSearch] = useState("");
@@ -104,7 +105,7 @@ export default function HistoriquePage() {
       })
       .catch(() => {
         if (!cancelled) {
-          toast("Impossible de charger l'historique des mouvements", "warning");
+          toast(t.stocks.loadError, "warning");
           setMovements([]);
         }
       })
@@ -122,7 +123,7 @@ export default function HistoriquePage() {
     stockApi
       .listMovements(1, 500, selectedProduct.id)
       .then((res) => setMovements(res.data))
-      .catch(() => toast("Impossible de recharger", "warning"))
+      .catch(() => toast(t.stocks.reloadError, "warning"))
       .finally(() => setLoadingMovements(false));
   };
 
@@ -157,8 +158,8 @@ export default function HistoriquePage() {
 
   return (
     <AppShell
-      title="Historique Produits"
-      subtitle="Cycle de vie complet — entrées, sorties et ajustements"
+      title={t.stocks.historyPageTitle}
+      subtitle={t.stocks.historyPageSubtitle}
     >
       <div className="flex flex-col lg:flex-row gap-4" style={{ minHeight: "calc(100vh - 120px)" }}>
         {/* ═══════════════════════════════════════════════════════
@@ -174,7 +175,7 @@ export default function HistoriquePage() {
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder={`${t.common.search} un produit…`}
+                  placeholder={`${t.common.search} ${t.stocks.searchProductPh}`}
                   className="flex-1 bg-transparent text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none"
                 />
                 {search && (
@@ -187,7 +188,7 @@ export default function HistoriquePage() {
                 )}
               </div>
               <p className="text-[11px] text-[var(--text-muted)] mt-2 px-0.5">
-                {filteredProducts.length} produit{filteredProducts.length !== 1 ? "s" : ""}
+                {filteredProducts.length} {t.common.product}{filteredProducts.length !== 1 ? "s" : ""}
               </p>
             </div>
 
@@ -198,7 +199,7 @@ export default function HistoriquePage() {
               ) : filteredProducts.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
                   <Package className="w-8 h-8 text-slate-300 mb-3" />
-                  <p className="text-sm text-[var(--text-muted)]">Aucun produit trouvé</p>
+                  <p className="text-sm text-[var(--text-muted)]">{t.stocks.noProductFound}</p>
                 </div>
               ) : (
                 <div className="divide-y divide-[var(--border-subtle)]">
@@ -286,20 +287,20 @@ export default function HistoriquePage() {
                 <History className="w-10 h-10 text-slate-300" />
               </div>
               <p className="text-base font-semibold text-[var(--text-primary)]">
-                Sélectionnez un produit
+                {t.stocks.selectProduct}
               </p>
               <p className="text-sm text-[var(--text-muted)] mt-1.5 text-center max-w-xs">
-                Choisissez un produit dans le panneau de gauche pour consulter son historique complet
+                {t.stocks.selectProductDesc}
               </p>
               <div className="mt-6 flex items-center gap-4 text-xs text-[var(--text-muted)]">
                 <span className="flex items-center gap-1.5">
-                  <ArrowDownToLine className="w-3.5 h-3.5 text-emerald-500" /> Entrées
+                  <ArrowDownToLine className="w-3.5 h-3.5 text-emerald-500" /> {t.stocks.movementIn}
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <ArrowUpFromLine className="w-3.5 h-3.5 text-red-500" /> Sorties
+                  <ArrowUpFromLine className="w-3.5 h-3.5 text-red-500" /> {t.stocks.movementOut}
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <RefreshCw className="w-3.5 h-3.5 text-amber-500" /> Ajustements
+                  <RefreshCw className="w-3.5 h-3.5 text-amber-500" /> {t.stocks.movementAdj}
                 </span>
               </div>
             </Card>
@@ -345,7 +346,7 @@ export default function HistoriquePage() {
                   <div className="flex items-center gap-5 shrink-0 flex-wrap">
                     <div className="text-right">
                       <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wide font-semibold">
-                        Prix vente
+                        {t.stocks.sellPrice}
                       </p>
                       <p className="text-sm font-bold text-[var(--brand)] tabular-nums mt-0.5">
                         {formatCurrency(selectedProduct.price)}
@@ -353,7 +354,7 @@ export default function HistoriquePage() {
                     </div>
                     <div className="text-right">
                       <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wide font-semibold">
-                        Prix achat
+                        {t.stocks.costPriceLabel}
                       </p>
                       <p className="text-sm font-bold text-[var(--text-primary)] tabular-nums mt-0.5">
                         {formatCurrency(selectedProduct.costPrice)}
@@ -361,7 +362,7 @@ export default function HistoriquePage() {
                     </div>
                     <div className="text-right">
                       <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wide font-semibold">
-                        Marge
+                        {t.stocks.marginRate}
                       </p>
                       <p
                         className={cn(
@@ -380,7 +381,7 @@ export default function HistoriquePage() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {[
                   {
-                    label: "Total Entré",
+                    label: t.stocks.totalIn,
                     value: totalIn,
                     sign: "+",
                     icon: ArrowDownToLine,
@@ -389,7 +390,7 @@ export default function HistoriquePage() {
                     valueColor: "text-emerald-600",
                   },
                   {
-                    label: "Total Vendu / Sorti",
+                    label: t.stocks.totalOut,
                     value: totalOut,
                     sign: "-",
                     icon: ArrowUpFromLine,
@@ -398,7 +399,7 @@ export default function HistoriquePage() {
                     valueColor: "text-red-500",
                   },
                   {
-                    label: "Variation nette",
+                    label: t.stocks.netChange,
                     value: netChange,
                     sign: netChange >= 0 ? "+" : "",
                     icon: netChange >= 0 ? TrendingUp : TrendingDown,
@@ -435,12 +436,12 @@ export default function HistoriquePage() {
                 <div className="px-4 py-3.5 border-b border-[var(--border)] flex items-center justify-between">
                   <div>
                     <h3 className="text-[15px] font-semibold text-[var(--text-primary)]">
-                      Historique des mouvements
+                      {t.stocks.movementHistory}
                     </h3>
                     <p className="text-xs text-[var(--text-muted)] mt-0.5">
                       {loadingMovements
                         ? t.common.loading
-                        : `${movements.length} mouvement${movements.length !== 1 ? "s" : ""} au total`}
+                        : `${movements.length} ${movements.length !== 1 ? t.stocks.movementAdj.toLowerCase() : t.stocks.movementInLabel.toLowerCase()}`}
                     </p>
                   </div>
                   <button
@@ -468,7 +469,7 @@ export default function HistoriquePage() {
                       {t.stocks.noHistory}
                     </p>
                     <p className="text-xs text-[var(--text-muted)] mt-1">
-                      Ce produit n'a pas encore de mouvements de stock
+                      {t.stocks.noMovementsDesc}
                     </p>
                   </div>
                 ) : (
