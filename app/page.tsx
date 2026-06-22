@@ -23,7 +23,7 @@ export default function WelcomePage() {
             </span>
           </div>
           <button
-            onClick={() => router.push("/login")}
+            onClick={() => router.push("/activate")}
             className="text-[13px] text-neutral-500 hover:text-neutral-900 transition-colors"
           >
             Sign in
@@ -56,7 +56,7 @@ export default function WelcomePage() {
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
           <button
-            onClick={() => router.push("/login")}
+            onClick={() => router.push("/activate")}
             className="px-5 py-2.5 text-[14px] text-neutral-500 hover:text-neutral-900 transition-colors"
           >
             I have access

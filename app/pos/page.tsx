@@ -328,8 +328,11 @@ export default function POSPage() {
   }, [cart, checkoutStep, subtotal, discount, total, selectedCustomer]);
 
   const handleConfirmPayment = async () => {
-    // ID caissier depuis l'auth, fallback sur le premier employé
-    const defaultCashierId = user?.id || "cmqk34t550003j81mc4vb6bow";
+    // ID caissier depuis l'auth — requis, doit être connecté
+    if (!user?.id) {
+      return; // not logged in, shouldn't reach POS
+    }
+    const defaultCashierId = user.id;
 
     // Déterminer le montant payé et la monnaie selon le mode
     const splitTotal = splitPayment.cash + splitPayment.mobile + splitPayment.card;
@@ -846,7 +849,7 @@ export default function POSPage() {
                           </p>
                           {isExpired && (
                             <p className="text-[10px] text-amber-600 font-medium flex items-center gap-0.5 mt-0.5">
-                              <AlertTriangle className="w-2.5 h-2.5" /> Produit expiré — vente avec markdown
+                              <AlertTriangle className="w-2.5 h-2.5" /> Expired product — sold at markdown
                             </p>
                           )}
                         </div>

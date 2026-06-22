@@ -12,15 +12,15 @@ interface I18nContextValue {
 }
 
 const I18nContext = createContext<I18nContextValue>({
-  locale: "fr",
+  locale: "en",
   setLocale: () => {},
-  t: translations.fr as T,
+  t: translations.en as unknown as T,
 });
 
 const STORAGE_KEY = "kabrak-locale";
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>("fr");
+  const [locale, setLocaleState] = useState<Locale>("en");
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY) as Locale | null;

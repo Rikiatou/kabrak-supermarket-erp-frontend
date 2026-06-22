@@ -20,6 +20,7 @@ import {
   ScanLine,
   Calendar,
   Settings,
+  History,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/context";
@@ -49,6 +50,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     { href: "/scanner", label: t.nav.scanner, icon: ScanLine, badge: null },
     { href: "/comptabilite", label: t.nav.comptabilite, icon: BookOpen, badge: null },
     { href: "/rapports", label: t.nav.rapports, icon: BarChart3, badge: null },
+    { href: "/historique", label: "Product History", icon: History, badge: null },
     { href: "/ia", label: t.nav.ia, icon: Cpu, badge: null },
     { href: "/settings", label: "Settings", icon: Settings, badge: null },
   ];

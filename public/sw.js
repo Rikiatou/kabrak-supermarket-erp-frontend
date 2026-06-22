@@ -20,13 +20,18 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const { request } = event;
 
-  // API calls: network first, fallback to cache
+  // Never cache non-GET requests (POST, PUT, PATCH, DELETE)
+  if (request.method !== "GET") return;
+
+  // API calls: network first, fallback to cache (GET only)
   if (request.url.includes("/api/")) {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          }
           return response;
         })
         .catch(() => caches.match(request))
