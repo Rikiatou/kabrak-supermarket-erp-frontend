@@ -492,8 +492,16 @@ export default function CaissesPage() {
 
   const handleOpen = async (employeeId: string, openingCash: number) => {
     if (!openRegister) return;
+    const reg = REGISTERS.find((r) => r.id === openRegister);
+    const emp = cashiers.find((e) => e.id === employeeId);
     try {
-      await open({ registerId: openRegister, employeeId, openingCash });
+      await open({
+        registerId: openRegister,
+        registerName: reg?.name ?? openRegister,
+        employeeId,
+        employeeName: emp ? `${emp.firstName} ${emp.lastName}` : employeeId,
+        openingCash,
+      });
       toast("Register opened", "success");
       setOpenRegister(null);
       reload();

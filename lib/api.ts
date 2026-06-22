@@ -565,7 +565,7 @@ export interface ApiShift {
 export const shiftsApi = {
   list: () => fetchAPI<ApiShift[]>(`/shifts`),
   active: () => fetchAPI<ApiShift[]>(`/shifts/active`),
-  open: (data: { registerId: string; employeeId: string; openingCash: number }) =>
+  open: (data: { registerId: string; registerName?: string; employeeId: string; employeeName?: string; openingCash: number }) =>
     fetchAPI<ApiShift>(`/shifts/open`, { method: "POST", body: JSON.stringify(data) }),
   close: (id: string, data: { closingCash: number; expectedCash: number; notes?: string }) =>
     fetchAPI<ApiShift>(`/shifts/${id}/close`, { method: "POST", body: JSON.stringify(data) }),
