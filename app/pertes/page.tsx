@@ -224,7 +224,7 @@ export default function PertesPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-[var(--text-primary)]">Déclarer une perte</h3>
+              <h3 className="text-sm font-bold text-[var(--text-primary)]">Report a loss</h3>
               <button onClick={() => setShowModal(false)} className="p-1 hover:bg-slate-100 rounded-lg">
                 <X className="w-4 h-4 text-[var(--text-muted)]" />
               </button>
@@ -302,7 +302,7 @@ export default function PertesPage() {
                 type="text"
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                placeholder="Ex: Bouteille cassée pendant le transport"
+                placeholder="Ex: Broken bottle during transport"
                 className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]"
               />
             </div>

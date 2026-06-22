@@ -12,9 +12,9 @@ interface RoleGuardProps {
 }
 
 /**
- * Protège toutes les pages sauf /login.
- * - Si non connecté → redirect /login
- * - Si connecté mais rôle insuffisant → redirect vers sa page d'accueil
+ * Guards all pages except /login.
+ * - If not logged in -> redirect /login
+ * - If logged in but insufficient role -> redirect to home page
  */
 export function RoleGuard({ children }: RoleGuardProps) {
   const router = useRouter();

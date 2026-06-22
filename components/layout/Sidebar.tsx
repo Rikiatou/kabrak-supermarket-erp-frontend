@@ -50,7 +50,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     { href: "/comptabilite", label: t.nav.comptabilite, icon: BookOpen, badge: null },
     { href: "/rapports", label: t.nav.rapports, icon: BarChart3, badge: null },
     { href: "/ia", label: t.nav.ia, icon: Cpu, badge: null },
-    { href: "/settings", label: "Paramètres", icon: Settings, badge: null },
+    { href: "/settings", label: "Settings", icon: Settings, badge: null },
   ];
 
   // Filtrer par rôle

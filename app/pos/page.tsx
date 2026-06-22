@@ -590,7 +590,7 @@ export default function POSPage() {
         <div class="dashed"></div>
         <p class="center small" style="margin-top:8px">${storeInfo.receiptFooter || t.pos.thankYou}</p>
         <p class="center small">${storeInfo.name}</p>
-        <p class="center small">(RÉIMPRESSION)</p>
+        <p class="center small">(REPRINT)</p>
       </body>
       </html>
     `);

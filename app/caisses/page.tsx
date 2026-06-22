@@ -257,7 +257,7 @@ function CloseShiftModal({
 
           <div>
             <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">
-              Caisse réelle comptée
+              Actual cash counted
             </label>
             <div className="relative">
               <Wallet className="w-4 h-4 text-[var(--text-muted)] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -282,7 +282,7 @@ function CloseShiftModal({
             )}
           >
             <span className="text-xs font-medium text-[var(--text-secondary)]">
-              Écart
+              Variance
             </span>
             <span
               className={cn(
@@ -382,7 +382,7 @@ function RegisterCard({
           </div>
         </div>
         <Badge variant={isOpen ? "success" : "neutral"} size="sm">
-          {isOpen ? "Ouverte" : "Fermée"}
+          {isOpen ? "Open" : "Closed"}
         </Badge>
       </div>
 
@@ -494,7 +494,7 @@ export default function CaissesPage() {
     if (!openRegister) return;
     try {
       await open({ registerId: openRegister, employeeId, openingCash });
-      toast("Caisse ouverte avec succès", "success");
+      toast("Register opened", "success");
       setOpenRegister(null);
       reload();
     } catch (e) {
@@ -510,7 +510,7 @@ export default function CaissesPage() {
     if (!closeShift) return;
     try {
       await close(closeShift.id, { closingCash, expectedCash, notes });
-      toast("Caisse fermée avec succès", "success");
+      toast("Register closed", "success");
       setCloseShift(null);
       reload();
     } catch (e) {
@@ -532,7 +532,7 @@ export default function CaissesPage() {
       tone: "text-blue-600 bg-blue-100",
     },
     {
-      label: "Écarts total",
+      label: "Total variance",
       value: formatCurrency(totalDifference),
       icon: <AlertTriangle className="w-5 h-5" />,
       tone:

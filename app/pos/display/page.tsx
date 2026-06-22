@@ -66,7 +66,7 @@ export default function CustomerDisplayPage() {
           </div>
           <h1 className="text-6xl font-bold">Merci!</h1>
           <p className="text-3xl opacity-90">Thank you for your purchase</p>
-          <p className="text-2xl opacity-80">À bientôt · See you soon</p>
+          <p className="text-2xl opacity-80">See you soon</p>
         </div>
       </div>
     );
@@ -123,13 +123,13 @@ export default function CustomerDisplayPage() {
           )}
           <div className="flex justify-between items-center">
             <span className="text-2xl font-medium opacity-90">
-              {state.type === "payment" ? "TOTAL À PAYER" : "TOTAL"}
+              {state.type === "payment" ? "TOTAL DUE" : "TOTAL"}
             </span>
             <span className="text-6xl font-bold tabular-nums">{formatCurrency(state.total || 0)}</span>
           </div>
           {state.type === "payment" && state.amountDue != null && state.amountDue > 0 && (
             <div className="mt-4 text-right">
-              <p className="text-lg opacity-80">Reste à payer: {formatCurrency(state.amountDue)}</p>
+              <p className="text-lg opacity-80">Remaining: {formatCurrency(state.amountDue)}</p>
             </div>
           )}
           {state.change != null && state.change > 0 && (

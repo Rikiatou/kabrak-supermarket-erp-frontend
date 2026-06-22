@@ -40,11 +40,11 @@ import type { ApiExpense } from "@/lib/api";
 // ---- Fallback mock data ----
 const mockMonthlyData = [
   { month: "Nov", revenue: 28_400_000, expenses: 19_800_000, profit: 8_600_000 },
-  { month: "Déc", revenue: 35_200_000, expenses: 23_100_000, profit: 12_100_000 },
+  { month: "Dec", revenue: 35_200_000, expenses: 23_100_000, profit: 12_100_000 },
   { month: "Jan", revenue: 29_100_000, expenses: 20_500_000, profit: 8_600_000 },
-  { month: "Fév", revenue: 27_800_000, expenses: 19_200_000, profit: 8_600_000 },
+  { month: "Feb", revenue: 27_800_000, expenses: 19_200_000, profit: 8_600_000 },
   { month: "Mar", revenue: 31_500_000, expenses: 21_800_000, profit: 9_700_000 },
-  { month: "Avr", revenue: 34_100_000, expenses: 22_900_000, profit: 11_200_000 },
+  { month: "Apr", revenue: 34_100_000, expenses: 22_900_000, profit: 11_200_000 },
 ];
 
 const mockExpenseBreakdown = [
@@ -57,16 +57,16 @@ const mockExpenseBreakdown = [
 ];
 
 const mockExpenses: ApiExpense[] = [
-  { id: "EXP-001", date: "2026-04-28", category: "supplies", description: "Facture SABC — livraison bières", amount: 340_000, paymentMethod: "transfer", supplier: "SABC", status: "paid" },
-  { id: "EXP-002", date: "2026-04-27", category: "salaries", description: "Salaires — quinzaine", amount: 2_400_000, paymentMethod: "transfer", status: "paid" },
-  { id: "EXP-003", date: "2026-04-26", category: "supplies", description: "Facture Unilever CMR", amount: 185_000, paymentMethod: "cash", supplier: "Unilever", status: "paid" },
-  { id: "EXP-004", date: "2026-04-25", category: "rent", description: "Loyer mensuel — Bailleur Nkomo", amount: 950_000, paymentMethod: "transfer", supplier: "Bailleur Nkomo", status: "paid" },
-  { id: "EXP-005", date: "2026-04-20", category: "utilities", description: "Facture ENEO — électricité", amount: 320_000, paymentMethod: "transfer", supplier: "ENEO", status: "paid" },
+  { id: "EXP-001", date: "2026-04-28", category: "supplies", description: "SABC invoice — beer delivery", amount: 340_000, paymentMethod: "transfer", supplier: "SABC", status: "paid" },
+  { id: "EXP-002", date: "2026-04-27", category: "salaries", description: "Salaries — bi-weekly", amount: 2_400_000, paymentMethod: "transfer", status: "paid" },
+  { id: "EXP-003", date: "2026-04-26", category: "supplies", description: "Unilever CMR invoice", amount: 185_000, paymentMethod: "cash", supplier: "Unilever", status: "paid" },
+  { id: "EXP-004", date: "2026-04-25", category: "rent", description: "Monthly rent", amount: 950_000, paymentMethod: "transfer", supplier: "Landlord", status: "paid" },
+  { id: "EXP-005", date: "2026-04-20", category: "utilities", description: "ENEO invoice — electricity", amount: 320_000, paymentMethod: "transfer", supplier: "ENEO", status: "paid" },
 ];
 
 const PIE_COLORS = ["#1a56db", "#6366f1", "#10b981", "#f59e0b", "#ef4444", "#94a3b8"];
 
-const MONTH_NAMES = ["Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Août", "Sep", "Oct", "Nov", "Déc"];
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 // ---- Helpers ----
 function toISODate(d: Date): string {
@@ -102,7 +102,7 @@ const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?:
       <p className="font-semibold text-[var(--text-primary)] mb-1.5">{label}</p>
       {payload.map((p) => (
         <div key={p.name} className="flex justify-between gap-4">
-          <span className="text-[var(--text-muted)]">{p.name === "revenue" ? "CA" : p.name === "expenses" ? "Charges" : "Bénéfice"}</span>
+          <span className="text-[var(--text-muted)]">{p.name === "revenue" ? "Revenue" : p.name === "expenses" ? "Expenses" : "Profit"}</span>
           <span className="font-medium tabular-nums">{formatCurrency(p.value)}</span>
         </div>
       ))}
@@ -371,7 +371,7 @@ export default function ComptabilitePage() {
             iconBg: "bg-[var(--brand-light)]",
           },
           {
-            label: "Dépenses totales",
+            label: "Total expenses",
             value: totalExpenses,
             delta: 0,
             icon: <TrendingDown className="w-5 h-5 text-red-500" />,
@@ -464,8 +464,8 @@ export default function ComptabilitePage() {
       {/* Recent Expenses Table */}
       <Card padding="md">
         <CardHeader
-          title="Dépenses récentes"
-          subtitle={`${expenses.length} écritures`}
+          title="Recent expenses"
+          subtitle={`${expenses.length} entries`}
           action={
             <Button variant="primary" size="sm" onClick={() => setModalOpen(true)}>
               <Plus className="w-4 h-4 mr-1.5" />
@@ -501,7 +501,7 @@ export default function ComptabilitePage() {
                   </td>
                   <td className="px-5 py-3">
                     <Badge variant={e.status === "paid" ? "success" : "warning"}>
-                      {e.status === "paid" ? "Payé" : e.status === "pending" ? "En attente" : e.status}
+                      {e.status === "paid" ? "Paid" : e.status === "pending" ? "Pending" : e.status}
                     </Badge>
                   </td>
                 </tr>

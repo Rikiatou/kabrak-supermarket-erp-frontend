@@ -140,7 +140,7 @@ export default function SettingsPage() {
             ) : saved ? (
               <>
                 <CheckCircle2 className="w-4 h-4 text-green-500" />
-                Enregistré!
+                Saved!
               </>
             ) : (
               <>
@@ -158,19 +158,19 @@ export default function SettingsPage() {
           <div className="flex items-start gap-3">
             <Building2 className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
             <div className="flex-1">
-              <h3 className="font-semibold text-blue-900 text-sm">Licence Active</h3>
+              <h3 className="font-semibold text-blue-900 text-sm">Active License</h3>
               <div className="grid grid-cols-2 gap-2 mt-2 text-xs text-blue-800">
                 <div>
                   <span className="font-medium">Type:</span> {license.type === "STANDARD" ? "Standard" : "Multi-Store"}
                 </div>
                 <div>
-                  <span className="font-medium">Magasins:</span> {stores.length} / {license.maxStores}
+                  <span className="font-medium">Stores:</span> {stores.length} / {license.maxStores}
                 </div>
                 <div>
-                  <span className="font-medium">Expire le:</span> {new Date(license.expiresAt).toLocaleDateString("fr-FR")}
+                  <span className="font-medium">Expires:</span> {new Date(license.expiresAt).toLocaleDateString()}
                 </div>
                 <div>
-                  <span className="font-medium">Jours restants:</span> {license.daysRemaining}
+                  <span className="font-medium">Days left:</span> {license.daysRemaining}
                 </div>
               </div>
               <p className="text-xs text-blue-600 mt-2 font-mono">{license.licenseKey}</p>
@@ -183,12 +183,12 @@ export default function SettingsPage() {
       <div className="bg-white rounded-xl border border-slate-200 p-6">
         <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
           <Store className="w-5 h-5 text-blue-600" />
-          Identité du Supermarché
+          Store Identity
         </h2>
         <div className="grid md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
-              Nom du supermarché *
+              Store name *
             </label>
             <input
               type="text"
@@ -211,13 +211,13 @@ export default function SettingsPage() {
               onChange={(e) => handleChange("supermarketSlogan", e.target.value)}
               disabled={!canEdit}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50"
-              placeholder="Votre supermarché de proximité"
+              placeholder="Your neighborhood store"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
-              Logo du supermarché
+              Store logo
             </label>
             
             {/* Aperçu du logo */}
@@ -251,12 +251,12 @@ export default function SettingsPage() {
                 {uploading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Upload en cours...
+                    Uploading...
                   </>
                 ) : (
                   <>
                     <Upload className="w-4 h-4" />
-                    Uploader un logo
+                    Upload logo
                   </>
                 )}
               </Button>
@@ -277,7 +277,7 @@ export default function SettingsPage() {
             {/* Champ URL manuel (optionnel) */}
             <details className="mt-2">
               <summary className="text-xs text-slate-500 cursor-pointer hover:text-slate-700">
-                Ou entrer une URL manuellement
+              Or enter a URL manually
               </summary>
               <input
                 type="text"
@@ -290,13 +290,13 @@ export default function SettingsPage() {
             </details>
 
             <p className="text-xs text-slate-400 mt-1">
-              Logo affiché sur la sidebar, tickets et factures (max 5MB)
+              Logo shown in sidebar, receipts and invoices (max 5MB)
             </p>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
-              Couleur principale
+              Brand color
             </label>
             <div className="flex gap-2">
               <input
@@ -322,7 +322,7 @@ export default function SettingsPage() {
       <div className="bg-white rounded-xl border border-slate-200 p-6">
         <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
           <MapPin className="w-5 h-5 text-blue-600" />
-          Coordonnées
+          Contact details
         </h2>
         <div className="grid md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
@@ -333,14 +333,14 @@ export default function SettingsPage() {
               onChange={(e) => handleChange("address", e.target.value)}
               disabled={!canEdit}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50"
-              placeholder="Carrefour Obili, Yaoundé"
+              placeholder="123 Main St, City"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
               <Phone className="w-3.5 h-3.5 inline mr-1" />
-              Téléphone
+              Phone
             </label>
             <input
               type="text"
@@ -396,12 +396,12 @@ export default function SettingsPage() {
       <div className="bg-white rounded-xl border border-slate-200 p-6">
         <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
           <Receipt className="w-5 h-5 text-blue-600" />
-          Tickets de Caisse
+          Receipts
         </h2>
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
-              En-tête du ticket
+              Receipt header
             </label>
             <textarea
               value={form.receiptHeader || ""}
@@ -409,13 +409,13 @@ export default function SettingsPage() {
               disabled={!canEdit}
               rows={2}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50"
-              placeholder="Bienvenue chez Easy Shop!"
+              placeholder="Welcome to Easy Shop!"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
-              Pied de page du ticket
+              Receipt footer
             </label>
             <textarea
               value={form.receiptFooter || ""}
@@ -423,7 +423,7 @@ export default function SettingsPage() {
               disabled={!canEdit}
               rows={2}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50"
-              placeholder="Merci de votre visite! À bientôt chez Easy Shop"
+              placeholder="Thank you for your visit! See you soon at Easy Shop"
             />
           </div>
 
@@ -437,7 +437,7 @@ export default function SettingsPage() {
               className="w-4 h-4 accent-blue-600"
             />
             <label htmlFor="receiptShowLogo" className="text-sm text-slate-700">
-              Afficher le logo sur les tickets
+              Show logo on receipts
             </label>
           </div>
         </div>
@@ -447,11 +447,11 @@ export default function SettingsPage() {
       <div className="bg-white rounded-xl border border-slate-200 p-6">
         <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
           <Receipt className="w-5 h-5 text-blue-600" />
-          Factures A4
+          Invoices
         </h2>
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">
-            Pied de page des factures
+            Invoice footer
           </label>
           <textarea
             value={form.invoiceFooter || ""}
@@ -459,7 +459,7 @@ export default function SettingsPage() {
             disabled={!canEdit}
             rows={3}
             className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50"
-            placeholder="Easy Shop SARL · RCCM: CM/.../... · N° Contribuable: ... · Carrefour Obili, Yaoundé · Tél: +237 ..."
+            placeholder="Easy Shop Ltd · Reg: ... · Tax ID: ... · 123 Main St · Tel: +237 ..."
           />
         </div>
       </div>
@@ -481,7 +481,7 @@ export default function SettingsPage() {
               className="w-4 h-4 accent-blue-600"
             />
             <label htmlFor="enableLoyalty" className="text-sm text-slate-700">
-              Activer le programme de fidélité (points clients)
+              Enable loyalty program (customer points)
             </label>
           </div>
 
@@ -495,13 +495,13 @@ export default function SettingsPage() {
               className="w-4 h-4 accent-blue-600"
             />
             <label htmlFor="enableAutoPrint" className="text-sm text-slate-700">
-              Impression automatique des tickets après paiement
+              Auto-print receipts after payment
             </label>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
-              Taux de TVA par défaut (%)
+              Default VAT rate (%)
             </label>
             <input
               type="number"
@@ -540,7 +540,7 @@ export default function SettingsPage() {
       {/* Read-only notice */}
       {!canEdit && (
         <div className="text-center text-sm text-slate-400">
-          Seul le gérant (Boss) peut modifier ces paramètres.
+          Only the manager (Boss) can edit these settings.
         </div>
       )}
     </div>

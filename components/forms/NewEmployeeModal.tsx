@@ -116,7 +116,7 @@ export function NewEmployeeModal({ onClose, onSave }: NewEmployeeModalProps) {
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-[var(--text-primary)]">
-                      {form.firstName || "Prénom"} {form.lastName || "Nom"}
+                      {form.firstName || "First name"} {form.lastName || "Last name"}
                     </p>
                     <p className="text-xs text-[var(--text-muted)] mt-0.5">
                       {form.role ? t.employes.roles[form.role] : t.forms.selectRole}
@@ -127,7 +127,7 @@ export function NewEmployeeModal({ onClose, onSave }: NewEmployeeModalProps) {
                 {/* Identity */}
                 <div>
                   <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-widest mb-3">
-                    Identité
+                    Identity
                   </p>
                   <div className="grid grid-cols-2 gap-4">
                     <Field label={t.forms.firstName} error={errors.firstName} required>

@@ -67,10 +67,10 @@ export default function ClientsPage() {
     if (!firstName || !lastName || !phone) return;
     const result = await createCustomer({ firstName, lastName, phone, email: email || undefined });
     if (result) {
-      toast(`Client créé: ${firstName} ${lastName} - ${result.customerNumber}`, "success");
+      toast(`Customer created: ${firstName} ${lastName} - ${result.customerNumber}`, "success");
       reload();
     } else {
-      toast(`Client créé localement: ${firstName} ${lastName}`, "success");
+      toast(`Customer created locally: ${firstName} ${lastName}`, "success");
     }
     setShowModal(false);
     setFirstName("");
@@ -83,7 +83,7 @@ export default function ClientsPage() {
     if (!showRedeem || redeemPoints < 1) return;
     const customer = customers.find((c) => c.id === showRedeem);
     if (!customer) return;
-    toast(`${redeemPoints} points échangés = ${formatCurrency(redeemPoints * POINTS_TO_FCFA)} pour ${customer.firstName}`, "success");
+    toast(`${redeemPoints} points redeemed = ${formatCurrency(redeemPoints * POINTS_TO_FCFA)} for ${customer.firstName}`, "success");
     setShowRedeem(null);
     setRedeemPoints(0);
   };
@@ -261,7 +261,7 @@ export default function ClientsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowRedeem(null)}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-[var(--text-primary)]">Échanger des points</h3>
+              <h3 className="text-sm font-bold text-[var(--text-primary)]">Redeem points</h3>
               <button onClick={() => setShowRedeem(null)} className="p-1 hover:bg-slate-100 rounded-lg">
                 <X className="w-4 h-4 text-[var(--text-muted)]" />
               </button>

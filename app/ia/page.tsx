@@ -51,27 +51,27 @@ const priorityConfig: Record<string, { color: string; bg: string; icon: any; ico
 };
 
 const typeConfig: Record<string, { label: string; icon: any; color: string }> = {
-  stockout: { label: "Rupture", icon: Package, color: "text-red-600" },
-  overstock: { label: "Surstock", icon: TrendingUp, color: "text-blue-600" },
-  expiry: { label: "Expiration", icon: Clock, color: "text-amber-600" },
-  profit: { label: "Rentabilité", icon: TrendingUp, color: "text-emerald-600" },
+  stockout: { label: "Stockout", icon: Package, color: "text-red-600" },
+  overstock: { label: "Overstock", icon: TrendingUp, color: "text-blue-600" },
+  expiry: { label: "Expiry", icon: Clock, color: "text-amber-600" },
+  profit: { label: "Profitability", icon: TrendingUp, color: "text-emerald-600" },
 };
 
-// Données de fallback si le backend ne répond pas
+// Fallback data if backend is unreachable
 const mockForecast = [
-  { name: "Eau Minérale 1.5L", sku: "EAU-001", category: "Boissons", stock: 45, minStock: 20, unit: "pièce", sold30Days: 320, dailyVelocity: 10.7, daysUntilOut: 4, recommendedOrder: 150, urgency: "critical" },
-  { name: "Riz Parfumé 5kg", sku: "RIZ-005", category: "Épicerie", stock: 28, minStock: 15, unit: "sac", sold30Days: 180, dailyVelocity: 6.0, daysUntilOut: 4, recommendedOrder: 84, urgency: "critical" },
-  { name: "Sucre Granulé 1kg", sku: "SUC-001", category: "Épicerie", stock: 85, minStock: 30, unit: "pièce", sold30Days: 240, dailyVelocity: 8.0, daysUntilOut: 10, recommendedOrder: 112, urgency: "warning" },
-  { name: "Huile Végétale 1L", sku: "HUI-001", category: "Épicerie", stock: 120, minStock: 40, unit: "pièce", sold30Days: 90, dailyVelocity: 3.0, daysUntilOut: 40, recommendedOrder: 42, urgency: "ok" },
-  { name: "Savon de Marseille", sku: "SAV-001", category: "Ménager", stock: 350, minStock: 50, unit: "pièce", sold30Days: 30, dailyVelocity: 1.0, daysUntilOut: 350, recommendedOrder: 0, urgency: "overstock" },
+  { name: "Mineral Water 1.5L", sku: "EAU-001", category: "Beverages", stock: 45, minStock: 20, unit: "pc", sold30Days: 320, dailyVelocity: 10.7, daysUntilOut: 4, recommendedOrder: 150, urgency: "critical" },
+  { name: "Scented Rice 5kg", sku: "RIZ-005", category: "Grocery", stock: 28, minStock: 15, unit: "sack", sold30Days: 180, dailyVelocity: 6.0, daysUntilOut: 4, recommendedOrder: 84, urgency: "critical" },
+  { name: "Granulated Sugar 1kg", sku: "SUC-001", category: "Grocery", stock: 85, minStock: 30, unit: "pc", sold30Days: 240, dailyVelocity: 8.0, daysUntilOut: 10, recommendedOrder: 112, urgency: "warning" },
+  { name: "Vegetable Oil 1L", sku: "HUI-001", category: "Grocery", stock: 120, minStock: 40, unit: "pc", sold30Days: 90, dailyVelocity: 3.0, daysUntilOut: 40, recommendedOrder: 42, urgency: "ok" },
+  { name: "Marseille Soap", sku: "SAV-001", category: "Household", stock: 350, minStock: 50, unit: "pc", sold30Days: 30, dailyVelocity: 1.0, daysUntilOut: 350, recommendedOrder: 0, urgency: "overstock" },
 ];
 
 const mockRecommendations = [
-  { type: "stockout", priority: "high", title: "Rupture imminente: Eau Minérale 1.5L", message: "Le stock sera épuisé dans 4 jours. Commander 150 pièces recommandé.", action: "Commander 150 pièces" },
-  { type: "stockout", priority: "high", title: "Rupture imminente: Riz Parfumé 5kg", message: "Le stock sera épuisé dans 4 jours. Commander 84 sacs recommandé.", action: "Commander 84 sacs" },
-  { type: "expiry", priority: "high", title: "Expiration: Yaourt Nature 500g", message: "Expire dans 5 jours. Stock: 40 unités. Appliquer une remise.", action: "Appliquer -20%" },
-  { type: "overstock", priority: "low", title: "Surstock: Savon de Marseille", message: "Stock pour 350 jours. Lancer une promotion pour accélérer les ventes.", action: "Lancer promotion" },
-  { type: "profit", priority: "low", title: "Top marge: Café Arabica 250g", message: "Marge de 62% (1500 FCFA/unité). Mettre en avant en caisse.", action: "Mettre en avant" },
+  { type: "stockout", priority: "high", title: "Stockout imminent: Mineral Water 1.5L", message: "Stock will run out in 4 days. Order 150 units recommended.", action: "Order 150 units" },
+  { type: "stockout", priority: "high", title: "Stockout imminent: Scented Rice 5kg", message: "Stock will run out in 4 days. Order 84 sacks recommended.", action: "Order 84 sacks" },
+  { type: "expiry", priority: "high", title: "Expiry: Natural Yogurt 500g", message: "Expires in 5 days. Stock: 40 units. Apply a discount.", action: "Apply -20%" },
+  { type: "overstock", priority: "low", title: "Overstock: Marseille Soap", message: "Stock for 350 days. Launch a promotion to accelerate sales.", action: "Launch promotion" },
+  { type: "profit", priority: "low", title: "Top margin: Arabica Coffee 250g", message: "62% margin (1500 FCFA/unit). Feature at checkout.", action: "Feature at checkout" },
 ];
 
 export default function IaPage() {
@@ -132,7 +132,7 @@ export default function IaPage() {
             <div>
               <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t.ia.predictiveAnalysis}</h2>
               <p className="text-xs text-[var(--text-muted)]">
-                {summary.total} produits analysés
+                {summary.total} products analyzed
               </p>
             </div>
           </div>
@@ -175,7 +175,7 @@ export default function IaPage() {
           <Card className="p-4 border-l-4 border-l-emerald-200">
             <div className="flex items-center gap-2 mb-1">
               <ShoppingCart className="w-4 h-4 text-emerald-600" />
-              <span className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide">À commander</span>
+              <span className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide">To order</span>
             </div>
             <p className="text-2xl font-bold text-emerald-600 tabular-nums">{formatCurrency(summary.recommendedOrdersValue)}</p>
             <p className="text-[11px] text-[var(--text-muted)] mt-0.5">{t.ia.estimatedValue}</p>
@@ -239,7 +239,7 @@ export default function IaPage() {
           <div className="flex items-center gap-2 mb-3">
             <Package className="w-4 h-4 text-[var(--brand)]" />
             <h3 className="text-sm font-semibold text-[var(--text-primary)]">Stock forecasts</h3>
-            <span className="text-xs text-[var(--text-muted)]">- 30 jours de données</span>
+            <span className="text-xs text-[var(--text-muted)]">- 30 days of data</span>
           </div>
           <Card className="overflow-hidden">
             <div className="overflow-x-auto">
@@ -248,8 +248,8 @@ export default function IaPage() {
                   <tr className="border-b border-[var(--border)] bg-[var(--background)]">
                     <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Produit</th>
                     <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3 hidden sm:table-cell">Stock</th>
-                    <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Vélocité/j</th>
-                    <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Épuisé dans</th>
+                    <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Velocity/day</th>
+                    <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Out of stock in</th>
                     <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3 hidden md:table-cell">Commande sugg.</th>
                     <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Statut</th>
                   </tr>
@@ -351,7 +351,7 @@ export default function IaPage() {
                         medium: "bg-blue-100 text-blue-700",
                       };
                       const reasonLabels: Record<string, string> = {
-                        expiry: "Expiré",
+                        expiry: "Expired",
                         near_expiry: "Exp. proche",
                         clearance: "Destockage",
                       };
@@ -372,7 +372,7 @@ export default function IaPage() {
                                 s.daysToExpiry <= 0 ? "text-red-600" :
                                 s.daysToExpiry <= 7 ? "text-amber-600" : "text-[var(--text-muted)]"
                               )}>
-                                {s.daysToExpiry <= 0 ? "Expiré" : `J-${s.daysToExpiry}`}
+                                {s.daysToExpiry <= 0 ? "Expired" : `D-${s.daysToExpiry}`}
                               </span>
                             ) : (
                               <span className="text-xs text-[var(--text-muted)]">—</span>

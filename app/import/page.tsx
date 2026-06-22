@@ -91,9 +91,9 @@ export default function ImportPage() {
 
   const downloadTemplate = () => {
     const template = `sku,barcode,name,category,subCategory,brand,price,costPrice,stock,minStock,unit,expiryDate,imageUrl
-HV-5L-001,0620012345678,Huile Végétale 5L,Épicerie,Huiles,SCTB,5500,4100,50,20,bouteille,,
-EM-1.5-003,0610098765432,Eau Minérale 1.5L,Boissons,Eaux,SABC,400,250,200,50,bouteille,,
-RIZ-25-002,0640055667788,Riz Parfumé 25kg,Épicerie,Riz,Import Asie,22000,17500,42,15,sac,,`;
+HV-5L-001,0620012345678,Vegetable Oil 5L,Grocery,Oils,SCTB,5500,4100,50,20,bottle,,
+EM-1.5-003,0610098765432,Mineral Water 1.5L,Beverages,Waters,SABC,400,250,200,50,bottle,,
+RIZ-25-002,0640055667788,Scented Rice 25kg,Grocery,Rice,Import Asia,22000,17500,42,15,sack,,`;
 
     const blob = new Blob([template], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -220,7 +220,7 @@ RIZ-25-002,0640055667788,Riz Parfumé 25kg,Épicerie,Riz,Import Asie,22000,17500
                   Cliquez ou glissez votre CSV ici
                 </p>
                 <p className="text-xs text-[var(--text-muted)]">
-                  Format: .csv (jusqu'à 50 000 produits)
+                  Format: .csv (up to 50,000 products)
                 </p>
               </div>
             )}
@@ -231,7 +231,7 @@ RIZ-25-002,0640055667788,Riz Parfumé 25kg,Épicerie,Riz,Import Asie,22000,17500
             <div className="mt-4 flex items-center justify-between">
               <div className="text-xs text-[var(--text-muted)] flex items-center gap-1.5">
                 <FileText className="w-3.5 h-3.5" />
-                Prêt à importer {csvText.split("\n").length - 1} produits
+                Ready to import {csvText.split("\n").length - 1} products
               </div>
               <Button
                 onClick={handleImport}
@@ -254,14 +254,14 @@ RIZ-25-002,0640055667788,Riz Parfumé 25kg,Épicerie,Riz,Import Asie,22000,17500
         {result && (
           <Card padding="md">
             <CardHeader
-              title="Résultats de l'import"
-              subtitle={`Terminé en ${(result.duration / 1000).toFixed(1)} secondes`}
+              title="Import results"
+              subtitle={`Completed in ${(result.duration / 1000).toFixed(1)} seconds`}
             />
             <div className="mt-4 grid grid-cols-3 gap-3">
               <div className="bg-emerald-50 rounded-xl p-4 text-center">
                 <CheckCircle2 className="w-6 h-6 text-emerald-500 mx-auto mb-1" />
                 <p className="text-2xl font-bold text-emerald-600">{result.success}</p>
-                <p className="text-xs text-emerald-700">Réussis</p>
+                <p className="text-xs text-emerald-700">Succeeded</p>
               </div>
               <div className="bg-red-50 rounded-xl p-4 text-center">
                 <AlertCircle className="w-6 h-6 text-red-500 mx-auto mb-1" />
@@ -296,7 +296,7 @@ RIZ-25-002,0640055667788,Riz Parfumé 25kg,Épicerie,Riz,Import Asie,22000,17500
               <div className="mt-4 bg-emerald-50 rounded-xl p-4 flex items-center gap-3">
                 <CheckCircle2 className="w-5 h-5 text-emerald-500" />
                 <p className="text-sm text-emerald-700">
-                  Tous les {result.success} produits ont été importés avec succès!
+                  All {result.success} products imported successfully!
                 </p>
               </div>
             )}

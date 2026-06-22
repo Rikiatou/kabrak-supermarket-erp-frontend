@@ -71,8 +71,8 @@ const mockInvoices: Invoice[] = [
     clientPhone: "+237 6 91 23 45 67",
     clientEmail: "contact@baobab.cm",
     items: [
-      { description: "Riz parfumé 25kg", quantity: 10, unitPrice: 18000, total: 180000 },
-      { description: "Huile végétale 5L", quantity: 5, unitPrice: 12000, total: 60000 },
+      { description: "Scented rice 25kg", quantity: 10, unitPrice: 18000, total: 180000 },
+      { description: "Vegetable oil 5L", quantity: 5, unitPrice: 12000, total: 60000 },
     ],
     subtotal: 240000,
     tax: 37200,
@@ -81,7 +81,7 @@ const mockInvoices: Invoice[] = [
     balance: 0,
     status: "paid",
     payments: [
-      { id: "p1", amount: 277200, method: "mobile", date: "2026-06-18", note: "Paiement intégral MTN MoMo" },
+      { id: "p1", amount: 277200, method: "mobile", date: "2026-06-18", note: "Full payment MTN MoMo" },
     ],
   },
   {
@@ -89,7 +89,7 @@ const mockInvoices: Invoice[] = [
     number: "FAC-2026-0002",
     date: "2026-06-17",
     dueDate: "2026-07-17",
-    clientName: "Hôtel Mont Fébé",
+    clientName: "Hotel Mont Febe",
     clientPhone: "+237 6 72 34 56 78",
     clientEmail: "achats@montfebe.cm",
     items: [
@@ -102,7 +102,7 @@ const mockInvoices: Invoice[] = [
     balance: 254250,
     status: "partial",
     payments: [
-      { id: "p2", amount: 150000, method: "cash", date: "2026-06-17", note: "Acompte espèces" },
+      { id: "p2", amount: 150000, method: "cash", date: "2026-06-17", note: "Cash deposit" },
     ],
   },
 ];
@@ -112,7 +112,7 @@ export default function FacturesPage() {
   const { toast } = useToast();
   const { config: licenseConfig } = useLicense();
   const supermarketName = licenseConfig?.supermarketName || "KABRAK MARKET";
-  const supermarketAddress = licenseConfig?.address || "Supermarket Pro - Yaoundé, Cameroun";
+  const supermarketAddress = licenseConfig?.address || "KABRAK Retail - Yaounde, Cameroon";
   const supermarketPhone = licenseConfig?.phone ? `Tel: ${licenseConfig.phone}` : "Tel: +237 6XX XXX XXX";
   const invoiceFooter = licenseConfig?.invoiceFooter || `${supermarketName} - ${supermarketAddress} - ${supermarketPhone}`;
 
@@ -343,7 +343,7 @@ export default function FacturesPage() {
     pdf.setTextColor(60, 60, 60);
     pdf.setFontSize(9);
     pdf.setFont("helvetica", "bold");
-    pdf.text("FACTURÉ À:", margin + 5, 88);
+    pdf.text("BILLED TO:", margin + 5, 88);
     pdf.setFontSize(11);
     pdf.text(invoice.clientName, margin + 5, 96);
     pdf.setFont("helvetica", "normal");
@@ -366,7 +366,7 @@ export default function FacturesPage() {
     pdf.setFontSize(9);
     pdf.setFont("helvetica", "bold");
     pdf.text("Description", margin + 5, tableY + 7);
-    pdf.text("Qté", margin + 110, tableY + 7, { align: "center" });
+    pdf.text("Qty", margin + 110, tableY + 7, { align: "center" });
     pdf.text("Prix unit.", margin + 135, tableY + 7, { align: "right" });
     pdf.text("Total", pageWidth - margin - 5, tableY + 7, { align: "right" });
 
@@ -413,7 +413,7 @@ export default function FacturesPage() {
     pdf.setFont("helvetica", "normal");
     pdf.text("Merci pour votre confiance!", pageWidth / 2, y + 30, { align: "center" });
     pdf.text(invoiceFooter, pageWidth / 2, y + 36, { align: "center" });
-    pdf.text("Conditions de paiement: 30 jours. Litiges: Tribunal de Commerce de Yaoundé.", pageWidth / 2, y + 42, { align: "center" });
+    pdf.text("Payment terms: 30 days. Disputes: Commercial Court of Yaounde.", pageWidth / 2, y + 42, { align: "center" });
 
     // Signature area
     pdf.setDrawColor(180, 180, 180);
@@ -476,17 +476,17 @@ export default function FacturesPage() {
                 })),
                 `factures_${new Date().toISOString().slice(0, 10)}`,
                 [
-                  { key: "Numero", label: "Numéro" },
+                  { key: "Numero", label: "Number" },
                   { key: "Client", label: "Client" },
                   { key: "Date", label: "Date" },
-                  { key: "Echeance", label: "Échéance" },
+                  { key: "Echeance", label: "Due date" },
                   { key: "Total", label: "Total (FCFA)" },
-                  { key: "Paye", label: "Payé (FCFA)" },
-                  { key: "Solde", label: "Solde (FCFA)" },
-                  { key: "Statut", label: "Statut" },
+                  { key: "Paye", label: "Paid (FCFA)" },
+                  { key: "Solde", label: "Balance (FCFA)" },
+                  { key: "Statut", label: "Status" },
                 ],
               );
-              toast("Export CSV téléchargé", "success");
+              toast("CSV export downloaded", "success");
             }}
           >
             Export CSV
@@ -569,7 +569,7 @@ export default function FacturesPage() {
                 <input value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Nom de l'entreprise" className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]" />
               </div>
               <div>
-                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Téléphone</label>
+                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Phone</label>
                 <input value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} placeholder="+237 6XX XXX XXX" className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]" />
               </div>
               <div>
@@ -597,7 +597,7 @@ export default function FacturesPage() {
                       type="number"
                       value={item.quantity}
                       onChange={(e) => updateItem(idx, "quantity", parseInt(e.target.value) || 0)}
-                      placeholder="Qté"
+                      placeholder="Qty"
                       className="w-16 px-2 py-2 border border-[var(--border)] rounded-lg text-sm tabular-nums text-center outline-none focus:border-[var(--brand)]"
                     />
                     <input
@@ -663,7 +663,7 @@ export default function FacturesPage() {
                 <div className="text-sm font-bold tabular-nums text-[var(--text-primary)]">{formatCurrency(paymentInvoice.total)}</div>
               </div>
               <div className="bg-emerald-50 rounded-xl p-3">
-                <div className="text-xs text-emerald-600 uppercase tracking-wide flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Payé</div>
+                <div className="text-xs text-emerald-600 uppercase tracking-wide flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Paid</div>
                 <div className="text-sm font-bold tabular-nums text-emerald-700">{formatCurrency(paymentInvoice.paidAmount)}</div>
               </div>
               <div className={cn("rounded-xl p-3", paymentInvoice.balance > 0 ? "bg-red-50" : "bg-emerald-50")}>
@@ -731,7 +731,7 @@ export default function FacturesPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-[var(--text-muted)] mb-1.5 block">Méthode</label>
+                    <label className="text-xs text-[var(--text-muted)] mb-1.5 block">Method</label>
                     <select
                       value={paymentMethod}
                       onChange={(e) => setPaymentMethod(e.target.value)}
@@ -749,7 +749,7 @@ export default function FacturesPage() {
                     <input
                       value={paymentNote}
                       onChange={(e) => setPaymentNote(e.target.value)}
-                      placeholder="Référence, remarque..."
+                      placeholder="Reference, note..."
                       className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]"
                     />
                   </div>

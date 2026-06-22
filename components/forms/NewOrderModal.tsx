@@ -161,7 +161,7 @@ function ProductAutocomplete({
       )}
       {open && filtered.length === 0 && value.trim() && (
         <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-[var(--border)] rounded-lg shadow-lg px-3 py-2 text-sm text-[var(--text-muted)]">
-          Aucun produit trouvé
+          No product found
         </div>
       )}
     </div>
@@ -535,7 +535,7 @@ export function NewOrderModal({ onClose, onSave, defaultSupplier, allowDirectRec
                     value={form.notes}
                     onChange={set("notes")}
                     rows={2}
-                    placeholder="Instructions de livraison, références, conditions particulières…"
+                    placeholder="Delivery instructions, references, special conditions..."
                     className={cn(inputClass(false), "resize-none")}
                   />
                 </Field>

@@ -331,7 +331,7 @@ export default function PlanningPage() {
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-[var(--brand)]" />
                 <h3 className="text-sm font-bold text-[var(--text-primary)]">
-                  Nouveau créneau — {addEmployee.firstName} {addEmployee.lastName}
+                  New shift — {addEmployee.firstName} {addEmployee.lastName}
                 </h3>
               </div>
               <button onClick={() => setShowAddModal(false)} className="p-1 hover:bg-slate-100 rounded-lg">
@@ -360,7 +360,7 @@ export default function PlanningPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Début</label>
+                  <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Start</label>
                   <select
                     value={form.startTime}
                     onChange={(e) => setForm({ ...form, startTime: e.target.value })}
@@ -420,7 +420,7 @@ export default function PlanningPage() {
             {form.startTime >= form.endTime && (
               <div className="flex items-center gap-2 text-amber-600 text-xs bg-amber-50 rounded-lg p-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
-                L&apos;heure de début doit être avant l&apos;heure de fin
+                Start time must be before end time
               </div>
             )}
 

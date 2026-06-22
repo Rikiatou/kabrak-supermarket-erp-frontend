@@ -8,11 +8,11 @@ import { cn } from "@/lib/utils";
 import type { Product } from "@/lib/types";
 
 const CATEGORIES = [
-  "Épicerie", "Boissons", "Produits laitiers",
-  "Hygiène", "Boucherie", "Boulangerie", "Surgelés",
+  "Grocery", "Beverages", "Dairy",
+  "Hygiene", "Butchery", "Bakery", "Frozen",
 ];
 
-const UNITS = ["bouteille", "boîte", "sachet", "sac", "kg", "litre", "paquet", "barre", "pot", "unité"];
+const UNITS = ["bottle", "can", "pack", "sack", "kg", "liter", "box", "bar", "jar", "unit"];
 
 interface NewProductModalProps {
   onClose: () => void;
@@ -35,7 +35,7 @@ type FormData = {
 
 const empty: FormData = {
   name: "", sku: "", barcode: "", category: "", price: "",
-  costPrice: "", stock: "", minStock: "", unit: "unité", supplier: "", expiryDate: "",
+  costPrice: "", stock: "", minStock: "", unit: "unit", supplier: "", expiryDate: "",
 };
 
 export function NewProductModal({ onClose, onSave }: NewProductModalProps) {
@@ -180,7 +180,7 @@ export function NewProductModal({ onClose, onSave }: NewProductModalProps) {
                             : margin >= 10 ? "bg-[var(--warning-light)] text-amber-700"
                             : "bg-[var(--danger-light)] text-red-600"
                         )}>
-                          <span>Marge brute calculée :</span>
+                          <span>Gross margin:</span>
                           <span className="tabular-nums">{margin}%</span>
                           <span className="text-xs font-normal opacity-70">
                             {margin >= 20 ? "✓ Bonne marge" : margin >= 10 ? "⚠ Marge faible" : "✗ Marge insuffisante"}

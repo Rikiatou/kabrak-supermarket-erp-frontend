@@ -33,7 +33,7 @@ type SortDir = "asc" | "desc";
 type FilterStatus = "all" | "critical" | "low" | "ok" | "expiring";
 
 // Stable backend category keys (always French in DB) - order matches CATEGORIES labels
-const CATEGORY_KEYS = ["Toutes", "Épicerie", "Boissons", "Produits laitiers", "Hygiène", "Boucherie", "Boulangerie", "Surgelés"];
+const CATEGORY_KEYS = ["All", "Grocery", "Beverages", "Dairy", "Hygiene", "Butchery", "Bakery", "Frozen"];
 
 function stockStatus(product: Product): FilterStatus {
   if (product.stock === 0) return "critical";
@@ -117,7 +117,7 @@ export default function StocksPage() {
       // Ajouter le produit créé à la liste locale
       const newProduct = apiProductToFrontend(created);
       setProducts((prev) => [newProduct, ...prev]);
-      toast(`${data.name} ajouté au stock`, "success");
+      toast(`${data.name} added to stock`, "success");
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : t.stocks.errorAdd;
       toast(msg, "warning");
@@ -460,7 +460,7 @@ export default function StocksPage() {
                             daysLeft <= 7 ? "text-amber-500" : "text-[var(--text-muted)]"
                           )}
                         >
-                          {daysLeft <= 0 ? "Expiré" : `J-${daysLeft}`}
+                          {daysLeft <= 0 ? "Expired" : `D-${daysLeft}`}
                         </span>
                       ) : (
                         <span className="text-xs text-[var(--text-muted)]">—</span>
@@ -592,7 +592,7 @@ export default function StocksPage() {
                 <input
                   value={markdownNote}
                   onChange={(e) => setMarkdownNote(e.target.value)}
-                  placeholder="Raison détaillée..."
+                  placeholder="Detailed reason..."
                   className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-amber-500"
                 />
               </div>
@@ -654,7 +654,7 @@ function ProductDetailPanel({
       />
       <div className="fixed right-0 top-0 h-screen w-[380px] bg-white shadow-[var(--shadow-lg)] z-50 flex flex-col">
         <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
-          <h2 className="font-semibold text-[var(--text-primary)]">Détail produit</h2>
+          <h2 className="font-semibold text-[var(--text-primary)]">Product detail</h2>
           <button
             onClick={onClose}
             className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors"
