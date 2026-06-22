@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLicense } from "@/lib/license/context";
 import { useAuth } from "@/lib/auth/context";
 import { Button } from "@/components/ui/Button";
@@ -16,6 +16,8 @@ import {
   Phone,
   MapPin,
   Globe,
+  Upload,
+  Image as ImageIcon,
 } from "lucide-react";
 import type { ClientConfig } from "@/lib/license/types";
 
@@ -28,6 +30,8 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Seul le boss peut modifier les paramètres
   const canEdit = user?.role === "boss";
@@ -41,6 +45,55 @@ export default function SettingsPage() {
 
   const handleChange = (field: keyof ClientConfig, value: string | number | boolean) => {
     setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleUploadLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !license?.licenseKey) return;
+
+    // Vérifier le type de fichier
+    if (!file.type.startsWith("image/")) {
+      alert("Veuillez sélectionner une image (JPG, PNG, GIF, etc.)");
+      return;
+    }
+
+    // Vérifier la taille (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert("L'image est trop grande (max 5MB)");
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("logo", file);
+
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/licenses/${license.licenseKey}/upload-logo`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      if (!res.ok) throw new Error("Upload failed");
+
+      const data = await res.json();
+      handleChange("logoUrl", data.logoUrl);
+      
+      // Sauvegarder automatiquement
+      await updateConfig({ ...form, logoUrl: data.logoUrl });
+      await refreshConfig();
+    } catch (error) {
+      console.error("Upload error:", error);
+      alert("Erreur lors de l'upload du logo");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
   };
 
   const handleSave = async () => {
@@ -162,17 +215,81 @@ export default function SettingsPage() {
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
-              URL du logo
+              Logo du supermarché
             </label>
-            <input
-              type="text"
-              value={form.logoUrl || ""}
-              onChange={(e) => handleChange("logoUrl", e.target.value)}
-              disabled={!canEdit}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50"
-              placeholder="https://... ou /uploads/logo.png"
-            />
-            <p className="text-xs text-slate-400 mt-1">Logo affiché sur la sidebar et les tickets</p>
+            
+            {/* Aperçu du logo */}
+            {form.logoUrl && (
+              <div className="mb-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                <img
+                  src={form.logoUrl}
+                  alt="Logo"
+                  className="h-16 w-auto object-contain"
+                />
+              </div>
+            )}
+
+            {/* Bouton upload */}
+            <div className="flex gap-2 mb-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleUploadLogo}
+                disabled={!canEdit || uploading}
+                className="hidden"
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={!canEdit || uploading}
+                className="flex items-center gap-2"
+              >
+                {uploading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Upload en cours...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4" />
+                    Uploader un logo
+                  </>
+                )}
+              </Button>
+              
+              {form.logoUrl && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => handleChange("logoUrl", "")}
+                  disabled={!canEdit}
+                  className="text-red-600 hover:text-red-700"
+                >
+                  Supprimer
+                </Button>
+              )}
+            </div>
+
+            {/* Champ URL manuel (optionnel) */}
+            <details className="mt-2">
+              <summary className="text-xs text-slate-500 cursor-pointer hover:text-slate-700">
+                Ou entrer une URL manuellement
+              </summary>
+              <input
+                type="text"
+                value={form.logoUrl || ""}
+                onChange={(e) => handleChange("logoUrl", e.target.value)}
+                disabled={!canEdit}
+                className="w-full mt-2 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50"
+                placeholder="https://... ou /uploads/logo.png"
+              />
+            </details>
+
+            <p className="text-xs text-slate-400 mt-1">
+              Logo affiché sur la sidebar, tickets et factures (max 5MB)
+            </p>
           </div>
 
           <div>
