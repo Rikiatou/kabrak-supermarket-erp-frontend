@@ -302,6 +302,7 @@ export const translations = {
       weeklySchedule: "Planning de la semaine",
       roles: {
         boss: "Boss",
+        manager: "Manager",
         cashier: "Caissier(ère)",
         stockist: "Stockeur",
         accountant: "Comptable",
@@ -1230,6 +1231,7 @@ export const translations = {
       weeklySchedule: "Weekly schedule",
       roles: {
         boss: "Boss",
+        manager: "Manager",
         cashier: "Cashier",
         stockist: "Stocker",
         accountant: "Accountant",

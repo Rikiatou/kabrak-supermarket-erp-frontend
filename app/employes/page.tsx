@@ -8,8 +8,11 @@ import {
   Mail,
   Clock,
   X,
-  ChevronDown,
   Calendar,
+  Eye,
+  EyeOff,
+  RefreshCw,
+  ChevronDown,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Card } from "@/components/ui/Card";
@@ -21,11 +24,13 @@ import { useToast } from "@/components/ui/Toast";
 import { NewEmployeeModal } from "@/components/forms/NewEmployeeModal";
 import { useEmployees } from "@/lib/hooks/useApi";
 import { employeesApi } from "@/lib/api";
+import { useAuth } from "@/lib/auth/context";
 import { formatDate, cn } from "@/lib/utils";
 import type { Employee } from "@/lib/types";
 
 const roleColors: Record<Employee["role"], string> = {
   boss: "bg-indigo-100 text-indigo-700",
+  manager: "bg-violet-100 text-violet-700",
   cashier: "bg-blue-100 text-blue-700",
   stockist: "bg-amber-100 text-amber-700",
   accountant: "bg-emerald-100 text-emerald-700",
@@ -112,7 +117,7 @@ export default function EmployesPage() {
   const { employees: apiEmployees } = useEmployees();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [search, setSearch] = useState("");
-  const [filterRole, setFilterRole] = useState("Tous");
+  const [filterRole, setFilterRole] = useState("All");
   const [filterStatus, setFilterStatus] = useState("Tous");
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [showNewEmployee, setShowNewEmployee] = useState(false);
@@ -171,7 +176,7 @@ export default function EmployesPage() {
         hoursThisWeek: 0,
       };
       setEmployees((prev) => [newEmp, ...prev]);
-      toast(`${data.firstName} ${data.lastName} ajouté — PIN temporaire: ${generatedPin}`, "success");
+      toast(`${data.firstName} ${data.lastName} added — temporary PIN: ${generatedPin}`, "success");
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : t.employes.errorAdd;
       toast(msg, "warning");
@@ -189,7 +194,7 @@ export default function EmployesPage() {
   const filtered = employees.filter((e) => {
     const name = `${e.firstName} ${e.lastName}`.toLowerCase();
     const matchSearch = !search || name.includes(search.toLowerCase());
-    const matchRole = filterRole === "Tous" || e.role === filterRole;
+    const matchRole = filterRole === "All" || e.role === filterRole;
     const matchStatus =
       filterStatus === "Tous" ||
       (filterStatus === "active" && e.status === "active") ||
@@ -241,9 +246,9 @@ export default function EmployesPage() {
             onChange={(e) => setFilterRole(e.target.value)}
             className="appearance-none bg-white border border-[var(--border)] rounded-xl px-3 py-2 pr-8 text-sm text-[var(--text-secondary)] outline-none cursor-pointer"
           >
-            {["Tous", "manager", "cashier", "stockist", "supervisor"].map((r) => (
+            {["All", "manager", "cashier", "stockist", "boss", "accountant"].map((r) => (
               <option key={r} value={r}>
-                {r === "Tous" ? t.employes.allRoles : t.employes.roles[r as Employee["role"]]}
+                {r === "All" ? t.employes.allRoles : t.employes.roles[r as Employee["role"]] ?? r}
               </option>
             ))}
           </select>
@@ -298,7 +303,7 @@ export default function EmployesPage() {
             <thead>
               <tr>
                 <th className="text-left text-xs font-semibold text-[var(--text-muted)] pb-3 pr-4">
-                  Employé
+                  Employee
                 </th>
                 {[
                   t.common.monday,
@@ -404,7 +409,28 @@ function EmployeeDetailPanel({
 }) {
   const { t } = useI18n();
   const { toast } = useToast();
+  const { user } = useAuth();
   const gradient = avatarGradients[index % avatarGradients.length];
+  const [showPin, setShowPin] = useState(false);
+  const [pinValue, setPinValue] = useState<string | null>(null);
+  const [resetting, setResetting] = useState(false);
+
+  const canManagePin = user?.role === "boss" || user?.role === "manager";
+
+  const handleResetPin = async () => {
+    setResetting(true);
+    const newPin = String(Math.floor(1000 + Math.random() * 9000));
+    try {
+      await employeesApi.update(employee.id, { pin: newPin });
+      setPinValue(newPin);
+      setShowPin(true);
+      toast(`PIN reset for ${employee.firstName} — new PIN: ${newPin}`, "success");
+    } catch {
+      toast("Failed to reset PIN", "warning");
+    } finally {
+      setResetting(false);
+    }
+  };
 
   return (
     <>
@@ -478,6 +504,41 @@ function EmployeeDetailPanel({
               </div>
             ))}
           </div>
+
+          {/* PIN section — boss/manager only */}
+          {canManagePin && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">
+                Login PIN
+              </p>
+              <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-xl">
+                <span className="flex-1 font-mono text-sm tracking-widest text-[var(--text-primary)]">
+                  {pinValue !== null
+                    ? (showPin ? pinValue : "••••")
+                    : (showPin ? "see DB" : "••••")}
+                </span>
+                <button
+                  onClick={() => setShowPin((v) => !v)}
+                  className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+                  title={showPin ? "Hide" : "Show"}
+                >
+                  {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+                <button
+                  onClick={handleResetPin}
+                  disabled={resetting}
+                  className="flex items-center gap-1 text-xs text-[var(--brand)] hover:text-[var(--brand-hover)] font-medium transition-colors disabled:opacity-50"
+                  title="Generate new PIN"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${resetting ? "animate-spin" : ""}`} />
+                  Reset
+                </button>
+              </div>
+              <p className="text-[11px] text-[var(--text-muted)]">
+                Only you can see this. Share the new PIN directly with the employee.
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="p-4 border-t border-[var(--border)] flex gap-2">

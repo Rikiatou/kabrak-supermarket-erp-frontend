@@ -91,7 +91,7 @@ export interface Employee {
   id: string;
   firstName: string;
   lastName: string;
-  role: "boss" | "cashier" | "stockist" | "accountant";
+  role: "boss" | "manager" | "cashier" | "stockist" | "accountant";
   department: string;
   phone: string;
   email: string;
