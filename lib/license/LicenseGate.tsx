@@ -59,36 +59,22 @@ export function LicenseGate({ children }: LicenseGateProps) {
     }
   }, [license, loading, isExpired, isPublicPage, router]);
 
-  // Page publique = pas de gate
-  if (isPublicPage) {
-    return <>{children}</>;
-  }
-
-  // Pendant le chargement
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-[var(--background)]">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 text-[var(--brand)] animate-spin" />
-          <p className="text-sm text-[var(--text-muted)]">Vérification de la licence...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Pas de licence
-  if (!license) {
-    return null; // Redirect en cours
-  }
-
-  // Licence expirée
-  if (isExpired) {
-    return null; // Redirect en cours
-  }
+  // Toujours rendre les children pour préserver l'arbre React (évite error #310)
+  // Overlay de chargement par-dessus au lieu de remplacer les children
+  const showLoadingOverlay = !isPublicPage && loading;
+  const showLicenseWarning = !isPublicPage && !loading && license && !isExpired && showWarning;
 
   return (
     <>
-      {showWarning && (
+      {showLoadingOverlay && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[var(--background)]">
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className="w-8 h-8 text-[var(--brand)] animate-spin" />
+            <p className="text-sm text-[var(--text-muted)]">Vérification de la licence...</p>
+          </div>
+        </div>
+      )}
+      {showLicenseWarning && (
         <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 text-center">
           <p className="text-sm text-amber-800">
             ⚠️ Votre licence expire dans <strong>{daysRemaining} jours</strong>.{" "}

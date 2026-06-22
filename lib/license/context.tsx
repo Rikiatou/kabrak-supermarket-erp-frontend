@@ -132,7 +132,20 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
 export function useLicense() {
   const ctx = useContext(LicenseContext);
   if (!ctx) {
-    throw new Error("useLicense doit être utilisé dans LicenseProvider");
+    // Retourner des valeurs par défaut pendant le SSR/prerender
+    return {
+      license: null,
+      config: null,
+      stores: [],
+      loading: true,
+      isActivated: false,
+      isExpired: false,
+      daysRemaining: 0,
+      activate: async () => false,
+      deactivate: () => {},
+      refreshConfig: async () => {},
+      updateConfig: async () => false,
+    } as LicenseContextType;
   }
   return ctx;
 }

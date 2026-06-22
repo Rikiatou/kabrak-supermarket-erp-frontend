@@ -69,7 +69,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) {
-    throw new Error("useAuth doit être utilisé dans AuthProvider");
+    // Retourner des valeurs par défaut pendant le SSR/prerender
+    return {
+      user: null,
+      loading: true,
+      login: async () => false,
+      logout: () => {},
+      isAuthenticated: false,
+    } as AuthContextType;
   }
   return ctx;
 }
