@@ -287,12 +287,14 @@ export default function LoginPage() {
           )}
         </div>
 
-        {/* Comptes de test */}
+        {/* Test accounts */}
         <div className="mt-4 bg-blue-50 rounded-xl p-3 text-xs text-blue-700">
           <p className="font-semibold mb-1">{t.login.testAccounts}</p>
           <p>{t.login.testManager}</p>
           <p>{t.login.testCashier}</p>
           <p>{t.login.testCashier2}</p>
+          <p>{t.login.testStocker}</p>
+          <p>{t.login.testAccountant}</p>
         </div>
       </div>
     </div>

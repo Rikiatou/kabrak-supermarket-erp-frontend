@@ -599,6 +599,8 @@ export const translations = {
       testManager: "Boss: EMP001 / PIN: 1234",
       testCashier: "Caissier: EMP002 / PIN: 2345",
       testCashier2: "Caissière: EMP003 / PIN: 3456",
+      testStocker: "Stockeur: EMP004 / PIN: 4567",
+      testAccountant: "Comptable: EMP005 / PIN: 5678",
     },
     // Not Found
     notFound: {
@@ -1517,6 +1519,8 @@ export const translations = {
       testManager: "Boss: EMP001 / PIN: 1234",
       testCashier: "Cashier: EMP002 / PIN: 2345",
       testCashier2: "Cashier: EMP003 / PIN: 3456",
+      testStocker: "Stocker: EMP004 / PIN: 4567",
+      testAccountant: "Accountant: EMP005 / PIN: 5678",
     },
     notFound: {
       title: "Page not found",
