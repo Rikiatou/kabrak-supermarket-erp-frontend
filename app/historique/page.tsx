@@ -188,32 +188,34 @@ export default function HistoriquePage() {
   }, [movements, typeFilter, dateFrom, dateTo]);
 
   // Summary totals (from ALL movements, not filtered)
-  const totalIn  = movements.filter((m) => m.type === "in").reduce((s, m) => s + m.quantity, 0);
-  const totalOut = movements.filter((m) => m.type === "out").reduce((s, m) => s + m.quantity, 0);
-  const totalAdj = movements.filter((m) => m.type === "adjustment").reduce((s, m) => s + m.quantity, 0);
+  // Backend stores OUT movements with negative quantity (e.g. -5),
+  // IN movements with positive quantity (e.g. +16),
+  // adjustments with signed quantity (e.g. -2 or +3).
+  // So: totalOut is already negative — use Math.abs for display.
+  const totalIn  = movements.filter((m) => m.type === "in").reduce((s, m) => s + Math.abs(m.quantity), 0);
+  const totalOut = movements.filter((m) => m.type === "out").reduce((s, m) => s + Math.abs(m.quantity), 0);
+  const totalAdj = movements.filter((m) => m.type === "adjustment").reduce((s, m) => s + m.quantity, 0); // signed
   const netChange = totalIn - totalOut + totalAdj;
 
-  // Running balance for sparkline — chronological order
+  // Running balance — use the signed quantity directly from the backend.
+  // IN  → +qty (positive), OUT → qty (already negative), ADJ → signed qty.
+  // So balance += m.quantity works for ALL types.
   const sparklinePoints = useMemo(() => {
     if (!movements.length) return [];
     const sorted = [...movements].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
     let balance = 0;
     return sorted.map((m) => {
-      if (m.type === "in") balance += m.quantity;
-      else if (m.type === "out") balance -= m.quantity;
-      else balance += m.quantity; // adjustment (signed)
+      balance += m.quantity; // signed: in=+, out=-, adj=±
       return balance;
     });
   }, [movements]);
 
-  // Running balance per row (newest-first display → compute from sorted asc then reverse)
+  // Running balance per row (newest-first display)
   const movementsWithBalance = useMemo(() => {
     const sorted = [...filteredMovements].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
     let balance = 0;
     const withBal = sorted.map((m) => {
-      if (m.type === "in") balance += m.quantity;
-      else if (m.type === "out") balance -= m.quantity;
-      else balance += m.quantity;
+      balance += m.quantity; // signed
       return { ...m, balance };
     });
     return withBal.reverse(); // newest first
@@ -231,7 +233,7 @@ export default function HistoriquePage() {
     const rows = movementsWithBalance.map((m) => [
       formatDate(m.createdAt),
       m.type,
-      m.type === "in" ? `+${m.quantity}` : m.type === "out" ? `-${m.quantity}` : m.quantity,
+      m.type === "in" ? `+${Math.abs(m.quantity)}` : m.type === "out" ? `-${Math.abs(m.quantity)}` : m.quantity,
       m.balance,
       translateReason(m.reason),
       m.reference ?? "",
@@ -547,9 +549,9 @@ export default function HistoriquePage() {
                                   {config.label}
                                 </Badge>
                               </td>
-                              {/* Quantity */}
+                              {/* Quantity — backend stores OUT as negative, so use Math.abs for display */}
                               <td className={cn("px-4 py-3 text-sm font-bold text-right tabular-nums", isIn ? "text-emerald-600" : isOut ? "text-red-500" : "text-amber-600")}>
-                                {isIn ? "+" : isOut ? "−" : ""}{movement.quantity}
+                                {isIn ? "+" : isOut ? "−" : ""}{Math.abs(movement.quantity)}
                               </td>
                               {/* Running balance */}
                               <td className="px-4 py-3 text-sm font-semibold text-right tabular-nums text-[var(--text-secondary)]">
