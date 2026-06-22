@@ -20,7 +20,7 @@ function ActivateContent() {
 
   useEffect(() => {
     if (license && !isExpired && !isRenewal) {
-      router.replace("/dashboard");
+      router.replace("/login");
     }
   }, [license, isExpired, isRenewal, router]);
 
@@ -38,7 +38,7 @@ function ActivateContent() {
 
     if (ok) {
       setSuccess(true);
-      setTimeout(() => router.replace("/dashboard"), 1500);
+      setTimeout(() => router.replace("/login"), 1500);
     } else {
       setError("Invalid, expired, or unreachable. Check your key and try again.");
     }

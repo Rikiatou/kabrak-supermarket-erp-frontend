@@ -719,7 +719,7 @@ function ProductDetailPanel({
               { label: t.stocks.barcode, value: product.barcode },
               { label: t.stocks.unit, value: product.unit },
               ...(daysLeft !== null
-                ? [{ label: t.stocks.expiryDate, value: `${formatDate(product.expiryDate!)} (J-${daysLeft})` }]
+                ? [{ label: t.stocks.expiryDate, value: `${formatDate(product.expiryDate!)} (D-${daysLeft})` }]
                 : []),
             ].map(({ label, value }) => (
               <div key={label} className="flex justify-between py-2 border-b border-[var(--border-subtle)] last:border-0">
