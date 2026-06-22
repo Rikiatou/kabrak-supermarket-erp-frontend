@@ -168,9 +168,9 @@ export default function AchatsPage() {
   };
 
   const handleSaveDelivery = useCallback(async () => {
-    if (!deliverySupplierId) { toast("Select a supplier", "warning"); return; }
+    if (!deliverySupplierId) { toast(t.achats.selectSupplier, "warning"); return; }
     const validLines = deliveryLines.filter((l) => l.productId && l.qty > 0 && l.unitPrice > 0);
-    if (validLines.length === 0) { toast("Add at least one product with quantity and price", "warning"); return; }
+    if (validLines.length === 0) { toast("Add at least one product with qty and price", "warning"); return; }
     setSavingDelivery(true);
     try {
       await purchaseOrdersApi.createDirect({
@@ -364,7 +364,7 @@ export default function AchatsPage() {
         <div className="flex items-center gap-1 bg-white border border-[var(--border)] rounded-xl p-1 shadow-[var(--shadow-sm)]">
           {[
             { key: "orders", label: t.achats.purchaseOrders },
-            { key: "deliveries", label: "Delivery Notes" },
+            { key: "deliveries", label: t.achats.deliveryNotes },
             { key: "suppliers", label: t.achats.suppliers },
           ].map(({ key, label }) => (
             <button
@@ -424,7 +424,7 @@ export default function AchatsPage() {
             else openNewOrder();
           }}
         >
-          {activeTab === "orders" ? t.achats.newOrder : activeTab === "deliveries" ? "New Delivery" : t.achats.newSupplier}
+          {activeTab === "orders" ? t.achats.newOrder : activeTab === "deliveries" ? t.achats.newDelivery : t.achats.newSupplier}
         </Button>
       </div>
 
@@ -518,7 +518,7 @@ export default function AchatsPage() {
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <Truck className="w-10 h-10 text-[var(--text-muted)] mb-3 opacity-40" />
                 <p className="text-sm font-medium text-[var(--text-secondary)]">No delivery notes yet</p>
-                <p className="text-xs text-[var(--text-muted)] mt-1">Click "New Delivery" to record a received delivery</p>
+                <p className="text-xs text-[var(--text-muted)] mt-1">Click t.achats.newDelivery to record a received delivery</p>
               </div>
             ) : (
               <table className="w-full">
@@ -623,7 +623,7 @@ export default function AchatsPage() {
                   type="text"
                   value={deliveryRef}
                   onChange={(e) => setDeliveryRef(e.target.value)}
-                  placeholder="e.g. 0020182"
+                  placeholder={t.achats.deliveryRefPh}
                   className="w-full border border-[var(--border)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--brand)]"
                 />
               </div>
@@ -702,7 +702,7 @@ export default function AchatsPage() {
                 Cancel
               </Button>
               <Button className="flex-1" onClick={handleSaveDelivery} disabled={savingDelivery}>
-                {savingDelivery ? "Saving…" : "Save & Update Stock"}
+                {savingDelivery ? "Saving…" : t.achats.saveDelivery}
               </Button>
             </div>
           </div>

@@ -1,7 +1,7 @@
 {
   "name": "KABRAK Market Pro",
   "short_name": "KABRAK",
-  "description": "ERP Supermarché - Gestion complète",
+  "description": "Supermarket ERP - Complete management",
   "start_url": "/dashboard",
   "display": "standalone",
   "orientation": "portrait",
@@ -25,19 +25,24 @@
   ],
   "shortcuts": [
     {
-      "name": "Caisse POS",
+      "name": "POS — New Sale",
       "url": "/pos",
-      "description": "Encaisser une vente"
+      "description": "Open point of sale"
     },
     {
-      "name": "Tableau de bord",
+      "name": "Dashboard",
       "url": "/dashboard",
-      "description": "Vue d'ensemble"
+      "description": "Overview"
+    },
+    {
+      "name": "Receive Delivery",
+      "url": "/achats",
+      "description": "Record a delivery note"
     },
     {
       "name": "Stocks",
       "url": "/stocks",
-      "description": "Gestion du stock"
+      "description": "Inventory management"
     }
   ]
 }
