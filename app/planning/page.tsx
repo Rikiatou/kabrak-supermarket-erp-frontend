@@ -78,9 +78,9 @@ export default function PlanningPage() {
     notes: "",
   });
 
-  // Filtrer les employés caissiers/superviseurs/managers seulement
+  // Filtrer les employés assignables (tous rôles sauf inactifs)
   const cashiers = useMemo(
-    () => employees.filter((e) => ["cashier", "supervisor", "manager"].includes(e.role)),
+    () => employees.filter((e) => ["cashier", "supervisor", "manager", "boss", "stockist", "accountant"].includes(e.role)),
     [employees],
   );
 

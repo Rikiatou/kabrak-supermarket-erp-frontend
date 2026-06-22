@@ -142,9 +142,10 @@ export default function EmployesPage() {
   const handleNewEmployee = async (data: Omit<Employee, "id" | "status" | "hoursThisWeek">) => {
     setSaving(true);
     try {
-      // Générer un numéro d'employé automatique
+      // Générer un numéro d'employé et PIN aléatoire
       const empCount = employees.length + 1;
       const employeeNumber = `EMP${String(empCount).padStart(3, "0")}`;
+      const generatedPin = String(Math.floor(1000 + Math.random() * 9000)); // PIN 4 chiffres aléatoire
       const created = await employeesApi.create({
         employeeNumber,
         firstName: data.firstName,
@@ -155,7 +156,7 @@ export default function EmployesPage() {
         email: data.email || undefined,
         hireDate: data.hireDate ? new Date(data.hireDate) : new Date(),
         status: "active",
-        pin: "0000", // PIN par défaut, à changer par l'employé
+        pin: generatedPin, // PIN aléatoire, communiquer à l'employé
       });
       const newEmp: Employee = {
         id: created.id,
@@ -170,7 +171,7 @@ export default function EmployesPage() {
         hoursThisWeek: 0,
       };
       setEmployees((prev) => [newEmp, ...prev]);
-      toast(`${data.firstName} ${data.lastName} ajouté — PIN: 0000`, "success");
+      toast(`${data.firstName} ${data.lastName} ajouté — PIN temporaire: ${generatedPin}`, "success");
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : t.employes.errorAdd;
       toast(msg, "warning");

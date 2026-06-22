@@ -185,7 +185,7 @@ export default function StocksPage() {
 
   const handleRemoveMarkdown = async (product: Product) => {
     const result = await removeMarkdown(product.id);
-    if (result || !result) {
+    if (result) {
       setProducts((prev) =>
         prev.map((p) =>
           p.id === product.id

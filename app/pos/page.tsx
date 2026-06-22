@@ -192,7 +192,7 @@ export default function POSPage() {
   };
 
   const subtotal = cart.reduce((s, i) => s + getEffectivePrice(i.product) * i.quantity, 0);
-  const tax = 0;
+  const tax = Math.round(subtotal * TAX_RATE);
   const totalBeforeDiscount = subtotal + tax;
   const discount = Math.min(cashierDiscountAmount, totalBeforeDiscount);
   const total = totalBeforeDiscount - discount;

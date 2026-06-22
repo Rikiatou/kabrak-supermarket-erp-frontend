@@ -65,8 +65,19 @@ export default function PertesPage() {
     const product = products.find((p) => p.id === selectedProduct);
     if (!product || quantity < 1) return;
 
-    // Ajuster le stock via le backend
-    await adjust(product.id, Math.max(0, product.stock - quantity), `${lossType}: ${reason || t.pertes.lossTypes.loss}`);
+    // Validation: quantité ne peut pas dépasser le stock
+    if (quantity > product.stock) {
+      toast(`Stock insuffisant: seulement ${product.stock} en stock`, "warning");
+      return;
+    }
+
+    try {
+      // Ajuster le stock via le backend
+      await adjust(product.id, Math.max(0, product.stock - quantity), `${lossType}: ${reason || t.pertes.lossTypes.loss}`);
+    } catch (e) {
+      toast("Erreur lors de l'ajustement du stock", "warning");
+      return;
+    }
 
     const entry: LossEntry = {
       id: `LOSS-${Date.now()}`,

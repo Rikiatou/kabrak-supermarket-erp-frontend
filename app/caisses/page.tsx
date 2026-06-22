@@ -83,7 +83,7 @@ function OpenShiftModal({
   onCancel: () => void;
 }) {
   const [employeeId, setEmployeeId] = useState(defaultEmployeeId);
-  const [openingCash, setOpeningCash] = useState("50000");
+  const [openingCash, setOpeningCash] = useState("0");
   const { t } = useI18n();
 
   const cash = Number(openingCash) || 0;
@@ -192,10 +192,10 @@ function CloseShiftModal({
   onCancel: () => void;
 }) {
   const [closingCash, setClosingCash] = useState(
-    String(shift.openingCash + 50000),
+    String(shift.openingCash),
   );
   const [expectedCash, setExpectedCash] = useState(
-    String(shift.openingCash + 50000),
+    String(shift.openingCash),
   );
   const [notes, setNotes] = useState("");
   const { t } = useI18n();

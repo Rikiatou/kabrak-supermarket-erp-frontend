@@ -69,10 +69,12 @@ export default function SettingsPage() {
       const formData = new FormData();
       formData.append("logo", file);
 
+      const token = typeof window !== "undefined" ? localStorage.getItem("kabrak_auth_token") : null;
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/licenses/${license.licenseKey}/upload-logo`,
         {
           method: "POST",
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
           body: formData,
         }
       );
