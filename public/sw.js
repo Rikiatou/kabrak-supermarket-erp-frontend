@@ -1,10 +1,13 @@
-const CACHE_NAME = "kabrak-v1";
-const STATIC_ASSETS = ["/", "/dashboard", "/pos", "/stocks", "/manifest.json"];
+// KABRAK Service Worker — v3
+// Strategy: only cache genuine static assets.
+// NEVER intercept: API calls, Next.js RSC payloads, page navigation, cross-origin requests.
 
-self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS).catch(() => {}))
-  );
+const CACHE_NAME = "kabrak-v3";
+
+// Only files with these extensions get cached
+const CACHEABLE_EXT = [".js", ".css", ".woff", ".woff2", ".ttf", ".otf", ".svg", ".png", ".ico", ".webp", ".jpg", ".jpeg"];
+
+self.addEventListener("install", () => {
   self.skipWaiting();
 });
 
@@ -20,37 +23,41 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const { request } = event;
 
-  // Never cache non-GET requests (POST, PUT, PATCH, DELETE)
+  // 1. Only handle GET
   if (request.method !== "GET") return;
 
-  // API calls: network first, fallback to cache (GET only)
-  if (request.url.includes("/api/")) {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          }
-          return response;
-        })
-        .catch(() => caches.match(request))
-    );
-    return;
-  }
+  const url = new URL(request.url);
 
-  // Static assets: cache first
+  // 2. Never intercept cross-origin (Railway backend, external CDNs)
+  if (url.origin !== self.location.origin) return;
+
+  // 3. Never intercept Next.js internals: RSC payloads, HMR, internal API
+  if (
+    url.searchParams.has("_rsc") ||
+    request.headers.get("RSC") === "1" ||
+    request.headers.get("Next-Router-State-Tree") ||
+    url.pathname.startsWith("/_next/webpack-hmr") ||
+    url.pathname.startsWith("/api/")
+  ) return;
+
+  // 4. Only cache actual static files — skip everything else (page routes, etc.)
+  const ext = "." + url.pathname.split(".").pop().toLowerCase();
+  if (!CACHEABLE_EXT.includes(ext)) return;
+
+  // 5. Cache-first for static assets
   event.respondWith(
     caches.match(request).then(
       (cached) =>
         cached ||
-        fetch(request).then((response) => {
-          if (response.status === 200) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          }
-          return response;
-        })
+        fetch(request)
+          .then((response) => {
+            if (response.ok) {
+              const clone = response.clone();
+              caches.open(CACHE_NAME).then((c) => c.put(request, clone));
+            }
+            return response;
+          })
+          .catch(() => new Response("", { status: 503 }))
     )
   );
 });

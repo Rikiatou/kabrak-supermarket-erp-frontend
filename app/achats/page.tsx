@@ -128,7 +128,7 @@ function StarRating({ rating }: { rating: number }) {
 export default function AchatsPage() {
   const { t } = useI18n();
   const { toast } = useToast();
-  const { suppliers: apiSuppliers } = useSuppliers();
+  const { suppliers: apiSuppliers, reload: reloadSuppliers } = useSuppliers();
   const { data: apiOrders, reload: reloadOrders } = usePurchaseOrders();
   const { create: createOrder, creating: creatingOrder } = useCreatePurchaseOrder();
   const [search, setSearch] = useState("");
@@ -146,6 +146,9 @@ export default function AchatsPage() {
   const [deliveryRef, setDeliveryRef] = useState("");
   const [deliveryDate, setDeliveryDate] = useState(new Date().toISOString().split("T")[0]);
   const [deliverySupplierId, setDeliverySupplierId] = useState("");
+  const [deliverySupplierName, setDeliverySupplierName] = useState("");
+  const [supplierSuggestions, setSupplierSuggestions] = useState<Supplier[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [deliveryProductSearch, setDeliveryProductSearch] = useState<string[]>([]);
   type DeliveryLine = { productId: string; qty: number; unitPrice: number };
   const [deliveryLines, setDeliveryLines] = useState<DeliveryLine[]>([
@@ -164,24 +167,36 @@ export default function AchatsPage() {
 
   const resetDeliveryForm = () => {
     setDeliveryRef(""); setDeliveryDate(new Date().toISOString().split("T")[0]);
-    setDeliverySupplierId(""); setDeliveryLines([{ productId: "", qty: 1, unitPrice: 0 }]);
+    setDeliverySupplierId(""); setDeliverySupplierName(""); setDeliveryLines([{ productId: "", qty: 1, unitPrice: 0 }]);
   };
 
   const handleSaveDelivery = useCallback(async () => {
-    if (!deliverySupplierId) { toast(t.achats.selectSupplier, "warning"); return; }
+    let supplierId = deliverySupplierId;
+    // If typed a name manually with no match → auto-create the supplier
+    if (!supplierId && deliverySupplierName.trim()) {
+      try {
+        const created = await suppliersApi.create({ name: deliverySupplierName.trim(), contact: "", phone: "" });
+        supplierId = created.id;
+        reloadSuppliers();
+      } catch {
+        toast("Could not create supplier automatically", "warning"); return;
+      }
+    }
+    if (!supplierId) { toast("Enter or select a supplier", "warning"); return; }
     const validLines = deliveryLines.filter((l) => l.productId && l.qty > 0 && l.unitPrice > 0);
     if (validLines.length === 0) { toast("Add at least one product with qty and price", "warning"); return; }
     setSavingDelivery(true);
     try {
       await purchaseOrdersApi.createDirect({
-        supplierId: deliverySupplierId,
+        supplierId,
         expectedDate: deliveryDate,
         invoiceNumber: deliveryRef || undefined,
         notes: deliveryRef ? `Bordereau ref: ${deliveryRef}` : undefined,
         items: validLines.map((l) => ({ productId: l.productId, quantity: l.qty, unitCost: l.unitPrice })),
       });
-      toast(`Delivery note saved — stock updated for ${validLines.length} product(s)`, "success");
+      toast(`Delivery saved — stock updated for ${validLines.length} product(s)`, "success");
       reloadOrders();
+      reloadSuppliers();
       setShowDeliveryForm(false);
       resetDeliveryForm();
     } catch (e: unknown) {
@@ -291,6 +306,7 @@ export default function AchatsPage() {
       };
       setSupplierList((prev) => [newSup, ...prev]);
       toast(`${t.achats.supplierAdded} ${data.name}`, "success");
+      reloadSuppliers();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : t.achats.errorAdd;
       toast(msg, "warning");
@@ -594,16 +610,36 @@ export default function AchatsPage() {
             <div className="flex-1 overflow-y-auto p-5 space-y-4">
               {/* Row 1: Supplier + Date */}
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 uppercase tracking-wide">Supplier *</label>
-                  <select
-                    value={deliverySupplierId}
-                    onChange={(e) => setDeliverySupplierId(e.target.value)}
-                    className="w-full border border-[var(--border)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--brand)] bg-white"
-                  >
-                    <option value="">— Select supplier —</option>
-                    {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                  </select>
+                <div className="relative">
+                  <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 uppercase tracking-wide">
+                    Supplier * {!deliverySupplierId && deliverySupplierName.trim() && <span className="text-emerald-600 normal-case font-normal">(will be created)</span>}
+                  </label>
+                  <input
+                    type="text"
+                    value={deliverySupplierName}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setDeliverySupplierName(v);
+                      setDeliverySupplierId("");
+                      const matches = suppliers.filter((s) => s.name.toLowerCase().includes(v.toLowerCase()));
+                      setSupplierSuggestions(matches);
+                      setShowSuggestions(v.length > 0);
+                    }}
+                    onFocus={() => { if (deliverySupplierName.length > 0) setShowSuggestions(true); }}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                    placeholder="Type supplier name..."
+                    className="w-full border border-[var(--border)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--brand)]"
+                  />
+                  {showSuggestions && supplierSuggestions.length > 0 && (
+                    <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white border border-[var(--border)] rounded-xl shadow-lg overflow-hidden">
+                      {supplierSuggestions.slice(0, 6).map((s) => (
+                        <button key={s.id} type="button"
+                          onMouseDown={() => { setDeliverySupplierName(s.name); setDeliverySupplierId(s.id); setShowSuggestions(false); }}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0"
+                        >{s.name}</button>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 uppercase tracking-wide">Date *</label>
