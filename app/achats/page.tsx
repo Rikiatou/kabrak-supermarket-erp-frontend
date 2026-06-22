@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Search,
   Plus,
@@ -16,6 +16,9 @@ import {
   Mail,
   MapPin,
   TrendingUp,
+  Truck,
+  Printer,
+  Trash2,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { useI18n } from "@/lib/i18n/context";
@@ -26,7 +29,7 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { suppliers as mockSuppliers } from "@/lib/mock-data";
-import { useSuppliers, usePurchaseOrders, useCreatePurchaseOrder } from "@/lib/hooks/useApi";
+import { useSuppliers, usePurchaseOrders, useCreatePurchaseOrder, useProducts } from "@/lib/hooks/useApi";
 import { suppliersApi, purchaseOrdersApi } from "@/lib/api";
 import { formatCurrency, cn } from "@/lib/utils";
 import type { Supplier } from "@/lib/types";
@@ -129,12 +132,111 @@ export default function AchatsPage() {
   const { data: apiOrders, reload: reloadOrders } = usePurchaseOrders();
   const { create: createOrder, creating: creatingOrder } = useCreatePurchaseOrder();
   const [search, setSearch] = useState("");
-  const [activeTab, setActiveTab] = useState<"orders" | "suppliers">("orders");
+  const [activeTab, setActiveTab] = useState<"orders" | "suppliers" | "deliveries">("orders");
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const [showNewSupplier, setShowNewSupplier] = useState(false);
   const [showNewOrder, setShowNewOrder] = useState(false);
   const [orderSupplier, setOrderSupplier] = useState<Supplier | undefined>(undefined);
+
+  // Delivery note state
+  const { products: allProducts } = useProducts();
+  const [showDeliveryForm, setShowDeliveryForm] = useState(false);
+  const [savingDelivery, setSavingDelivery] = useState(false);
+  const [deliveryRef, setDeliveryRef] = useState("");
+  const [deliveryDate, setDeliveryDate] = useState(new Date().toISOString().split("T")[0]);
+  const [deliverySupplierId, setDeliverySupplierId] = useState("");
+  const [deliveryProductSearch, setDeliveryProductSearch] = useState<string[]>([]);
+  type DeliveryLine = { productId: string; qty: number; unitPrice: number };
+  const [deliveryLines, setDeliveryLines] = useState<DeliveryLine[]>([
+    { productId: "", qty: 1, unitPrice: 0 },
+  ]);
+  const [printDelivery, setPrintDelivery] = useState<null | {
+    ref: string; date: string; supplier: string; lines: Array<{ name: string; qty: number; unitPrice: number; total: number }>; grandTotal: number;
+  }>(null);
+
+  const addDeliveryLine = () => setDeliveryLines((l) => [...l, { productId: "", qty: 1, unitPrice: 0 }]);
+  const removeDeliveryLine = (i: number) => setDeliveryLines((l) => l.filter((_, idx) => idx !== i));
+  const updateDeliveryLine = (i: number, field: keyof DeliveryLine, value: string | number) =>
+    setDeliveryLines((l) => l.map((line, idx) => idx === i ? { ...line, [field]: value } : line));
+
+  const deliveryGrandTotal = deliveryLines.reduce((s, l) => s + l.qty * l.unitPrice, 0);
+
+  const resetDeliveryForm = () => {
+    setDeliveryRef(""); setDeliveryDate(new Date().toISOString().split("T")[0]);
+    setDeliverySupplierId(""); setDeliveryLines([{ productId: "", qty: 1, unitPrice: 0 }]);
+  };
+
+  const handleSaveDelivery = useCallback(async () => {
+    if (!deliverySupplierId) { toast("Select a supplier", "warning"); return; }
+    const validLines = deliveryLines.filter((l) => l.productId && l.qty > 0 && l.unitPrice > 0);
+    if (validLines.length === 0) { toast("Add at least one product with quantity and price", "warning"); return; }
+    setSavingDelivery(true);
+    try {
+      await purchaseOrdersApi.createDirect({
+        supplierId: deliverySupplierId,
+        expectedDate: deliveryDate,
+        invoiceNumber: deliveryRef || undefined,
+        notes: deliveryRef ? `Bordereau ref: ${deliveryRef}` : undefined,
+        items: validLines.map((l) => ({ productId: l.productId, quantity: l.qty, unitCost: l.unitPrice })),
+      });
+      toast(`Delivery note saved — stock updated for ${validLines.length} product(s)`, "success");
+      reloadOrders();
+      setShowDeliveryForm(false);
+      resetDeliveryForm();
+    } catch (e: unknown) {
+      toast(e instanceof Error ? e.message : "Failed to save delivery note", "warning");
+    } finally {
+      setSavingDelivery(false);
+    }
+  }, [deliverySupplierId, deliveryDate, deliveryRef, deliveryLines, reloadOrders, toast]);
+
+  const handlePrintDelivery = (order: typeof orders[0]) => {
+    const sup = suppliers.find((s) => s.id === order.supplier.id) || order.supplier;
+    const w = window.open("", "_blank", "width=800,height=900");
+    if (!w) return;
+    const rows = Array.from({ length: 20 }, (_, i) => `
+      <tr>
+        <td style="border:1px solid #ccc;padding:4px 6px;font-size:11px;">&nbsp;</td>
+        <td style="border:1px solid #ccc;padding:4px 6px;text-align:center;font-size:11px;">&nbsp;</td>
+        <td style="border:1px solid #ccc;padding:4px 6px;text-align:right;font-size:11px;">&nbsp;</td>
+        <td style="border:1px solid #ccc;padding:4px 6px;text-align:right;font-size:11px;">&nbsp;</td>
+      </tr>`).join("");
+    w.document.write(`<!DOCTYPE html><html><head><title>Delivery Note ${order.id}</title>
+      <style>
+        body{font-family:Arial,sans-serif;width:780px;margin:20px auto;color:#000}
+        h2{text-align:center;font-size:16px;border:2px solid #000;padding:6px;margin:8px 0}
+        .meta{display:flex;justify-content:space-between;margin-bottom:8px;font-size:12px}
+        table{width:100%;border-collapse:collapse;margin-top:8px}
+        th{background:#eee;border:1px solid #999;padding:5px 6px;font-size:11px;text-align:left}
+        .totals{margin-top:12px;text-align:right;font-size:13px;font-weight:bold}
+        .sig{display:flex;justify-content:space-between;margin-top:40px;font-size:12px}
+        .sig div{border-top:1px solid #000;padding-top:4px;width:180px;text-align:center}
+        @media print{button{display:none}}
+      </style></head><body>
+      <div class="meta">
+        <div><strong>Supplier:</strong> ${sup.name}</div>
+        <div><strong>Date:</strong> ${order.date}</div>
+        <div><strong>Ref #:</strong> <strong>${order.id}</strong></div>
+      </div>
+      <h2>DELIVERY NOTE — BORDEREAU DE LIVRAISON</h2>
+      <table>
+        <thead><tr>
+          <th style="width:50%">DESIGNATION</th>
+          <th style="width:12%;text-align:center">QTE</th>
+          <th style="width:19%;text-align:right">P.U. (FCFA)</th>
+          <th style="width:19%;text-align:right">P. TOTAL (FCFA)</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div class="totals">TOTAL HT: _____________________ FCFA</div>
+      <div class="sig">
+        <div>CLIENT</div><div>LIVREUR</div>
+      </div>
+      <br/><button onclick="window.print()" style="margin-top:16px;padding:8px 20px;font-size:13px;cursor:pointer">Print PDF</button>
+    </body></html>`);
+    w.document.close();
+  };
 
   // Convertir les suppliers API au format frontend, fallback sur mock
   const suppliers: Supplier[] = apiSuppliers.length > 0
@@ -262,11 +364,12 @@ export default function AchatsPage() {
         <div className="flex items-center gap-1 bg-white border border-[var(--border)] rounded-xl p-1 shadow-[var(--shadow-sm)]">
           {[
             { key: "orders", label: t.achats.purchaseOrders },
+            { key: "deliveries", label: "Delivery Notes" },
             { key: "suppliers", label: t.achats.suppliers },
           ].map(({ key, label }) => (
             <button
               key={key}
-              onClick={() => setActiveTab(key as "orders" | "suppliers")}
+              onClick={() => setActiveTab(key as "orders" | "suppliers" | "deliveries")}
               className={cn(
                 "px-4 py-1.5 text-sm font-medium rounded-lg transition-all",
                 activeTab === key
@@ -317,10 +420,11 @@ export default function AchatsPage() {
           icon={<Plus className="w-4 h-4" />}
           onClick={() => {
             if (activeTab === "suppliers") setShowNewSupplier(true);
+            else if (activeTab === "deliveries") setShowDeliveryForm(true);
             else openNewOrder();
           }}
         >
-          {activeTab === "orders" ? t.achats.newOrder : t.achats.newSupplier}
+          {activeTab === "orders" ? t.achats.newOrder : activeTab === "deliveries" ? "New Delivery" : t.achats.newSupplier}
         </Button>
       </div>
 
@@ -403,6 +507,206 @@ export default function AchatsPage() {
             </tbody>
           </table>
         </Card>
+      )}
+
+      {/* Delivery Notes list */}
+      {activeTab === "deliveries" && (() => {
+        const deliveries = orders.filter((o) => o.status === "received");
+        return (
+          <Card padding="none">
+            {deliveries.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <Truck className="w-10 h-10 text-[var(--text-muted)] mb-3 opacity-40" />
+                <p className="text-sm font-medium text-[var(--text-secondary)]">No delivery notes yet</p>
+                <p className="text-xs text-[var(--text-muted)] mt-1">Click "New Delivery" to record a received delivery</p>
+              </div>
+            ) : (
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-[var(--border)] bg-slate-50/60">
+                    {["Ref / Order #", "Supplier", "Date", "Products", "Total", ""].map((h) => (
+                      <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {deliveries.map((d) => (
+                    <tr key={d.id} className="border-b border-[var(--border-subtle)] last:border-0 hover:bg-slate-50/50 transition-colors">
+                      <td className="px-4 py-3">
+                        <span className="text-sm font-mono font-medium text-[var(--text-primary)]">{d.id}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center text-[10px] font-bold text-emerald-700 shrink-0">
+                            {d.supplier.name.charAt(0)}
+                          </div>
+                          <span className="text-sm font-medium text-[var(--text-primary)]">{d.supplier.name}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-[var(--text-secondary)] tabular-nums">{d.date}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1.5 text-sm text-[var(--text-secondary)]">
+                          <Package className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+                          {d.itemCount} items
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm font-semibold text-[var(--text-primary)] tabular-nums">{formatCurrency(d.total)}</td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => handlePrintDelivery(d)}
+                          className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-colors"
+                        >
+                          <Printer className="w-3 h-3" />
+                          Print
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </Card>
+        );
+      })()}
+
+      {/* Delivery Note Form panel */}
+      {showDeliveryForm && (
+        <>
+          <div className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-40" onClick={() => setShowDeliveryForm(false)} />
+          <div className="fixed right-0 top-0 h-screen w-[540px] bg-white shadow-[var(--shadow-lg)] z-50 flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center">
+                  <Truck className="w-4 h-4 text-emerald-600" />
+                </div>
+                <div>
+                  <h2 className="font-semibold text-[var(--text-primary)] text-sm">New Delivery Note</h2>
+                  <p className="text-xs text-[var(--text-muted)]">Bordereau de Livraison — stock auto-updated on save</p>
+                </div>
+              </div>
+              <button onClick={() => setShowDeliveryForm(false)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors">
+                <X className="w-4 h-4 text-[var(--text-secondary)]" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+              {/* Row 1: Supplier + Date */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 uppercase tracking-wide">Supplier *</label>
+                  <select
+                    value={deliverySupplierId}
+                    onChange={(e) => setDeliverySupplierId(e.target.value)}
+                    className="w-full border border-[var(--border)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--brand)] bg-white"
+                  >
+                    <option value="">— Select supplier —</option>
+                    {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 uppercase tracking-wide">Date *</label>
+                  <input
+                    type="date"
+                    value={deliveryDate}
+                    onChange={(e) => setDeliveryDate(e.target.value)}
+                    className="w-full border border-[var(--border)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--brand)]"
+                  />
+                </div>
+              </div>
+
+              {/* Ref number */}
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 uppercase tracking-wide">Bordereau Reference #</label>
+                <input
+                  type="text"
+                  value={deliveryRef}
+                  onChange={(e) => setDeliveryRef(e.target.value)}
+                  placeholder="e.g. 0020182"
+                  className="w-full border border-[var(--border)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--brand)]"
+                />
+              </div>
+
+              {/* Items table */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide">Products *</label>
+                  <button onClick={addDeliveryLine} className="flex items-center gap-1 text-xs font-medium text-[var(--brand)] hover:text-blue-700 transition-colors">
+                    <Plus className="w-3.5 h-3.5" /> Add line
+                  </button>
+                </div>
+
+                {/* Header */}
+                <div className="grid grid-cols-[1fr_72px_90px_90px_32px] gap-1.5 mb-1">
+                  {["Product", "QTE", "P.U. (FCFA)", "P. TOTAL", ""].map((h) => (
+                    <span key={h} className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wide px-1">{h}</span>
+                  ))}
+                </div>
+
+                <div className="space-y-1.5">
+                  {deliveryLines.map((line, i) => {
+                    const lineTotal = line.qty * line.unitPrice;
+                    return (
+                      <div key={i} className="grid grid-cols-[1fr_72px_90px_90px_32px] gap-1.5 items-center">
+                        <select
+                          value={line.productId}
+                          onChange={(e) => updateDeliveryLine(i, "productId", e.target.value)}
+                          className="border border-[var(--border)] rounded-lg px-2 py-1.5 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--brand)] bg-white truncate"
+                        >
+                          <option value="">— select —</option>
+                          {allProducts.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        </select>
+                        <input
+                          type="number" min="1" value={line.qty}
+                          onChange={(e) => updateDeliveryLine(i, "qty", Math.max(1, parseInt(e.target.value) || 1))}
+                          className="border border-[var(--border)] rounded-lg px-2 py-1.5 text-xs text-center outline-none focus:border-[var(--brand)] tabular-nums"
+                        />
+                        <input
+                          type="number" min="0" value={line.unitPrice}
+                          onChange={(e) => updateDeliveryLine(i, "unitPrice", parseFloat(e.target.value) || 0)}
+                          className="border border-[var(--border)] rounded-lg px-2 py-1.5 text-xs text-right outline-none focus:border-[var(--brand)] tabular-nums"
+                        />
+                        <div className="text-xs font-semibold text-[var(--text-primary)] text-right tabular-nums px-1">
+                          {lineTotal > 0 ? formatCurrency(lineTotal) : "—"}
+                        </div>
+                        <button
+                          onClick={() => removeDeliveryLine(i)}
+                          disabled={deliveryLines.length === 1}
+                          className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-[var(--text-muted)] hover:text-red-500 transition-colors disabled:opacity-30"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Grand total */}
+                <div className="flex items-center justify-between mt-4 pt-3 border-t border-[var(--border)]">
+                  <span className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide">TOTAL GENERAL HT</span>
+                  <span className="text-lg font-bold text-[var(--text-primary)] tabular-nums">{formatCurrency(deliveryGrandTotal)}</span>
+                </div>
+              </div>
+
+              <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3">
+                <p className="text-xs text-emerald-700 font-medium">
+                  Stock auto-update: saving this delivery note will immediately add the quantities to each product's current stock and create stock movement entries.
+                </p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-5 py-4 border-t border-[var(--border)] flex gap-3">
+              <Button variant="secondary" className="flex-1" onClick={() => { setShowDeliveryForm(false); resetDeliveryForm(); }}>
+                Cancel
+              </Button>
+              <Button className="flex-1" onClick={handleSaveDelivery} disabled={savingDelivery}>
+                {savingDelivery ? "Saving…" : "Save & Update Stock"}
+              </Button>
+            </div>
+          </div>
+        </>
       )}
 
       {/* Suppliers grid */}

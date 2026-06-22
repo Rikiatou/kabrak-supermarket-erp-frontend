@@ -9,6 +9,14 @@ import {
   AlertTriangle,
   ArrowRight,
   Calendar,
+  ShoppingCart,
+  Truck,
+  FileText,
+  BarChart3,
+  Cpu,
+  History,
+  PackagePlus,
+  Zap,
 } from "lucide-react";
 import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
@@ -20,6 +28,7 @@ import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { useI18n } from "@/lib/i18n/context";
+import { useAuth } from "@/lib/auth/context";
 import {
   useTodayStats,
   useYesterdayStats,
@@ -47,6 +56,43 @@ export default function DashboardPage() {
   const { data: topProducts } = useMonthlyTopProducts(5);
   const { data: averageBasket } = useAverageBasket();
   const { data: unpaidInvoices } = useUnpaidInvoices();
+  const { user } = useAuth();
+
+  const roleShortcuts: Record<string, { label: string; href: string; icon: React.ElementType; color: string }[]> = {
+    boss: [
+      { label: "New Sale", href: "/pos", icon: ShoppingCart, color: "bg-blue-50 text-blue-700 border-blue-100" },
+      { label: "Receive Delivery", href: "/achats", icon: Truck, color: "bg-emerald-50 text-emerald-700 border-emerald-100" },
+      { label: "Reports", href: "/rapports", icon: BarChart3, color: "bg-violet-50 text-violet-700 border-violet-100" },
+      { label: "AI Insights", href: "/ia", icon: Cpu, color: "bg-amber-50 text-amber-700 border-amber-100" },
+      { label: "Product History", href: "/historique", icon: History, color: "bg-slate-50 text-slate-700 border-slate-200" },
+      { label: "Invoices", href: "/factures", icon: FileText, color: "bg-rose-50 text-rose-700 border-rose-100" },
+    ],
+    manager: [
+      { label: "New Sale", href: "/pos", icon: ShoppingCart, color: "bg-blue-50 text-blue-700 border-blue-100" },
+      { label: "Receive Delivery", href: "/achats", icon: Truck, color: "bg-emerald-50 text-emerald-700 border-emerald-100" },
+      { label: "Reports", href: "/rapports", icon: BarChart3, color: "bg-violet-50 text-violet-700 border-violet-100" },
+      { label: "AI Insights", href: "/ia", icon: Cpu, color: "bg-amber-50 text-amber-700 border-amber-100" },
+      { label: "Product History", href: "/historique", icon: History, color: "bg-slate-50 text-slate-700 border-slate-200" },
+      { label: "Invoices", href: "/factures", icon: FileText, color: "bg-rose-50 text-rose-700 border-rose-100" },
+    ],
+    cashier: [
+      { label: "New Sale", href: "/pos", icon: ShoppingCart, color: "bg-blue-50 text-blue-700 border-blue-100" },
+      { label: "Clients", href: "/clients", icon: Users, color: "bg-emerald-50 text-emerald-700 border-emerald-100" },
+      { label: "Register", href: "/caisses", icon: Zap, color: "bg-amber-50 text-amber-700 border-amber-100" },
+    ],
+    accountant: [
+      { label: "Invoices", href: "/factures", icon: FileText, color: "bg-blue-50 text-blue-700 border-blue-100" },
+      { label: "Accounting", href: "/comptabilite", icon: BarChart3, color: "bg-violet-50 text-violet-700 border-violet-100" },
+      { label: "Reports", href: "/rapports", icon: BarChart3, color: "bg-emerald-50 text-emerald-700 border-emerald-100" },
+    ],
+    stockist: [
+      { label: "Receive Delivery", href: "/achats", icon: Truck, color: "bg-emerald-50 text-emerald-700 border-emerald-100" },
+      { label: "Stocks", href: "/stocks", icon: PackagePlus, color: "bg-blue-50 text-blue-700 border-blue-100" },
+      { label: "Losses", href: "/pertes", icon: AlertTriangle, color: "bg-red-50 text-red-700 border-red-100" },
+      { label: "Scanner", href: "/scanner", icon: Package, color: "bg-amber-50 text-amber-700 border-amber-100" },
+    ],
+  };
+  const shortcuts = roleShortcuts[user?.role ?? ""] ?? [];
 
   // Données réelles du backend (fallback sur mock si indisponible)
   const revenue = todayStats?.revenue ?? 0;
@@ -103,6 +149,22 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Role-based quick shortcuts */}
+      {shortcuts.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-5">
+          {shortcuts.map((s) => (
+            <Link
+              key={s.href + s.label}
+              href={s.href}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold transition-all hover:opacity-80 active:scale-95 ${s.color}`}
+            >
+              <s.icon className="w-3.5 h-3.5" />
+              {s.label}
+            </Link>
+          ))}
+        </div>
+      )}
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">

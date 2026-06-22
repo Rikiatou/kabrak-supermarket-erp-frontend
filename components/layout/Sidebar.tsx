@@ -35,28 +35,67 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { user, logout } = useAuth();
   const { config, license } = useLicense();
 
-  const allNavItems = [
-    { href: "/dashboard", label: t.nav.dashboard, icon: LayoutDashboard, badge: null },
-    { href: "/pos", label: t.nav.pos, icon: ShoppingCart, badge: null },
-    { href: "/stocks", label: t.nav.stocks, icon: Package, badge: 6 },
-    { href: "/import", label: t.nav.import, icon: Upload, badge: null },
-    { href: "/achats", label: t.nav.achats, icon: Truck, badge: null },
-    { href: "/factures", label: t.nav.factures, icon: FileText, badge: null },
-    { href: "/employes", label: t.nav.employes, icon: Users, badge: null },
-    { href: "/caisses", label: t.nav.caisses, icon: Store, badge: null },
-    { href: "/planning", label: t.nav.planning, icon: Calendar, badge: null },
-    { href: "/clients", label: t.nav.clients, icon: Users, badge: null },
-    { href: "/pertes", label: t.nav.pertes, icon: AlertTriangle, badge: null },
-    { href: "/scanner", label: t.nav.scanner, icon: ScanLine, badge: null },
-    { href: "/comptabilite", label: t.nav.comptabilite, icon: BookOpen, badge: null },
-    { href: "/rapports", label: t.nav.rapports, icon: BarChart3, badge: null },
-    { href: "/historique", label: "Product History", icon: History, badge: null },
-    { href: "/ia", label: t.nav.ia, icon: Cpu, badge: null },
-    { href: "/settings", label: "Settings", icon: Settings, badge: null },
-  ];
+  type NavItem = { href: string; label: string; icon: React.ElementType; badge: number | null };
 
-  // Filtrer par rôle
-  const navItems = allNavItems.filter((item) => canAccess(user?.role, item.href));
+  const navGroups: Array<{ label: string; items: NavItem[] }> = [
+    {
+      label: "",
+      items: [
+        { href: "/dashboard", label: t.nav.dashboard, icon: LayoutDashboard, badge: null },
+      ],
+    },
+    {
+      label: "Operations",
+      items: [
+        { href: "/pos", label: t.nav.pos, icon: ShoppingCart, badge: null },
+        { href: "/caisses", label: t.nav.caisses, icon: Store, badge: null },
+        { href: "/clients", label: t.nav.clients, icon: Users, badge: null },
+      ],
+    },
+    {
+      label: "Inventory",
+      items: [
+        { href: "/stocks", label: t.nav.stocks, icon: Package, badge: 6 },
+        { href: "/import", label: t.nav.import, icon: Upload, badge: null },
+        { href: "/scanner", label: t.nav.scanner, icon: ScanLine, badge: null },
+        { href: "/pertes", label: t.nav.pertes, icon: AlertTriangle, badge: null },
+      ],
+    },
+    {
+      label: "Procurement",
+      items: [
+        { href: "/achats", label: t.nav.achats, icon: Truck, badge: null },
+      ],
+    },
+    {
+      label: "Finance",
+      items: [
+        { href: "/factures", label: t.nav.factures, icon: FileText, badge: null },
+        { href: "/comptabilite", label: t.nav.comptabilite, icon: BookOpen, badge: null },
+        { href: "/rapports", label: t.nav.rapports, icon: BarChart3, badge: null },
+      ],
+    },
+    {
+      label: "Insights",
+      items: [
+        { href: "/historique", label: "Product History", icon: History, badge: null },
+        { href: "/ia", label: t.nav.ia, icon: Cpu, badge: null },
+      ],
+    },
+    {
+      label: "Team",
+      items: [
+        { href: "/employes", label: t.nav.employes, icon: Users, badge: null },
+        { href: "/planning", label: t.nav.planning, icon: Calendar, badge: null },
+      ],
+    },
+    {
+      label: "",
+      items: [
+        { href: "/settings", label: "Settings", icon: Settings, badge: null },
+      ],
+    },
+  ];
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-[260px] bg-[#0f172a] flex flex-col z-40">
@@ -94,36 +133,53 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           {t.nav.navigation}
         </p>
         <ul className="space-y-0.5">
-          {navItems.map(({ href, label, icon: Icon, badge }) => {
-            const active = pathname === href || pathname.startsWith(href + "/");
+          {navGroups.map((group) => {
+            const visibleItems = group.items.filter((item) =>
+              canAccess(user?.role, item.href)
+            );
+            if (visibleItems.length === 0) return null;
             return (
-              <li key={href}>
-                <Link
-                  href={href}
-                  onClick={onNavigate}
-                  className={cn(
-                    "group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150",
-                    active
-                      ? "bg-[var(--brand)] text-white shadow-md shadow-blue-900/30"
-                      : "text-slate-400 hover:text-white hover:bg-white/[0.06]"
-                  )}
-                >
-                  <Icon className="w-4 h-4 shrink-0" />
-                  <span className="flex-1 truncate">{label}</span>
-                  {badge != null && badge > 0 && (
-                    <span
-                      className={cn(
-                        "text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center tabular-nums",
-                        active ? "bg-white/20 text-white" : "bg-red-500 text-white"
-                      )}
-                    >
-                      {badge}
-                    </span>
-                  )}
-                  {active && (
-                    <ChevronRight className="w-3.5 h-3.5 text-white/60 shrink-0" />
-                  )}
-                </Link>
+              <li key={group.label || group.items[0]?.href} className="mb-1">
+                {group.label && (
+                  <p className="px-3 pt-3 pb-1 text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-widest">
+                    {group.label}
+                  </p>
+                )}
+                <ul className="space-y-0.5">
+                  {visibleItems.map(({ href, label, icon: Icon, badge }) => {
+                    const active = pathname === href || pathname.startsWith(href + "/");
+                    return (
+                      <li key={href}>
+                        <Link
+                          href={href}
+                          onClick={onNavigate}
+                          className={cn(
+                            "group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150",
+                            active
+                              ? "bg-[var(--brand)] text-white shadow-md shadow-blue-900/30"
+                              : "text-slate-400 hover:text-white hover:bg-white/[0.06]"
+                          )}
+                        >
+                          <Icon className="w-4 h-4 shrink-0" />
+                          <span className="flex-1 truncate">{label}</span>
+                          {badge != null && badge > 0 && (
+                            <span
+                              className={cn(
+                                "text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center tabular-nums",
+                                active ? "bg-white/20 text-white" : "bg-red-500 text-white"
+                              )}
+                            >
+                              {badge}
+                            </span>
+                          )}
+                          {active && (
+                            <ChevronRight className="w-3.5 h-3.5 text-white/60 shrink-0" />
+                          )}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
               </li>
             );
           })}
