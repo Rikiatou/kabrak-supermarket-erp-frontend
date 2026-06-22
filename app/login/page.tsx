@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Lock, User, Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
 import { useAuth } from "@/lib/auth/context";
 import { authApi, type ApiCashier } from "@/lib/api";
 import { ROLE_HOME, type Role } from "@/lib/auth/roles";
-import { Button } from "@/components/ui/Button";
+
 import { useI18n } from "@/lib/i18n/context";
 
 export default function LoginPage() {
@@ -110,9 +110,9 @@ export default function LoginPage() {
         if (newCount === 0) {
           // Verrouiller 10 minutes
           setLockedUntil(Date.now() + 10 * 60 * 1000);
-          setError("Trop de tentatives. Compte verrouillé 10 minutes.");
+          setError("Too many attempts. Account locked for 10 minutes.");
         } else {
-          setError(`PIN incorrect — ${newCount} tentative${newCount > 1 ? "s" : ""} restante${newCount > 1 ? "s" : ""}`);
+          setError(`Incorrect PIN — ${newCount} attempt${newCount > 1 ? "s" : ""} left`);
         }
         return newCount;
       });
@@ -126,30 +126,34 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-neutral-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm">
+      <div className="w-full max-w-[320px]">
+
         {/* Logo */}
-        <div className="text-center mb-10">
+        <div className="text-center mb-8">
           <img
             src="/kabrak-logo.jpeg"
             alt="KABRAK"
-            className="w-14 h-14 rounded-2xl object-cover mx-auto mb-4 shadow-sm border border-neutral-100"
+            className="w-12 h-12 rounded-xl object-cover mx-auto mb-4 shadow-sm border border-neutral-100"
           />
-          <h1 className="text-[22px] font-semibold tracking-tight text-neutral-900">{t.login.appName}</h1>
+          <h1 className="text-[20px] font-semibold tracking-tight text-neutral-900">{t.login.appName}</h1>
           <p className="text-[13px] text-neutral-400 mt-1">{t.login.subtitle}</p>
         </div>
 
         {/* Card */}
-        <div className="bg-white rounded-2xl border border-neutral-200 p-6 shadow-sm">
+        <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
+
           {/* Step 1: Select employee */}
           {!selectedCashier && (
-            <>
-              <h2 className="text-[13px] font-medium text-neutral-500 mb-3 flex items-center gap-2">
-                <User className="w-4 h-4" /> {t.login.selectProfile}
-              </h2>
-              <div className="space-y-1.5 max-h-80 overflow-y-auto">
+            <div>
+              <div className="px-5 pt-5 pb-3">
+                <p className="text-[11px] font-medium text-neutral-400 uppercase tracking-widest">
+                  {t.login.selectProfile}
+                </p>
+              </div>
+              <div className="px-2 pb-2 max-h-72 overflow-y-auto">
                 {cashiers.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Loader2 className="w-5 h-5 text-neutral-300 animate-spin mx-auto mb-2" />
+                  <div className="flex flex-col items-center py-10 gap-2">
+                    <Loader2 className="w-4 h-4 text-neutral-300 animate-spin" />
                     <p className="text-[12px] text-neutral-400">{t.login.loading}</p>
                   </div>
                 ) : (
@@ -157,151 +161,114 @@ export default function LoginPage() {
                     <button
                       key={cashier.id}
                       onClick={() => setSelectedCashier(cashier)}
-                      className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-neutral-50 transition-colors text-left"
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-neutral-50 active:bg-neutral-100 transition-colors text-left"
                     >
-                      <div className="w-9 h-9 rounded-full bg-neutral-100 flex items-center justify-center text-[13px] font-semibold text-neutral-600">
-                        {cashier.firstName.charAt(0)}
+                      <div className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center text-[12px] font-semibold text-neutral-600 shrink-0">
+                        {cashier.firstName.charAt(0)}{cashier.lastName.charAt(0)}
                       </div>
-                      <div className="flex-1">
-                        <p className="text-[14px] font-medium text-neutral-900">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[14px] font-medium text-neutral-900 truncate">
                           {cashier.firstName} {cashier.lastName}
                         </p>
-                        <p className="text-[12px] text-neutral-400 capitalize">
-                          {cashier.role} · {cashier.department}
+                        <p className="text-[11px] text-neutral-400 capitalize">
+                          {cashier.role}
                         </p>
                       </div>
                     </button>
                   ))
                 )}
               </div>
-            </>
+            </div>
           )}
 
           {/* Step 2: PIN */}
           {selectedCashier && (
-            <>
+            <div className="p-5">
+
               {/* Selected profile */}
-              <div className="flex items-center gap-3 p-3 bg-neutral-50 rounded-xl mb-5">
-                <div className="w-10 h-10 rounded-full bg-neutral-100 flex items-center justify-center text-[14px] font-semibold text-neutral-600">
-                  {selectedCashier.firstName.charAt(0)}
+              <div className="flex items-center gap-2.5 mb-6">
+                <div className="w-9 h-9 rounded-full bg-neutral-100 flex items-center justify-center text-[12px] font-semibold text-neutral-600 shrink-0">
+                  {selectedCashier.firstName.charAt(0)}{selectedCashier.lastName.charAt(0)}
                 </div>
-                <div className="flex-1">
-                  <p className="text-[14px] font-medium text-neutral-900">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[14px] font-medium text-neutral-900 truncate">
                     {selectedCashier.firstName} {selectedCashier.lastName}
                   </p>
-                  <p className="text-[12px] text-neutral-400 capitalize">
-                    {selectedCashier.role}
-                  </p>
+                  <p className="text-[11px] text-neutral-400 capitalize">{selectedCashier.role}</p>
                 </div>
                 <button
-                  onClick={() => {
-                    setSelectedCashier(null);
-                    setPin("");
-                    setError("");
-                  }}
-                  className="text-[12px] text-neutral-400 hover:text-neutral-700 transition-colors"
+                  onClick={() => { setSelectedCashier(null); setPin(""); setError(""); }}
+                  className="text-[12px] text-neutral-400 hover:text-neutral-700 transition-colors shrink-0"
                 >
                   {t.login.change}
                 </button>
               </div>
 
-              {/* PIN display */}
-              <div className="flex justify-center gap-3 mb-6">
+              {/* PIN dots */}
+              <div className="flex justify-center gap-4 mb-5">
                 {[0, 1, 2, 3].map((i) => (
                   <div
                     key={i}
-                    className={`w-11 h-11 rounded-xl border flex items-center justify-center text-[20px] font-semibold transition-all ${
-                      pin.length > i
-                        ? "border-neutral-900 bg-neutral-900 text-white"
-                        : "border-neutral-200 text-neutral-300"
+                    className={`w-3 h-3 rounded-full transition-all duration-150 ${
+                      pin.length > i ? "bg-neutral-900 scale-110" : "bg-neutral-200"
                     }`}
-                  >
-                    {pin.length > i ? "●" : ""}
-                  </div>
+                  />
                 ))}
               </div>
 
+              {/* Error */}
               {error && (
-                <div className={`flex items-center gap-2 text-[12px] mb-4 justify-center ${isLocked ? "text-red-600" : "text-red-500"}`}>
-                  <AlertCircle className="w-3.5 h-3.5" />
-                  {error}
+                <div className="flex items-center justify-center gap-1.5 text-[12px] text-red-500 mb-4">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span>{error}</span>
                   {isLocked && (
-                    <span className="font-mono font-medium">
+                    <span className="font-mono font-semibold ml-1">
                       {Math.floor(lockRemaining / 60)}:{String(lockRemaining % 60).padStart(2, "0")}
                     </span>
                   )}
                 </div>
               )}
 
-              {!isLocked && attemptsLeft !== null && attemptsLeft > 0 && (
-                <div className="flex justify-center gap-1.5 mb-3">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className={`w-1.5 h-1.5 rounded-full ${i < attemptsLeft ? "bg-amber-400" : "bg-neutral-200"}`}
-                    />
-                  ))}
-                </div>
-              )}
-
               {/* Keypad */}
               <div className="grid grid-cols-3 gap-2">
-                {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((d) => (
+                {["1","2","3","4","5","6","7","8","9"].map((d) => (
                   <button
                     key={d}
                     onClick={() => handlePinClick(d)}
                     disabled={loading || isLocked}
-                    className="h-13 py-3.5 rounded-xl bg-neutral-50 hover:bg-neutral-100 active:scale-95 transition-all text-[18px] font-medium text-neutral-800 disabled:opacity-40"
+                    className="py-3.5 rounded-xl bg-neutral-50 hover:bg-neutral-100 active:scale-95 transition-all text-[18px] font-medium text-neutral-800 disabled:opacity-30"
                   >
                     {d}
                   </button>
                 ))}
-                <button
-                  onClick={handleBackspace}
-                  disabled={loading || !pin || isLocked}
-                  className="h-13 py-3.5 rounded-xl bg-neutral-50 hover:bg-neutral-100 active:scale-95 transition-all text-[13px] font-medium text-neutral-400 disabled:opacity-40"
-                >
-                  {t.login.clear}
-                </button>
+                <div />
                 <button
                   onClick={() => handlePinClick("0")}
                   disabled={loading || isLocked}
-                  className="h-13 py-3.5 rounded-xl bg-neutral-50 hover:bg-neutral-100 active:scale-95 transition-all text-[18px] font-medium text-neutral-800 disabled:opacity-40"
+                  className="py-3.5 rounded-xl bg-neutral-50 hover:bg-neutral-100 active:scale-95 transition-all text-[18px] font-medium text-neutral-800 disabled:opacity-30"
                 >
                   0
                 </button>
                 <button
                   onClick={handleBackspace}
                   disabled={loading || !pin || isLocked}
-                  className="h-13 py-3.5 rounded-xl bg-neutral-50 hover:bg-neutral-100 active:scale-95 transition-all text-[14px] font-medium text-neutral-400 disabled:opacity-40"
+                  className="py-3.5 rounded-xl bg-neutral-50 hover:bg-neutral-100 active:scale-95 transition-all text-[16px] text-neutral-400 disabled:opacity-30"
                 >
                   ⌫
                 </button>
               </div>
 
               {loading && (
-                <div className="flex items-center justify-center gap-2 mt-4 text-[13px] text-neutral-400">
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                <div className="flex items-center justify-center gap-2 mt-4 text-[12px] text-neutral-400">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   {t.login.connecting}
                 </div>
               )}
-            </>
+            </div>
           )}
         </div>
 
-        {/* Test accounts */}
-        <div className="mt-6 text-center">
-          <p className="text-[11px] text-neutral-400 mb-2">{t.login.testAccounts}</p>
-          <div className="text-[11px] text-neutral-400 space-y-0.5">
-            <p>{t.login.testManager}</p>
-            <p>{t.login.testCashier}</p>
-            <p>{t.login.testCashier2}</p>
-            <p>{t.login.testStocker}</p>
-            <p>{t.login.testAccountant}</p>
-          </div>
-        </div>
-
-        {/* Powered by */}
+        {/* Footer */}
         <p className="text-center text-[11px] text-neutral-300 mt-6">
           Powered by KABRAK eng
         </p>

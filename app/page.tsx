@@ -1,41 +1,30 @@
 "use client";
 
-import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Zap, Package, Receipt, TrendingUp, BarChart3, Shield } from "lucide-react";
-import { useLicense } from "@/lib/license/context";
+import { ArrowRight } from "lucide-react";
 
 export default function WelcomePage() {
   const router = useRouter();
-  const { license, loading } = useLicense();
-
-  useEffect(() => {
-    if (!loading && license?.status === "ACTIVE") {
-      // Stay on welcome — user chooses
-    }
-  }, [loading, license]);
-
-  const features = [
-    { icon: Zap, title: "Fast Checkout", desc: "Scan, pay, done. Seconds per transaction." },
-    { icon: Package, title: "Live Inventory", desc: "Stock levels update in real time." },
-    { icon: Receipt, title: "Invoicing", desc: "Create, send, and track payments." },
-    { icon: TrendingUp, title: "Sales Reports", desc: "Revenue, margins, trends at a glance." },
-    { icon: BarChart3, title: "Accounting", desc: "Income, expenses, P&L statements." },
-    { icon: Shield, title: "Role Access", desc: "Cashiers, stockers, accountants — controlled." },
-  ];
 
   return (
-    <div className="min-h-screen bg-white text-neutral-900">
+    <div className="min-h-screen bg-white text-neutral-900 flex flex-col">
+
       {/* Nav */}
-      <nav className="border-b border-neutral-100">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <nav className="border-b border-neutral-100 shrink-0">
+        <div className="max-w-5xl mx-auto px-8 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <img src="/kabrak-logo.jpeg" alt="KABRAK" className="w-8 h-8 rounded-lg object-cover" />
-            <span className="text-[15px] font-semibold tracking-tight">KABRAK Retail</span>
+            <img
+              src="/kabrak-logo.jpeg"
+              alt="KABRAK"
+              className="w-7 h-7 rounded-lg object-cover"
+            />
+            <span className="text-[14px] font-semibold tracking-tight text-neutral-900">
+              KABRAK Retail
+            </span>
           </div>
           <button
             onClick={() => router.push("/login")}
-            className="text-[13px] font-medium text-neutral-500 hover:text-neutral-900 transition-colors"
+            className="text-[13px] text-neutral-500 hover:text-neutral-900 transition-colors"
           >
             Sign in
           </button>
@@ -43,47 +32,54 @@ export default function WelcomePage() {
       </nav>
 
       {/* Hero */}
-      <section className="max-w-3xl mx-auto px-6 pt-24 pb-20 text-center">
-        <div className="flex justify-center mb-10">
-          <img
-            src="/kabrak-logo.jpeg"
-            alt="KABRAK"
-            className="w-20 h-20 rounded-2xl object-cover shadow-sm border border-neutral-100"
-          />
-        </div>
-        <h1 className="text-5xl font-semibold tracking-tight mb-5 leading-tight">
-          Run your store<br />with clarity.
-        </h1>
-        <p className="text-lg text-neutral-500 max-w-xl mx-auto mb-10 leading-relaxed">
-          Point of sale, inventory, invoicing, and reporting.
-          One platform, built for retail.
+      <section className="flex-1 flex flex-col items-center justify-center px-8 py-24 text-center">
+        <p className="text-[12px] font-medium tracking-widest text-neutral-400 uppercase mb-8 select-none">
+          Retail management
         </p>
-        <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+
+        <h1 className="text-[52px] sm:text-[64px] font-semibold tracking-[-2px] leading-[1.08] text-neutral-900 mb-6 max-w-2xl">
+          Your store.<br />
+          Under control.
+        </h1>
+
+        <p className="text-[17px] text-neutral-500 leading-relaxed max-w-md mb-12">
+          Sales, inventory, invoicing and reporting —
+          everything your retail team needs, in one place.
+        </p>
+
+        <div className="flex flex-col sm:flex-row items-center gap-3">
           <button
             onClick={() => router.push("/activate")}
-            className="px-6 py-3 bg-neutral-900 text-white text-[14px] font-medium rounded-xl hover:bg-neutral-800 transition-colors flex items-center gap-2"
+            className="flex items-center gap-2 px-5 py-2.5 bg-neutral-900 text-white text-[14px] font-medium rounded-xl hover:bg-neutral-800 active:scale-[0.98] transition-all"
           >
-            Activate License
-            <ArrowRight className="w-4 h-4" />
+            Activate license
+            <ArrowRight className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={() => router.push("/login")}
-            className="px-6 py-3 text-[14px] font-medium text-neutral-600 hover:text-neutral-900 transition-colors"
+            className="px-5 py-2.5 text-[14px] text-neutral-500 hover:text-neutral-900 transition-colors"
           >
             I have access
           </button>
         </div>
       </section>
 
-      {/* Features */}
-      <section className="max-w-5xl mx-auto px-6 py-20">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-neutral-100 rounded-2xl overflow-hidden border border-neutral-100">
-          {features.map((f, i) => (
-            <div key={i} className="bg-white p-8">
-              <div className="w-10 h-10 bg-neutral-50 rounded-xl flex items-center justify-center mb-4">
-                <f.icon className="w-5 h-5 text-neutral-700" />
-              </div>
-              <h3 className="text-[15px] font-semibold mb-1.5">{f.title}</h3>
+      {/* Divider */}
+      <div className="border-t border-neutral-100 shrink-0" />
+
+      {/* Features — clean text list, no icon boxes */}
+      <section className="max-w-5xl mx-auto px-8 py-16 w-full">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-12 gap-y-8">
+          {[
+            { title: "Point of Sale", desc: "Scan and checkout in seconds, with or without internet." },
+            { title: "Live Inventory", desc: "Stock levels, expiry alerts, and supplier orders in real time." },
+            { title: "Invoicing", desc: "Create A4 invoices, track payments, export to PDF." },
+            { title: "Sales Reports", desc: "Revenue, margins, and trends by day, week, or month." },
+            { title: "Accounting", desc: "Expenses, income statements, and monthly breakdowns." },
+            { title: "Team access", desc: "Role-based access for cashiers, stockers, and managers." },
+          ].map((f) => (
+            <div key={f.title}>
+              <p className="text-[14px] font-semibold text-neutral-900 mb-1">{f.title}</p>
               <p className="text-[13px] text-neutral-500 leading-relaxed">{f.desc}</p>
             </div>
           ))}
@@ -91,13 +87,14 @@ export default function WelcomePage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-neutral-100">
-        <div className="max-w-6xl mx-auto px-6 py-8 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <img src="/kabrak-logo.jpeg" alt="KABRAK" className="w-5 h-5 rounded object-cover" />
-            <span className="text-[12px] text-neutral-400">KABRAK Retail</span>
-          </div>
-          <p className="text-[12px] text-neutral-400">Powered by KABRAK eng</p>
+      <footer className="border-t border-neutral-100 shrink-0">
+        <div className="max-w-5xl mx-auto px-8 py-6 flex items-center justify-between">
+          <span className="text-[12px] text-neutral-400">
+            &copy; {new Date().getFullYear()} KABRAK Retail
+          </span>
+          <span className="text-[12px] text-neutral-400">
+            Powered by KABRAK eng
+          </span>
         </div>
       </footer>
     </div>
