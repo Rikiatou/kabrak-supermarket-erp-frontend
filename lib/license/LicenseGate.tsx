@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useLicense } from "@/lib/license/context";
-import { useAuth } from "@/lib/auth/context";
 import { useI18n } from "@/lib/i18n/context";
 import { ShieldAlert, Loader2 } from "lucide-react";
 
@@ -24,9 +23,18 @@ interface LicenseGateProps {
 export function LicenseGate({ children }: LicenseGateProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const [mounted, setMounted] = useState(false);
   const { license, loading, isExpired, daysRemaining } = useLicense();
-  const { user } = useAuth();
   const { t } = useI18n();
+
+  // Éviter les erreurs SSR
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <>{children}</>;
+  }
 
   const isPublicPage = PUBLIC_PAGES.some(
     (p) => pathname === p || pathname.startsWith(p + "/")
