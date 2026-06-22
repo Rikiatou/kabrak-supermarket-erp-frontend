@@ -242,20 +242,17 @@ export default function AchatsPage() {
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
         {[
-          { label: t.achats.activeSuppliers, value: suppliers.length, icon: "🤝" },
-          { label: t.achats.pendingOrders, value: pendingOrdersCount, icon: "⏳" },
-          { label: t.achats.monthlyPurchases, value: formatCurrency(totalSpend), icon: "💰" },
-          { label: t.achats.avgDelivery, value: `2.4 ${t.achats.days}`, icon: "🚚" },
-        ].map(({ label, value, icon }) => (
+          { label: t.achats.activeSuppliers, value: suppliers.length },
+          { label: t.achats.pendingOrders, value: pendingOrdersCount },
+          { label: t.achats.monthlyPurchases, value: formatCurrency(totalSpend) },
+          { label: t.achats.avgDelivery, value: `2.4 ${t.achats.days}` },
+        ].map(({ label, value }) => (
           <div
             key={label}
-            className="bg-white border border-[var(--border)] rounded-2xl p-4 flex items-center gap-3 shadow-[var(--shadow-sm)]"
+            className="bg-white border border-[var(--border)] rounded-2xl p-4 shadow-[var(--shadow-sm)]"
           >
-            <span className="text-2xl">{icon}</span>
-            <div>
-              <p className="text-xl font-bold text-[var(--text-primary)] tabular-nums leading-none">{value}</p>
-              <p className="text-xs text-[var(--text-muted)] mt-0.5">{label}</p>
-            </div>
+            <p className="text-xl font-semibold text-[var(--text-primary)] tabular-nums leading-none">{value}</p>
+            <p className="text-[12px] text-[var(--text-muted)] mt-1">{label}</p>
           </div>
         ))}
       </div>

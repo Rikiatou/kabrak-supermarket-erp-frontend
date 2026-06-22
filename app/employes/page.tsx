@@ -205,22 +205,19 @@ export default function EmployesPage() {
       {/* Summary */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
         {[
-          { label: t.employes.totalEmployees, value: employees.length, icon: "👥" },
-          { label: t.employes.presentToday, value: activeCount, icon: "✅" },
-          { label: t.employes.onLeave, value: employees.length - activeCount, icon: "🌴" },
-          { label: t.employes.hoursPerWeek, value: `${totalHours}h`, icon: "⏰" },
-        ].map(({ label, value, icon }) => (
+          { label: t.employes.totalEmployees, value: employees.length },
+          { label: t.employes.presentToday, value: activeCount },
+          { label: t.employes.onLeave, value: employees.length - activeCount },
+          { label: t.employes.hoursPerWeek, value: `${totalHours}h` },
+        ].map(({ label, value }) => (
           <div
             key={label}
-            className="bg-white border border-[var(--border)] rounded-2xl p-4 flex items-center gap-3 shadow-[var(--shadow-sm)]"
+            className="bg-white border border-[var(--border)] rounded-2xl p-4 shadow-[var(--shadow-sm)]"
           >
-            <span className="text-2xl">{icon}</span>
-            <div>
-              <p className="text-xl font-bold text-[var(--text-primary)] tabular-nums leading-none">
-                {value}
-              </p>
-              <p className="text-xs text-[var(--text-muted)] mt-0.5">{label}</p>
-            </div>
+            <p className="text-xl font-semibold text-[var(--text-primary)] tabular-nums leading-none">
+              {value}
+            </p>
+            <p className="text-[12px] text-[var(--text-muted)] mt-1">{label}</p>
           </div>
         ))}
       </div>

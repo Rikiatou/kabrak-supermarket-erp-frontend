@@ -585,8 +585,8 @@ export const translations = {
     },
     // Login
     login: {
-      appName: "Kabrak Supermarket",
-      subtitle: "ERP - Connexion Caisse",
+      appName: "KABRAK Retail",
+      subtitle: "Connexion",
       selectProfile: "Sélectionnez votre profil",
       loading: "Chargement...",
       change: "Changer",
@@ -1505,8 +1505,8 @@ export const translations = {
       orderSaved: "Order saved successfully",
     },
     login: {
-      appName: "Kabrak Supermarket",
-      subtitle: "ERP - Checkout Login",
+      appName: "KABRAK Retail",
+      subtitle: "Sign in",
       selectProfile: "Select your profile",
       loading: "Loading...",
       change: "Change",

@@ -794,14 +794,5 @@ function movementReasonLabel(t: ReturnType<typeof useI18n>["t"], reason?: string
 }
 
 function getCategoryEmoji(category: string): string {
-  const map: Record<string, string> = {
-    "Épicerie": "🧴",
-    "Boissons": "🥤",
-    "Produits laitiers": "🧀",
-    "Hygiène": "🪥",
-    "Boucherie": "🥩",
-    "Boulangerie": "🍞",
-    "Surgelés": "🧊",
-  };
-  return map[category] ?? "📦";
+  return "";
 }

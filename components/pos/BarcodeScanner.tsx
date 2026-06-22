@@ -8,14 +8,15 @@ import { X, Camera, AlertCircle, Loader2 } from "lucide-react";
 interface BarcodeScannerProps {
   onScan: (code: string) => void;
   onClose: () => void;
+  result?: { code: string; status: "success" | "not_found" | "out_of_stock" } | null;
 }
 
-export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
+export function BarcodeScanner({ onScan, onClose, result }: BarcodeScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const controlsRef = useRef<IScannerControls | null>(null);
   const [error, setError] = useState("");
   const [starting, setStarting] = useState(true);
-  const [lastScan, setLastScan] = useState<{ code: string; time: number } | null>(null);
+  const lastScanRef = useRef<{ code: string; time: number } | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -35,7 +36,7 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
 
     (async () => {
       try {
-        // Demander la caméra arrière
+        // Demander la caméra arrière (ou la première disponible)
         const devices = await BrowserMultiFormatReader.listVideoInputDevices();
         const backCam = devices.find((d) => /back|rear|environment/i.test(d.label)) || devices[0];
 
@@ -44,15 +45,17 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
         const controls = await reader.decodeFromVideoDevice(
           backCam?.deviceId || undefined,
           videoRef.current,
-          (result, err) => {
-            if (result && mounted) {
-              const code = result.getText();
-              const now = Date.now();
-              // Éviter les doublons (même code dans les 2 secondes)
-              if (lastScan && lastScan.code === code && now - lastScan.time < 2000) return;
-              setLastScan({ code, time: now });
-              onScan(code);
-            }
+          (result) => {
+            if (!result || !mounted) return;
+            const code = result.getText();
+            const now = Date.now();
+
+            // Éviter les doublons : même code dans les 2 secondes
+            const last = lastScanRef.current;
+            if (last && last.code === code && now - last.time < 2000) return;
+
+            lastScanRef.current = { code, time: now };
+            onScan(code);
           }
         );
         controlsRef.current = controls;
@@ -131,6 +134,24 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
             <p className="text-white/40 text-xs mt-2">
               Vérifiez les permissions du navigateur et utilisez HTTPS
             </p>
+          </div>
+        )}
+
+        {/* Feedback dernier scan */}
+        {result && !error && (
+          <div className={
+            "absolute bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full text-sm font-semibold shadow-lg animate-fade-in " +
+            (result.status === "success"
+              ? "bg-emerald-500/90 text-white"
+              : result.status === "out_of_stock"
+              ? "bg-amber-500/90 text-white"
+              : "bg-red-500/90 text-white")
+          }>
+            {result.status === "success"
+              ? "✓ " + result.code
+              : result.status === "out_of_stock"
+              ? "Stock épuisé : " + result.code
+              : "Non trouvé : " + result.code}
           </div>
         )}
       </div>

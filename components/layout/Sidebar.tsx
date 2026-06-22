@@ -58,28 +58,28 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-[260px] bg-[#0f172a] flex flex-col z-40">
-      {/* Logo — Personnalisé selon la config client */}
+      {/* Logo — client logo or KABRAK default */}
       <div className="h-16 flex items-center px-4 border-b border-white/[0.06] shrink-0 justify-between">
         <div className="flex items-center gap-3">
           {config?.logoUrl ? (
-            // Logo personnalisé du client
             <img
               src={config.logoUrl}
               alt={config.supermarketName}
               className="w-8 h-8 rounded-lg object-cover shrink-0"
             />
           ) : (
-            // Logo par défaut KABRAK
-            <div className="w-8 h-8 bg-[var(--brand)] rounded-lg flex items-center justify-center shrink-0">
-              <Store className="w-4 h-4 text-white" />
-            </div>
+            <img
+              src="/kabrak-logo.jpeg"
+              alt="KABRAK"
+              className="w-8 h-8 rounded-lg object-cover shrink-0"
+            />
           )}
           <div className="min-w-0">
             <span className="text-white font-semibold text-[15px] leading-none tracking-tight truncate block">
-              {config?.supermarketName || "KABRAK"}
+              {config?.supermarketName || "KABRAK Retail"}
             </span>
             <span className="block text-[10px] text-slate-400 tracking-widest uppercase mt-0.5">
-              {license?.type === "MULTI_STORE" ? "Multi-Store ERP" : "Market ERP"}
+              {license?.type === "MULTI_STORE" ? "Multi-Store" : "Retail"}
             </span>
           </div>
         </div>
@@ -129,29 +129,30 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
 
       {/* Footer */}
-      <div className="px-4 py-4 border-t border-white/[0.06] shrink-0">
+      <div className="px-4 py-3 border-t border-white/[0.06] shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
+          <div className="w-8 h-8 rounded-full bg-white/[0.08] flex items-center justify-center text-white text-[11px] font-medium shrink-0">
             {user ? user.firstName.charAt(0) + user.lastName.charAt(0) : "AB"}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-white text-xs font-medium truncate">
-              {user ? `${user.firstName} ${user.lastName}` : "Amina Bello"}
+            <p className="text-white text-[12px] font-medium truncate">
+              {user ? `${user.firstName} ${user.lastName}` : "Grace Johnson"}
             </p>
             <p className="text-slate-500 text-[11px] truncate capitalize">
-              {user ? user.role : "Manager"}
+              {user ? user.role : "Boss"}
             </p>
           </div>
           {user && (
             <button
               onClick={logout}
-              title="Déconnexion"
+              title="Sign out"
               className="text-slate-400 hover:text-red-400 transition-colors"
             >
               <LogOut className="w-4 h-4" />
             </button>
           )}
         </div>
+        <p className="text-[10px] text-slate-600 mt-3 text-center">Powered by KABRAK eng</p>
       </div>
     </aside>
   );

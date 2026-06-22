@@ -93,6 +93,7 @@ export default function POSPage() {
   const [cashGiven, setCashGiven] = useState("");
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
   const [showScanner, setShowScanner] = useState(false);
+  const [scanResult, setScanResult] = useState<{ code: string; status: "success" | "not_found" | "out_of_stock" } | null>(null);
   const [cashierDiscountAmount, setCashierDiscountAmount] = useState(0);
   const [cashierDiscountReason, setCashierDiscountReason] = useState("");
   const [showDiscountModal, setShowDiscountModal] = useState(false);
@@ -186,10 +187,16 @@ export default function POSPage() {
           beepRef.current.currentTime = 0;
           beepRef.current.play().catch(() => {});
         }
-        setShowScanner(false);
+        setScanResult({ code, status: "success" });
+        // Garder le scanner ouvert pour scanner plusieurs articles (mode caisse)
       } else if (found && found.stock <= 0) {
-        // Produit trouvé mais stock épuisé — fermer le scanner
-        setShowScanner(false);
+        setScanResult({ code, status: "out_of_stock" });
+        if (beepRef.current) {
+          beepRef.current.currentTime = 0;
+          beepRef.current.play().catch(() => {});
+        }
+      } else {
+        setScanResult({ code, status: "not_found" });
       }
     },
     [products, addToCart]
@@ -690,8 +697,8 @@ export default function POSPage() {
                           {inCart.quantity}
                         </span>
                       )}
-                      <div className="w-9 h-9 bg-slate-50 rounded-lg flex items-center justify-center mb-2 text-lg">
-                        {getCategoryEmoji(product.category)}
+                      <div className="w-9 h-9 bg-neutral-50 rounded-lg flex items-center justify-center mb-2 text-[13px] font-semibold text-neutral-400">
+                        {product.name.charAt(0)}
                       </div>
                       <p className="text-xs font-semibold text-[var(--text-primary)] leading-snug line-clamp-2 mb-1">
                         {product.name}
@@ -964,7 +971,11 @@ export default function POSPage() {
       {showScanner && (
         <BarcodeScanner
           onScan={handleBarcodeScan}
-          onClose={() => setShowScanner(false)}
+          onClose={() => {
+            setShowScanner(false);
+            setScanResult(null);
+          }}
+          result={scanResult}
         />
       )}
       {showDiscountModal && (
@@ -1576,22 +1587,6 @@ function ReceiptPanel({
 }
 
 function getCategoryEmoji(category: string): string {
-  const map: Record<string, string> = {
-    "Grocery": "🧴",
-    "Beverages": "🥤",
-    "Dairy": "🧀",
-    "Hygiene": "🪥",
-    "Butchery": "🥩",
-    "Bakery": "🍞",
-    "Frozen": "🧊",
-    // Legacy French keys (for existing DB data)
-    "Épicerie": "🧴",
-    "Boissons": "🥤",
-    "Produits laitiers": "🧀",
-    "Hygiène": "🪥",
-    "Boucherie": "🥩",
-    "Boulangerie": "🍞",
-    "Surgelés": "🧊",
-  };
-  return map[category] ?? "📦";
+  // No emojis — clean, professional look
+  return "";
 }

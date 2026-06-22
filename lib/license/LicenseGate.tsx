@@ -77,7 +77,7 @@ export function LicenseGate({ children }: LicenseGateProps) {
       {showLicenseWarning && (
         <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 text-center">
           <p className="text-sm text-amber-800">
-            ⚠️ {t.licenseGate.expiringSoon} <strong>{daysRemaining} {t.licenseGate.days}</strong>.{" "}
+            {t.licenseGate.expiringSoon} <strong>{daysRemaining} {t.licenseGate.days}</strong>.{" "}
             <a href="/activate?renew=1" className="underline font-medium">
               {t.licenseGate.renewNow}
             </a>

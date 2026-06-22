@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "KABRAK Market ERP",
-    short_name: "KABRAK ERP",
-    description: "Solution de gestion complète pour supermarchés",
+    name: "KABRAK Retail",
+    short_name: "KABRAK",
+    description: "Complete retail management solution",
     start_url: "/dashboard",
     display: "standalone",
     background_color: "#f4f6fb",

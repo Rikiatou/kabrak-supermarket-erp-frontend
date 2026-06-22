@@ -21,16 +21,16 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    template: "%s — KABRAK ERP",
-    default: "KABRAK Market Pro",
+    template: "%s — KABRAK Retail",
+    default: "KABRAK Retail",
   },
-  description: "ERP Supermarché - Gestion complète caisse, stock, ventes",
-  applicationName: "KABRAK Market Pro",
+  description: "Complete retail management solution — POS, inventory, invoices, reports",
+  applicationName: "KABRAK Retail",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "KABRAK Pro",
+    title: "KABRAK Retail",
   },
   formatDetection: {
     telephone: false,
