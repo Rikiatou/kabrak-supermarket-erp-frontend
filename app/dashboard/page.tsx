@@ -191,7 +191,7 @@ export default function DashboardPage() {
                             : "bg-slate-100"
                       }`}
                       style={{ height: `${Math.max(heightPct, 2)}%` }}
-                      title={`${day.label}: ${day.revenue.toLocaleString("fr-FR")} FCFA (${day.transactions} txns)`}
+                      title={`${day.label}: ${day.revenue.toLocaleString()} FCFA (${day.transactions} txns)`}
                     />
                   </div>
                   <span className={`text-[10px] ${isToday ? "font-bold text-[var(--brand)]" : "text-[var(--text-muted)]"}`}>
@@ -357,10 +357,12 @@ export default function DashboardPage() {
                   stockist: "from-amber-400 to-orange-600",
                 };
                 const roleLabels: Record<string, string> = {
+                  boss: t.dashboard.roleBoss || "Boss",
                   manager: t.dashboard.roleManager,
                   supervisor: t.dashboard.roleSupervisor,
                   cashier: t.dashboard.roleCashier,
                   stockist: t.dashboard.roleStockist,
+                  accountant: t.dashboard.roleAccountant || "Accountant",
                 };
                 return (
                   <div key={emp.id} className="flex items-center gap-2">

@@ -1,12 +1,21 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
+// Get current locale from localStorage (set by i18n context)
+function getCurrentLocale(): "fr-FR" | "en-US" {
+  if (typeof window !== "undefined") {
+    return localStorage.getItem("kabrak-locale") === "en" ? "en-US" : "fr-FR";
+  }
+  return "fr-FR";
+}
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
 export function formatCurrency(amount: number, currency = "XAF"): string {
-  return new Intl.NumberFormat("fr-CM", {
+  const locale = getCurrentLocale();
+  return new Intl.NumberFormat(locale === "en-US" ? "en-US" : "fr-CM", {
     style: "currency",
     currency,
     minimumFractionDigits: 0,
@@ -14,7 +23,7 @@ export function formatCurrency(amount: number, currency = "XAF"): string {
 }
 
 export function formatNumber(value: number): string {
-  return new Intl.NumberFormat("fr-FR").format(value);
+  return new Intl.NumberFormat(getCurrentLocale()).format(value);
 }
 
 export function formatPercent(value: number, decimals = 1): string {
@@ -22,7 +31,7 @@ export function formatPercent(value: number, decimals = 1): string {
 }
 
 export function formatDate(date: Date | string): string {
-  return new Intl.DateTimeFormat("fr-FR", {
+  return new Intl.DateTimeFormat(getCurrentLocale(), {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -30,7 +39,7 @@ export function formatDate(date: Date | string): string {
 }
 
 export function formatTime(date: Date | string): string {
-  return new Intl.DateTimeFormat("fr-FR", {
+  return new Intl.DateTimeFormat(getCurrentLocale(), {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(date));

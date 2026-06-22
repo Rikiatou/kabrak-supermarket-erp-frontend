@@ -70,16 +70,16 @@ export function LicenseGate({ children }: LicenseGateProps) {
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[var(--background)]">
           <div className="flex flex-col items-center gap-3">
             <Loader2 className="w-8 h-8 text-[var(--brand)] animate-spin" />
-            <p className="text-sm text-[var(--text-muted)]">Vérification de la licence...</p>
+            <p className="text-sm text-[var(--text-muted)]">{t.licenseGate.verifying}</p>
           </div>
         </div>
       )}
       {showLicenseWarning && (
         <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 text-center">
           <p className="text-sm text-amber-800">
-            ⚠️ Votre licence expire dans <strong>{daysRemaining} jours</strong>.{" "}
+            ⚠️ {t.licenseGate.expiringSoon} <strong>{daysRemaining} {t.licenseGate.days}</strong>.{" "}
             <a href="/activate?renew=1" className="underline font-medium">
-              Renouveler maintenant
+              {t.licenseGate.renewNow}
             </a>
           </p>
         </div>

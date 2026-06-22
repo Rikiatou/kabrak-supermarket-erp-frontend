@@ -147,10 +147,12 @@ export const translations = {
       top5Sub: "Ce mois",
       sold: "vendus",
       noActiveEmployees: "Aucun employé actif",
+      roleBoss: "Patron",
       roleManager: "Boss",
       roleSupervisor: "Comptable",
       roleCashier: "Caissier",
       roleStockist: "Stockeur",
+      roleAccountant: "Comptable",
     },
     // POS
     pos: {
@@ -896,6 +898,12 @@ export const translations = {
       accessDenied: "Accès refusé",
       accessDeniedMsg: "Votre rôle ne vous permet pas d'accéder à cette page. Contactez un administrateur.",
     },
+    licenseGate: {
+      verifying: "Vérification de la licence...",
+      expiringSoon: "Votre licence expire dans",
+      days: "jours",
+      renewNow: "Renouveler maintenant",
+    },
     // KpiCard
     kpiCard: {
       vsYesterday: "vs hier :",
@@ -1068,10 +1076,12 @@ export const translations = {
       top5Sub: "This month",
       sold: "sold",
       noActiveEmployees: "No active employees",
+      roleBoss: "Boss",
       roleManager: "Boss",
       roleSupervisor: "Accountant",
       roleCashier: "Cashier",
       roleStockist: "Stocker",
+      roleAccountant: "Accountant",
     },
     pos: {
       title: "Point of Sale",
@@ -1794,6 +1804,12 @@ export const translations = {
       loading: "Loading...",
       accessDenied: "Access denied",
       accessDeniedMsg: "Your role does not allow access to this page. Contact an administrator.",
+    },
+    licenseGate: {
+      verifying: "Verifying license...",
+      expiringSoon: "Your license expires in",
+      days: "days",
+      renewNow: "Renew now",
     },
     kpiCard: {
       vsYesterday: "vs yesterday:",
