@@ -327,7 +327,7 @@ export default function FacturesPage() {
     pdf.setTextColor(30, 64, 175);
     pdf.setFontSize(28);
     pdf.setFont("helvetica", "bold");
-    pdf.text("FACTURE", pageWidth - margin - 50, 55);
+    pdf.text("INVOICE", pageWidth - margin - 50, 55);
 
     // Invoice info
     pdf.setTextColor(100, 100, 100);
@@ -335,6 +335,9 @@ export default function FacturesPage() {
     pdf.setFont("helvetica", "normal");
     pdf.text(`N° ${invoice.number}`, pageWidth - margin - 50, 62);
     pdf.text(`Date: ${new Date(invoice.date).toLocaleDateString("en-GB")}`, pageWidth - margin - 50, 68);
+    if (invoice.dueDate) {
+      pdf.text(`Due: ${new Date(invoice.dueDate).toLocaleDateString("en-GB")}`, pageWidth - margin - 50, 74);
+    }
 
     // Client info box
     pdf.setDrawColor(220, 220, 220);
@@ -407,18 +410,96 @@ export default function FacturesPage() {
     pdf.text("TOTAL TTC:", margin + 95, y + 2);
     pdf.text(formatCurrency(invoice.total), pageWidth - margin - 5, y + 2, { align: "right" });
 
+    // ── Payment summary (paid + balance) ──
+    y += 18;
+    pdf.setDrawColor(200, 200, 200);
+    pdf.line(margin + 90, y, pageWidth - margin, y);
+    y += 8;
+    pdf.setFontSize(10);
+    pdf.setFont("helvetica", "normal");
+    pdf.setTextColor(50, 50, 50);
+
+    // Paid amount
+    pdf.text("Amount paid:", margin + 95, y);
+    pdf.setTextColor(22, 163, 74); // emerald
+    pdf.setFont("helvetica", "bold");
+    pdf.text(formatCurrency(invoice.paidAmount), pageWidth - margin - 5, y, { align: "right" });
+    y += 8;
+
+    // Balance
+    pdf.setFont("helvetica", "normal");
+    pdf.setTextColor(50, 50, 50);
+    pdf.text("Balance due:", margin + 95, y);
+    if (invoice.balance > 0) {
+      pdf.setTextColor(220, 38, 38); // red
+    } else {
+      pdf.setTextColor(22, 163, 74); // emerald
+    }
+    pdf.setFont("helvetica", "bold");
+    pdf.text(formatCurrency(invoice.balance), pageWidth - margin - 5, y, { align: "right" });
+    y += 8;
+
+    // Status badge
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(9);
+    pdf.setTextColor(100, 100, 100);
+    pdf.text(`Status: ${invoice.status.toUpperCase()}`, margin + 95, y);
+
+    // ── Payment history table (if any payments) ──
+    if (invoice.payments.length > 0) {
+      y += 12;
+      pdf.setFillColor(248, 250, 252);
+      pdf.rect(margin, y - 4, pageWidth - 2 * margin, 8, "F");
+      pdf.setTextColor(60, 60, 60);
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(9);
+      pdf.text("PAYMENT HISTORY", margin + 5, y + 1);
+      y += 10;
+
+      // Header row
+      pdf.setFontSize(8);
+      pdf.text("Date", margin + 5, y);
+      pdf.text("Method", margin + 60, y);
+      pdf.text("Amount", pageWidth - margin - 5, y, { align: "right" });
+      y += 5;
+      pdf.setDrawColor(220, 220, 220);
+      pdf.line(margin, y, pageWidth - margin, y);
+      y += 7;
+
+      // Payment rows
+      pdf.setFont("helvetica", "normal");
+      pdf.setTextColor(80, 80, 80);
+      invoice.payments.forEach((p) => {
+        pdf.text(new Date(p.date).toLocaleDateString("en-GB"), margin + 5, y);
+        pdf.text(paymentMethodLabels[p.method] || p.method, margin + 60, y);
+        pdf.setFont("helvetica", "bold");
+        pdf.text(formatCurrency(p.amount), pageWidth - margin - 5, y, { align: "right" });
+        pdf.setFont("helvetica", "normal");
+        if (p.note) {
+          y += 5;
+          pdf.setFontSize(7);
+          pdf.setTextColor(150, 150, 150);
+          pdf.text(`  Note: ${p.note.substring(0, 60)}`, margin + 5, y);
+          pdf.setFontSize(8);
+          pdf.setTextColor(80, 80, 80);
+        }
+        y += 8;
+      });
+    }
+
     // Footer
+    y = Math.max(y + 10, 250);
     pdf.setTextColor(150, 150, 150);
     pdf.setFontSize(8);
     pdf.setFont("helvetica", "normal");
-    pdf.text("Merci pour votre confiance!", pageWidth / 2, y + 30, { align: "center" });
-    pdf.text(invoiceFooter, pageWidth / 2, y + 36, { align: "center" });
-    pdf.text("Payment terms: 30 days. Disputes: Commercial Court of Yaounde.", pageWidth / 2, y + 42, { align: "center" });
+    pdf.text("Thank you for your business!", pageWidth / 2, y, { align: "center" });
+    pdf.text(invoiceFooter, pageWidth / 2, y + 6, { align: "center" });
+    pdf.text("Payment terms: 30 days. Disputes: Commercial Court of Yaounde.", pageWidth / 2, y + 12, { align: "center" });
 
     // Signature area
     pdf.setDrawColor(180, 180, 180);
-    pdf.line(margin, y + 55, margin + 50, y + 55);
-    pdf.text("Signature & cachet", margin + 5, y + 62);
+    pdf.line(margin, y + 25, margin + 50, y + 25);
+    pdf.text("Signature & stamp", margin + 5, y + 32);
 
     pdf.save(`${invoice.number}.pdf`);
     toast(`${t.factures.pdfGenerated} ${invoice.number}.pdf`, "success");
@@ -556,7 +637,7 @@ export default function FacturesPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowModal(false)}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between sticky top-0 bg-white pb-2 border-b border-[var(--border)]">
-              <h3 className="text-sm font-bold text-[var(--text-primary)]">Nouvelle facture A4</h3>
+              <h3 className="text-sm font-bold text-[var(--text-primary)]">{t.factures.newInvoice}</h3>
               <button onClick={() => setShowModal(false)} className="p-1 hover:bg-slate-100 rounded-lg">
                 <X className="w-4 h-4 text-[var(--text-muted)]" />
               </button>
@@ -565,15 +646,15 @@ export default function FacturesPage() {
             {/* Client info */}
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2">
-                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Client *</label>
-                <input value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Nom de l'entreprise" className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]" />
+                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">{t.factures.client} *</label>
+                <input value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder={t.factures.clientName} className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]" />
               </div>
               <div>
-                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Phone</label>
+                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">{t.factures.clientPhone}</label>
                 <input value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} placeholder="+237 6XX XXX XXX" className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]" />
               </div>
               <div>
-                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Email</label>
+                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">{t.factures.clientEmail || "Email"}</label>
                 <input value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} placeholder="contact@email.cm" className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]" />
               </div>
             </div>
@@ -581,8 +662,8 @@ export default function FacturesPage() {
             {/* Items */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">Articles</label>
-                <button onClick={addItem} className="text-xs text-[var(--brand)] font-medium hover:underline">+ Add line</button>
+                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">{t.common.product}s</label>
+                <button onClick={addItem} className="text-xs text-[var(--brand)] font-medium hover:underline">+ {t.factures.addItem}</button>
               </div>
               <div className="space-y-2">
                 {items.map((item, idx) => (
@@ -590,21 +671,21 @@ export default function FacturesPage() {
                     <input
                       value={item.description}
                       onChange={(e) => updateItem(idx, "description", e.target.value)}
-                      placeholder="Description"
+                      placeholder={t.common.description}
                       className="flex-1 px-3 py-2 border border-[var(--border)] rounded-lg text-sm outline-none focus:border-[var(--brand)]"
                     />
                     <input
                       type="number"
                       value={item.quantity}
                       onChange={(e) => updateItem(idx, "quantity", parseInt(e.target.value) || 0)}
-                      placeholder="Qty"
+                      placeholder={t.common.quantity}
                       className="w-16 px-2 py-2 border border-[var(--border)] rounded-lg text-sm tabular-nums text-center outline-none focus:border-[var(--brand)]"
                     />
                     <input
                       type="number"
                       value={item.unitPrice}
                       onChange={(e) => updateItem(idx, "unitPrice", parseInt(e.target.value) || 0)}
-                      placeholder="Prix"
+                      placeholder={t.common.price}
                       className="w-24 px-2 py-2 border border-[var(--border)] rounded-lg text-sm tabular-nums text-right outline-none focus:border-[var(--brand)]"
                     />
                     <span className="w-28 text-right text-sm font-semibold tabular-nums py-2">{formatCurrency(item.total)}</span>
@@ -621,22 +702,22 @@ export default function FacturesPage() {
             {/* Totals */}
             <div className="bg-slate-50 rounded-xl p-4 space-y-1.5 text-sm">
               <div className="flex justify-between text-[var(--text-muted)]">
-                <span>Subtotal</span>
+                <span>{t.factures.subtotal}</span>
                 <span className="tabular-nums">{formatCurrency(subtotal)}</span>
               </div>
               <div className="flex justify-between text-[var(--text-muted)]">
-                <span>TVA (15.5%)</span>
+                <span>{t.factures.tax}</span>
                 <span className="tabular-nums">{formatCurrency(tax)}</span>
               </div>
               <div className="flex justify-between font-bold text-base pt-1 border-t border-[var(--border)]">
-                <span>Total TTC</span>
+                <span>{t.factures.total}</span>
                 <span className="tabular-nums text-[var(--brand)]">{formatCurrency(total)}</span>
               </div>
             </div>
 
             <div className="flex gap-2">
-              <Button variant="secondary" className="flex-1" onClick={() => setShowModal(false)}>Cancel</Button>
-              <Button className="flex-1" onClick={handleCreate} disabled={!clientName}>Create invoice</Button>
+              <Button variant="secondary" className="flex-1" onClick={() => setShowModal(false)}>{t.common.cancel}</Button>
+              <Button className="flex-1" onClick={handleCreate} disabled={!clientName}>{t.factures.create}</Button>
             </div>
           </div>
         </div>
@@ -649,7 +730,7 @@ export default function FacturesPage() {
             <div className="flex items-center justify-between sticky top-0 bg-white pb-2 border-b border-[var(--border)]">
               <div className="flex items-center gap-2">
                 <Wallet className="w-4 h-4 text-amber-600" />
-                <h3 className="text-sm font-bold text-[var(--text-primary)]">Suivi paiement — {paymentInvoice.number}</h3>
+                <h3 className="text-sm font-bold text-[var(--text-primary)]">{t.factures.paymentTracking} — {paymentInvoice.number}</h3>
               </div>
               <button onClick={closePaymentModal} className="p-1 hover:bg-slate-100 rounded-lg">
                 <X className="w-4 h-4 text-[var(--text-muted)]" />
@@ -659,16 +740,16 @@ export default function FacturesPage() {
             {/* Résumé facture */}
             <div className="grid grid-cols-3 gap-3">
               <div className="bg-slate-50 rounded-xl p-3">
-                <div className="text-xs text-[var(--text-muted)] uppercase tracking-wide">Total</div>
+                <div className="text-xs text-[var(--text-muted)] uppercase tracking-wide">{t.factures.total}</div>
                 <div className="text-sm font-bold tabular-nums text-[var(--text-primary)]">{formatCurrency(paymentInvoice.total)}</div>
               </div>
               <div className="bg-emerald-50 rounded-xl p-3">
-                <div className="text-xs text-emerald-600 uppercase tracking-wide flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Paid</div>
+                <div className="text-xs text-emerald-600 uppercase tracking-wide flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> {t.factures.paidAmount}</div>
                 <div className="text-sm font-bold tabular-nums text-emerald-700">{formatCurrency(paymentInvoice.paidAmount)}</div>
               </div>
               <div className={cn("rounded-xl p-3", paymentInvoice.balance > 0 ? "bg-red-50" : "bg-emerald-50")}>
                 <div className={cn("text-xs uppercase tracking-wide flex items-center gap-1", paymentInvoice.balance > 0 ? "text-red-600" : "text-emerald-600")}>
-                  {paymentInvoice.balance > 0 ? <Clock className="w-3 h-3" /> : <CheckCircle2 className="w-3 h-3" />} Reste
+                  {paymentInvoice.balance > 0 ? <Clock className="w-3 h-3" /> : <CheckCircle2 className="w-3 h-3" />} {t.factures.remainingBalance}
                 </div>
                 <div className={cn("text-sm font-bold tabular-nums", paymentInvoice.balance > 0 ? "text-red-700" : "text-emerald-700")}>{formatCurrency(paymentInvoice.balance)}</div>
               </div>
@@ -677,7 +758,7 @@ export default function FacturesPage() {
             {/* Barre de progression */}
             <div>
               <div className="flex justify-between text-xs text-[var(--text-muted)] mb-1">
-                <span>Avancement paiement</span>
+                <span>{t.factures.paymentProgress}</span>
                 <span>{Math.round((paymentInvoice.paidAmount / paymentInvoice.total) * 100)}%</span>
               </div>
               <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
@@ -690,9 +771,9 @@ export default function FacturesPage() {
 
             {/* Historique des paiements */}
             <div>
-              <div className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-2">Historique des paiements</div>
+              <div className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-2">{t.factures.paymentHistory}</div>
               {paymentInvoice.payments.length === 0 ? (
-                <div className="text-sm text-[var(--text-muted)] italic py-3 text-center bg-slate-50 rounded-xl">No payments recorded</div>
+                <div className="text-sm text-[var(--text-muted)] italic py-3 text-center bg-slate-50 rounded-xl">{t.factures.noPayments}</div>
               ) : (
                 <div className="space-y-2">
                   {paymentInvoice.payments.map((p) => (
@@ -718,10 +799,10 @@ export default function FacturesPage() {
             {/* Formulaire d'ajout paiement */}
             {paymentInvoice.balance > 0 ? (
               <div className="border-t border-[var(--border)] pt-4 space-y-3">
-                <div className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">Record a payment</div>
+                <div className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">{t.factures.addPayment}</div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs text-[var(--text-muted)] mb-1.5 block">Amount</label>
+                    <label className="text-xs text-[var(--text-muted)] mb-1.5 block">{t.common.amount}</label>
                     <input
                       type="number"
                       value={paymentAmount}
@@ -731,39 +812,39 @@ export default function FacturesPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-[var(--text-muted)] mb-1.5 block">Method</label>
+                    <label className="text-xs text-[var(--text-muted)] mb-1.5 block">{t.common.method}</label>
                     <select
                       value={paymentMethod}
                       onChange={(e) => setPaymentMethod(e.target.value)}
                       className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)] bg-white"
                     >
-                      <option value="cash">Cash</option>
-                      <option value="mobile">Mobile Money</option>
-                      <option value="card">Carte</option>
-                      <option value="bank">Virement</option>
-                      <option value="check">Check</option>
+                      <option value="cash">{t.common.cash}</option>
+                      <option value="mobile">{t.common.mobile}</option>
+                      <option value="card">{t.common.card}</option>
+                      <option value="bank">{t.common.bank}</option>
+                      <option value="check">{t.common.check}</option>
                     </select>
                   </div>
                   <div className="col-span-2">
-                    <label className="text-xs text-[var(--text-muted)] mb-1.5 block">Note (optionnel)</label>
+                    <label className="text-xs text-[var(--text-muted)] mb-1.5 block">{t.common.notes}</label>
                     <input
                       value={paymentNote}
                       onChange={(e) => setPaymentNote(e.target.value)}
-                      placeholder="Reference, note..."
+                      placeholder={t.common.notes}
                       className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]"
                     />
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="secondary" className="flex-1" onClick={closePaymentModal}>Fermer</Button>
+                  <Button variant="secondary" className="flex-1" onClick={closePaymentModal}>{t.common.close}</Button>
                   <Button className="flex-1" onClick={handleAddPayment} disabled={addingPayment || !paymentAmount}>
-                    {addingPayment ? "Saving..." : "Save payment"}
+                    {addingPayment ? t.common.saving : t.factures.savePayment}
                   </Button>
                 </div>
               </div>
             ) : (
               <div className="flex justify-end">
-                <Button variant="secondary" onClick={closePaymentModal}>Fermer</Button>
+                <Button variant="secondary" onClick={closePaymentModal}>{t.common.close}</Button>
               </div>
             )}
           </div>
