@@ -268,8 +268,52 @@ export default function LoginPage() {
           )}
         </div>
 
+        {/* Demo credentials panel */}
+        <div className="mt-5 bg-white border border-neutral-200 rounded-2xl shadow-sm overflow-hidden">
+          <div className="px-4 py-3 border-b border-neutral-100 flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <p className="text-[11px] font-semibold text-neutral-500 uppercase tracking-widest">Demo Accounts</p>
+            <p className="text-[10px] text-neutral-300 ml-auto">click to login instantly</p>
+          </div>
+          <div className="divide-y divide-neutral-50">
+            {[
+              { name: "Grace Johnson", role: "boss",       pin: "1234", emp: "EMP001", color: "bg-violet-50 text-violet-700 border-violet-100" },
+              { name: "Paul Mbarga",   role: "cashier",    pin: "2345", emp: "EMP002", color: "bg-blue-50 text-blue-700 border-blue-100" },
+              { name: "Esther Diallo", role: "cashier",    pin: "3456", emp: "EMP003", color: "bg-blue-50 text-blue-700 border-blue-100" },
+              { name: "David Bouba",   role: "stockist",   pin: "4567", emp: "EMP004", color: "bg-amber-50 text-amber-700 border-amber-100" },
+              { name: "Rebecca Kameni",role: "accountant", pin: "5678", emp: "EMP005", color: "bg-emerald-50 text-emerald-700 border-emerald-100" },
+            ].map((demo) => (
+              <button
+                key={demo.emp}
+                onClick={() => {
+                  const found = cashiers.find((c) => c.employeeNumber === demo.emp);
+                  if (found) {
+                    setSelectedCashier(found);
+                    setPin("");
+                    setError("");
+                    // slight delay so PIN screen renders, then auto-login
+                    setTimeout(() => handleLoginWithPin(demo.pin), 150);
+                  }
+                }}
+                className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-neutral-50 active:bg-neutral-100 transition-colors text-left"
+              >
+                <div className="w-7 h-7 rounded-full bg-neutral-100 flex items-center justify-center text-[11px] font-bold text-neutral-600 shrink-0">
+                  {demo.name.split(" ").map((n) => n[0]).join("")}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-medium text-neutral-800 truncate leading-tight">{demo.name}</p>
+                  <p className="text-[10px] text-neutral-400 capitalize">{demo.role}</p>
+                </div>
+                <span className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-md border ${demo.color}`}>
+                  {demo.pin}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Footer */}
-        <p className="text-center text-[11px] text-neutral-300 mt-6">
+        <p className="text-center text-[11px] text-neutral-300 mt-5">
           Powered by KABRAK eng
         </p>
       </div>
