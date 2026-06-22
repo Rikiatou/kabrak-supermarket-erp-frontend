@@ -241,7 +241,7 @@ export default function DashboardPage() {
               return (
                 <div key={day.date} className="flex-1 flex flex-col items-center gap-1.5">
                   <span className="text-[10px] font-medium text-[var(--text-muted)] tabular-nums">
-                    {day.revenue > 0 ? `${(day.revenue / 1000).toFixed(0)}k` : ""}
+                    {(day.revenue ?? 0) > 0 ? `${((day.revenue ?? 0) / 1000).toFixed(0)}k` : ""}
                   </span>
                   <div className="w-full flex items-end justify-center h-24">
                     <div
@@ -253,7 +253,7 @@ export default function DashboardPage() {
                             : "bg-slate-100"
                       }`}
                       style={{ height: `${Math.max(heightPct, 2)}%` }}
-                      title={`${day.label}: ${day.revenue.toLocaleString()} FCFA (${day.transactions} txns)`}
+                      title={`${day.label}: ${(day.revenue ?? 0).toLocaleString()} FCFA (${day.transactions ?? 0} txns)`}
                     />
                   </div>
                   <span className={`text-[10px] ${isToday ? "font-bold text-[var(--brand)]" : "text-[var(--text-muted)]"}`}>
@@ -278,10 +278,10 @@ export default function DashboardPage() {
             <div className="mt-4">
               <div className="flex items-end justify-between mb-2">
                 <span className="text-2xl font-bold text-[var(--brand)]">
-                  {(monthlyGoal.current / 1000).toFixed(0)}k FCFA
+                  {((monthlyGoal.current ?? 0) / 1000).toFixed(0)}k FCFA
                 </span>
                 <span className="text-sm text-[var(--text-muted)]">
-                  / {(monthlyGoal.goal / 1000).toFixed(0)}k
+                  / {((monthlyGoal.goal ?? 0) / 1000).toFixed(0)}k
                 </span>
               </div>
               <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
@@ -295,7 +295,7 @@ export default function DashboardPage() {
                   {monthlyGoal.progress}% {t.dashboard.monthlyGoalProgress}
                 </span>
                 <span className="text-[var(--text-muted)]">
-                  {t.dashboard.monthlyGoalRemaining} {(monthlyGoal.remaining / 1000).toFixed(0)}k FCFA
+                  {t.dashboard.monthlyGoalRemaining} {((monthlyGoal.remaining ?? 0) / 1000).toFixed(0)}k FCFA
                 </span>
               </div>
             </div>
@@ -321,7 +321,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-semibold text-[var(--brand)]">
-                      {(product.revenue / 1000).toFixed(1)}k
+                      {((product.revenue ?? 0) / 1000).toFixed(1)}k
                     </p>
                   </div>
                 </div>

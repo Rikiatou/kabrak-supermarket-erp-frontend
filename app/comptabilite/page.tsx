@@ -399,7 +399,7 @@ export default function ComptabilitePage() {
               {delta !== 0 && (
                 <div className={cn("flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg", delta > 0 ? "bg-[var(--success-light)] text-emerald-700" : "bg-[var(--danger-light)] text-red-600")}>
                   {delta > 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-                  {Math.abs(delta).toFixed(1)}%
+                  {Math.abs(delta ?? 0).toFixed(1)}%
                 </div>
               )}
             </div>

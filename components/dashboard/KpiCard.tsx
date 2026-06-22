@@ -34,7 +34,7 @@ export function KpiCard({
       ? formatCurrency(value)
       : format === "number"
       ? formatNumber(value)
-      : `${value.toFixed(1)}%`;
+      : `${(value ?? 0).toFixed(1)}%`;
 
   return (
     <div className="bg-white border border-[var(--border)] rounded-2xl p-5 shadow-[var(--shadow-sm)] hover:shadow-[var(--shadow)] transition-shadow duration-200">
@@ -64,7 +64,7 @@ export function KpiCard({
           ) : (
             <TrendingDown className="w-3 h-3" />
           )}
-          <span className="tabular-nums">{Math.abs(delta).toFixed(1)}%</span>
+          <span className="tabular-nums">{Math.abs(delta ?? 0).toFixed(1)}%</span>
         </div>
       </div>
 

@@ -164,6 +164,8 @@ export interface ApiStockMovement {
   reason?: string;
   reference?: string;
   notes?: string;
+  createdBy?: string;
+  employee?: { id: string; firstName: string; lastName: string; role: string };
   syncStatus: string;
   createdAt: string;
   product?: ApiProduct;

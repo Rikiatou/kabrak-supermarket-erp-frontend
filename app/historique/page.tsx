@@ -24,7 +24,7 @@ import { useProducts } from "@/lib/hooks/useApi";
 import { stockApi } from "@/lib/api";
 import type { ApiStockMovement } from "@/lib/api";
 import type { Product } from "@/lib/types";
-import { formatCurrency, formatDate, cn } from "@/lib/utils";
+import { formatCurrency, formatDate, formatTime, cn } from "@/lib/utils";
 
 type MovementType = "in" | "out" | "adjustment";
 type TypeFilter = "all" | MovementType;
@@ -229,16 +229,24 @@ export default function HistoriquePage() {
   // CSV Export
   const handleExportCSV = () => {
     if (!movementsWithBalance.length || !selectedProduct) return;
-    const header = ["Date", "Type", "Quantity", "Balance", "Reason", "Reference", "Note"];
-    const rows = movementsWithBalance.map((m) => [
-      formatDate(m.createdAt),
-      m.type,
-      m.type === "in" ? `+${Math.abs(m.quantity)}` : m.type === "out" ? `-${Math.abs(m.quantity)}` : m.quantity,
-      m.balance,
-      translateReason(m.reason),
-      m.reference ?? "",
-      (m.notes ?? "").replace(/,/g, ";"),
-    ]);
+    const header = ["Date", "Time", "Type", "Quantity", "Balance", "Unit Value", "Total Value", "Reason", "Reference", "Done By", "Note"];
+    const rows = movementsWithBalance.map((m) => {
+      const absQ = Math.abs(m.quantity);
+      const uv = m.type === "in" ? (selectedProduct.costPrice ?? 0) : (selectedProduct.price ?? 0);
+      return [
+        formatDate(m.createdAt),
+        formatTime(m.createdAt),
+        m.type,
+        m.type === "in" ? `+${absQ}` : m.type === "out" ? `-${absQ}` : m.quantity,
+        m.balance,
+        uv,
+        absQ * uv,
+        translateReason(m.reason),
+        m.reference ?? "",
+        m.employee ? `${m.employee.firstName} ${m.employee.lastName}` : "",
+        (m.notes ?? "").replace(/,/g, ";"),
+      ];
+    });
     const csv = [header, ...rows].map((r) => r.join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -382,7 +390,7 @@ export default function HistoriquePage() {
                     <div className="text-right">
                       <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wide font-semibold">{t.stocks.marginRate}</p>
                       <p className={cn("text-sm font-bold tabular-nums mt-0.5", marginPct >= 20 ? "text-emerald-600" : "text-amber-600")}>
-                        {marginPct.toFixed(1)}%
+                        {(marginPct ?? 0).toFixed(1)}%
                       </p>
                     </div>
                   </div>
@@ -510,15 +518,18 @@ export default function HistoriquePage() {
                       <thead>
                         <tr className="border-b border-[var(--border)] bg-slate-50/60">
                           {[
-                            { label: t.common.date,       align: "left" },
-                            { label: t.common.type,       align: "left" },
-                            { label: t.common.quantity,   align: "right" },
-                            { label: "Balance",           align: "right" },
-                            { label: t.common.reason,     align: "left" },
-                            { label: t.stocks.reference,  align: "left" },
-                            { label: t.common.note,       align: "left" },
+                            { label: t.common.date,        align: "left" },
+                            { label: t.common.type,        align: "left" },
+                            { label: t.common.quantity,    align: "right" },
+                            { label: "Balance",            align: "right" },
+                            { label: t.stocks.unitValue,   align: "right" },
+                            { label: t.stocks.totalValue,  align: "right" },
+                            { label: t.common.reason,      align: "left" },
+                            { label: t.stocks.reference,   align: "left" },
+                            { label: t.stocks.doneBy,      align: "left" },
+                            { label: t.common.note,        align: "left" },
                           ].map(({ label, align }) => (
-                            <th key={label} className={cn("px-4 py-3 text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide", align === "right" ? "text-right" : "text-left")}>
+                            <th key={label} className={cn("px-4 py-3 text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide whitespace-nowrap", align === "right" ? "text-right" : "text-left")}>
                               {label}
                             </th>
                           ))}
@@ -530,6 +541,12 @@ export default function HistoriquePage() {
                           const TypeIcon = config.icon;
                           const isIn  = movement.type === "in";
                           const isOut = movement.type === "out";
+                          const absQty = Math.abs(movement.quantity);
+                          // Value calculation
+                          const unitCost = selectedProduct?.costPrice ?? 0;
+                          const unitPrice = selectedProduct?.price ?? 0;
+                          const unitValue = isIn ? unitCost : unitPrice;
+                          const totalValue = absQty * unitValue;
                           return (
                             <tr
                               key={movement.id}
@@ -538,9 +555,10 @@ export default function HistoriquePage() {
                                 i % 2 === 0 ? "bg-white" : "bg-slate-50/20"
                               )}
                             >
-                              {/* Date */}
+                              {/* Date + time */}
                               <td className="px-4 py-3 text-sm text-[var(--text-secondary)] whitespace-nowrap">
-                                {formatDate(movement.createdAt)}
+                                <div>{formatDate(movement.createdAt)}</div>
+                                <div className="text-[10px] text-[var(--text-muted)]">{formatTime(movement.createdAt)}</div>
                               </td>
                               {/* Type */}
                               <td className="px-4 py-3">
@@ -549,13 +567,21 @@ export default function HistoriquePage() {
                                   {config.label}
                                 </Badge>
                               </td>
-                              {/* Quantity — backend stores OUT as negative, so use Math.abs for display */}
+                              {/* Quantity */}
                               <td className={cn("px-4 py-3 text-sm font-bold text-right tabular-nums", isIn ? "text-emerald-600" : isOut ? "text-red-500" : "text-amber-600")}>
-                                {isIn ? "+" : isOut ? "−" : ""}{Math.abs(movement.quantity)}
+                                {isIn ? "+" : isOut ? "−" : ""}{absQty}
                               </td>
                               {/* Running balance */}
                               <td className="px-4 py-3 text-sm font-semibold text-right tabular-nums text-[var(--text-secondary)]">
                                 {movement.balance}
+                              </td>
+                              {/* Unit value */}
+                              <td className="px-4 py-3 text-xs text-right tabular-nums text-[var(--text-muted)] whitespace-nowrap">
+                                {formatCurrency(unitValue)}
+                              </td>
+                              {/* Total value */}
+                              <td className="px-4 py-3 text-xs text-right tabular-nums font-semibold text-[var(--text-secondary)] whitespace-nowrap">
+                                {formatCurrency(totalValue)}
                               </td>
                               {/* Reason (translated) */}
                               <td className="px-4 py-3 text-sm text-[var(--text-secondary)]">
@@ -565,8 +591,18 @@ export default function HistoriquePage() {
                               <td className="px-4 py-3 text-xs text-[var(--text-muted)] font-mono">
                                 {movement.reference || <span className="not-italic">—</span>}
                               </td>
+                              {/* Done by */}
+                              <td className="px-4 py-3 text-xs text-[var(--text-secondary)] whitespace-nowrap">
+                                {movement.employee ? (
+                                  <span title={movement.employee.role}>
+                                    {movement.employee.firstName} {movement.employee.lastName.charAt(0)}.
+                                  </span>
+                                ) : (
+                                  <span className="text-[var(--text-muted)]">—</span>
+                                )}
+                              </td>
                               {/* Notes */}
-                              <td className="px-4 py-3 text-xs text-[var(--text-muted)] max-w-[200px]">
+                              <td className="px-4 py-3 text-xs text-[var(--text-muted)] max-w-[180px]">
                                 <span className="block truncate" title={movement.notes ?? ""}>{movement.notes || "—"}</span>
                               </td>
                             </tr>

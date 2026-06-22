@@ -182,7 +182,7 @@ export default function RapportsPage() {
     },
     {
       label: "Transactions",
-      value: sales.transactionCount.toLocaleString(),
+      value: (sales.transactionCount ?? 0).toLocaleString(),
       icon: ShoppingCart,
       delta: +11.7,
       sublabel: "for the period",
@@ -203,7 +203,7 @@ export default function RapportsPage() {
     },
     {
       label: t.rapports.achievementRate,
-      value: `${marginPct.toFixed(1)}%`,
+      value: `${(marginPct ?? 0).toFixed(1)}%`,
       icon: Percent,
       delta: marginPct >= 30 ? +2.4 : -1.2,
       sublabel: "gross margin",
@@ -293,7 +293,7 @@ export default function RapportsPage() {
               <span className="text-xs text-[var(--text-muted)]">{label}</span>
               <div className={cn("flex items-center gap-0.5 text-[11px] font-semibold", delta >= 0 ? "text-emerald-600" : "text-red-500")}>
                 {delta >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-                {Math.abs(delta).toFixed(1)}%
+                {Math.abs(delta ?? 0).toFixed(1)}%
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -465,7 +465,7 @@ export default function RapportsPage() {
           {[
             {
               label: t.rapports.productCount,
-              value: inventoryData.productCount.toLocaleString(),
+              value: (inventoryData.productCount ?? 0).toLocaleString(),
               icon: Package,
               color: "text-blue-600",
               bg: "bg-blue-50",

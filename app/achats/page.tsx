@@ -119,7 +119,7 @@ function StarRating({ rating }: { rating: number }) {
         />
       ))}
       <span className="text-[11px] font-medium text-[var(--text-muted)] ml-1 tabular-nums">
-        {rating.toFixed(1)}
+        {(rating ?? 0).toFixed(1)}
       </span>
     </div>
   );

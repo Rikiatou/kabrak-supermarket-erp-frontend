@@ -117,7 +117,7 @@ export default function ClientsPage() {
               </div>
               <div>
                 <p className="text-xs text-[var(--text-muted)]">{t.clients.distributedPoints}</p>
-                <p className="text-lg font-bold text-[var(--text-primary)] tabular-nums">{totalPoints.toLocaleString()}</p>
+                <p className="text-lg font-bold text-[var(--text-primary)] tabular-nums">{(totalPoints ?? 0).toLocaleString()}</p>
               </div>
             </div>
           </Card>
@@ -198,7 +198,7 @@ export default function ClientsPage() {
                   </div>
                   <div className="text-center">
                     <p className="text-xs text-[var(--text-muted)]">{t.clients.total}</p>
-                    <p className="text-sm font-bold text-[var(--text-primary)] tabular-nums">{(customer.totalSpent / 1000).toFixed(0)}K</p>
+                    <p className="text-sm font-bold text-[var(--text-primary)] tabular-nums">{((customer.totalSpent ?? 0) / 1000).toFixed(0)}K</p>
                   </div>
                 </div>
 
