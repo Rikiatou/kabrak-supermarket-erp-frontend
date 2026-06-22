@@ -315,7 +315,7 @@ function CloseShiftModal({
 
         <div className="flex items-center gap-3 mt-6">
           <Button variant="secondary" className="flex-1" onClick={onCancel}>
-            Annuler
+            Cancel
           </Button>
           <Button
             variant="danger"
@@ -404,7 +404,7 @@ function RegisterCard({
             </div>
             <div className="flex items-center gap-2 text-sm">
               <Clock className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-              <span className="text-[var(--text-muted)]">Ouverte à:</span>
+              <span className="text-[var(--text-muted)]">Opened at:</span>
               <span className="font-medium text-[var(--text-primary)] tabular-nums ml-auto">
                 {formatTime(shift.openedAt)}
               </span>
@@ -425,7 +425,7 @@ function RegisterCard({
             <Lock className="w-6 h-6 text-slate-300" />
           </div>
           <p className="text-xs text-[var(--text-muted)] text-center mb-4">
-            Aucune caisse ouverte
+            No register open
           </p>
           <Button
             variant="success"
@@ -592,7 +592,7 @@ export default function CaissesPage() {
       {/* Loading overlay hint */}
       {loading && shifts === null && (
         <p className="text-xs text-[var(--text-muted)] text-center mt-6">
-          Chargement des caisses actives…
+          Loading active registers...
         </p>
       )}
 

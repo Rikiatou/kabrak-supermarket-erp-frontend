@@ -225,7 +225,7 @@ export default function PlanningPage() {
                   <tr>
                     <td colSpan={8} className="px-4 py-12 text-center">
                       <User className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                      <p className="text-sm text-[var(--text-muted)]">Aucun employé caissier/superviseur trouvé</p>
+                      <p className="text-sm text-[var(--text-muted)]">No cashier/supervisor employees found</p>
                     </td>
                   </tr>
                 ) : (
@@ -278,7 +278,7 @@ export default function PlanningPage() {
                                     <button
                                       onClick={() => handleDelete(slot.id, `${employee.firstName} ${day.label}`)}
                                       className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-white/50"
-                                      title="Supprimer"
+                                      title="Delete"
                                     >
                                       <Trash2 className="w-3 h-3" />
                                     </button>
@@ -290,7 +290,7 @@ export default function PlanningPage() {
                                 className="w-full flex items-center justify-center gap-1 py-1 rounded-lg border border-dashed border-slate-200 text-[10px] text-[var(--text-muted)] hover:border-[var(--brand)] hover:text-[var(--brand)] transition-colors"
                               >
                                 <Plus className="w-3 h-3" />
-                                {slots.length === 0 ? "Ajouter" : "Autre"}
+                                {slots.length === 0 ? "Add" : "Another"}
                               </button>
                             </div>
                           </td>
@@ -383,7 +383,7 @@ export default function PlanningPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Pause début (optionnel)</label>
+                  <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Break start (optional)</label>
                   <select
                     value={form.breakStart}
                     onChange={(e) => setForm({ ...form, breakStart: e.target.value })}
@@ -425,9 +425,9 @@ export default function PlanningPage() {
             )}
 
             <div className="flex gap-2">
-              <Button variant="secondary" className="flex-1" onClick={() => setShowAddModal(false)}>Annuler</Button>
+              <Button variant="secondary" className="flex-1" onClick={() => setShowAddModal(false)}>Cancel</Button>
               <Button className="flex-1" onClick={handleSubmit} disabled={creating || form.startTime >= form.endTime}>
-                {creating ? "Ajout..." : "Ajouter le créneau"}
+                {creating ? "Adding..." : "Add slot"}
               </Button>
             </div>
           </div>

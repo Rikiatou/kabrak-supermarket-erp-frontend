@@ -108,7 +108,7 @@ export default function CustomerDisplayPage() {
             </div>
           ) : (
             <div className="h-full flex items-center justify-center text-[var(--text-muted)]">
-              <p className="text-xl">Aucun article en cours</p>
+              <p className="text-xl">No active items</p>
             </div>
           )}
         </div>

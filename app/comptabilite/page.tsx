@@ -356,7 +356,7 @@ export default function ComptabilitePage() {
           />
         </div>
         {(plLoading || monthlyLoading || breakdownLoading || expensesLoading) && (
-          <span className="text-xs text-[var(--text-muted)] pb-2.5">Chargement...</span>
+          <span className="text-xs text-[var(--text-muted)] pb-2.5">Loading...</span>
         )}
       </div>
 
@@ -469,7 +469,7 @@ export default function ComptabilitePage() {
           action={
             <Button variant="primary" size="sm" onClick={() => setModalOpen(true)}>
               <Plus className="w-4 h-4 mr-1.5" />
-              Ajouter une dépense
+              Add expense
             </Button>
           }
         />
@@ -478,11 +478,11 @@ export default function ComptabilitePage() {
             <thead>
               <tr className="text-left text-xs text-[var(--text-muted)] border-b border-[var(--border)]">
                 <th className="px-5 py-3 font-medium">Date</th>
-                <th className="px-5 py-3 font-medium">Catégorie</th>
+                <th className="px-5 py-3 font-medium">Category</th>
                 <th className="px-5 py-3 font-medium">Description</th>
                 <th className="px-5 py-3 font-medium">Fournisseur</th>
                 <th className="px-5 py-3 font-medium">Paiement</th>
-                <th className="px-5 py-3 font-medium text-right">Montant</th>
+                <th className="px-5 py-3 font-medium text-right">Amount</th>
                 <th className="px-5 py-3 font-medium">Statut</th>
               </tr>
             </thead>
@@ -509,7 +509,7 @@ export default function ComptabilitePage() {
               {expenses.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-5 py-8 text-center text-[var(--text-muted)]">
-                    Aucune dépense sur cette période
+                    No expenses in this period
                   </td>
                 </tr>
               )}

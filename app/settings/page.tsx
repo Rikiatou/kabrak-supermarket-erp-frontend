@@ -53,7 +53,7 @@ export default function SettingsPage() {
 
     // Vérifier le type de fichier
     if (!file.type.startsWith("image/")) {
-      alert("Veuillez sélectionner une image (JPG, PNG, GIF, etc.)");
+      alert("Please select an image file (JPG, PNG, GIF, etc.)");
       return;
     }
 
@@ -124,7 +124,7 @@ export default function SettingsPage() {
         <div>
           <h1 className="text-2xl font-bold text-[var(--text-primary)] flex items-center gap-2">
             <Store className="w-6 h-6" />
-            Paramètres du Supermarché
+            Store Settings
           </h1>
           <p className="text-sm text-[var(--text-muted)] mt-1">
             Personnalisez votre ERP: nom, logo, tickets, factures
@@ -145,7 +145,7 @@ export default function SettingsPage() {
             ) : (
               <>
                 <Save className="w-4 h-4" />
-                Enregistrer
+                Save
               </>
             )}
           </Button>
@@ -198,7 +198,7 @@ export default function SettingsPage() {
               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50"
               placeholder="Easy Shop"
             />
-            <p className="text-xs text-slate-400 mt-1">Affiché sur le dashboard, tickets et factures</p>
+            <p className="text-xs text-slate-400 mt-1">Shown on dashboard, receipts and invoices</p>
           </div>
 
           <div>
@@ -269,7 +269,7 @@ export default function SettingsPage() {
                   disabled={!canEdit}
                   className="text-red-600 hover:text-red-700"
                 >
-                  Supprimer
+                  Delete
                 </Button>
               )}
             </div>
@@ -464,11 +464,11 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Paramètres POS */}
+      {/* POS Settings */}
       <div className="bg-white rounded-xl border border-slate-200 p-6">
         <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
           <Palette className="w-5 h-5 text-blue-600" />
-          Paramètres POS
+          POS Settings
         </h2>
         <div className="space-y-3">
           <div className="flex items-center gap-2">

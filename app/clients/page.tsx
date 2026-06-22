@@ -249,8 +249,8 @@ export default function ClientsPage() {
               <input value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]" />
             </div>
             <div className="flex gap-2 pt-2">
-              <Button variant="secondary" className="flex-1" onClick={() => setShowModal(false)}>Annuler</Button>
-              <Button className="flex-1" onClick={handleCreate} disabled={!firstName || !lastName || !phone}>Créer</Button>
+              <Button variant="secondary" className="flex-1" onClick={() => setShowModal(false)}>Cancel</Button>
+              <Button className="flex-1" onClick={handleCreate} disabled={!firstName || !lastName || !phone}>Create</Button>
             </div>
           </div>
         </div>
@@ -276,7 +276,7 @@ export default function ClientsPage() {
                     <p className="text-2xl font-bold text-amber-700 tabular-nums">{customer.points}</p>
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Points à échanger</label>
+                    <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Points to redeem</label>
                     <input
                       type="number"
                       min={1}
@@ -287,11 +287,11 @@ export default function ClientsPage() {
                     />
                   </div>
                   <div className="bg-emerald-50 rounded-xl p-3 text-center">
-                    <p className="text-xs text-emerald-600">Valeur de la réduction</p>
+                    <p className="text-xs text-emerald-600">Discount value</p>
                     <p className="text-xl font-bold text-emerald-700 tabular-nums">{formatCurrency(redeemPoints * POINTS_TO_FCFA)}</p>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="secondary" className="flex-1" onClick={() => setShowRedeem(null)}>Annuler</Button>
+                    <Button variant="secondary" className="flex-1" onClick={() => setShowRedeem(null)}>Cancel</Button>
                     <Button className="flex-1" onClick={handleRedeem}>Confirmer</Button>
                   </div>
                 </>

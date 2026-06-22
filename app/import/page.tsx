@@ -279,7 +279,7 @@ RIZ-25-002,0640055667788,Riz Parfumé 25kg,Épicerie,Riz,Import Asie,22000,17500
             {result.errorDetails.length > 0 && (
               <div className="mt-4">
                 <p className="text-xs font-semibold text-[var(--text-secondary)] mb-2">
-                  Détails des erreurs ({result.errorDetails.length} affichés):
+                  Error details ({result.errorDetails.length} shown):
                 </p>
                 <div className="max-h-48 overflow-y-auto bg-[var(--background)] rounded-xl p-3 space-y-1">
                   {result.errorDetails.map((err, i) => (

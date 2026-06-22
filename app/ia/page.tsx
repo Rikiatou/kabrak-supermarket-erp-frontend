@@ -238,7 +238,7 @@ export default function IaPage() {
         <div>
           <div className="flex items-center gap-2 mb-3">
             <Package className="w-4 h-4 text-[var(--brand)]" />
-            <h3 className="text-sm font-semibold text-[var(--text-primary)]">Prévisions de stock</h3>
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">Stock forecasts</h3>
             <span className="text-xs text-[var(--text-muted)]">- 30 jours de données</span>
           </div>
           <Card className="overflow-hidden">
@@ -337,9 +337,9 @@ export default function IaPage() {
                       <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Produit</th>
                       <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3 hidden md:table-cell">Expiration</th>
                       <th className="text-right text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Prix actuel</th>
-                      <th className="text-right text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Prix suggéré</th>
+                      <th className="text-right text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Suggested price</th>
                       <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3 hidden sm:table-cell">Remise</th>
-                      <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Priorité</th>
+                      <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Priority</th>
                       <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Action</th>
                     </tr>
                   </thead>

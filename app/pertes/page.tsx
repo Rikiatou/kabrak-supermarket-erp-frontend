@@ -239,7 +239,7 @@ export default function PertesPage() {
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Rechercher un produit..."
+                  placeholder="Search a product..."
                   className="w-full pl-9 pr-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]"
                 />
               </div>
@@ -264,7 +264,7 @@ export default function PertesPage() {
 
             {/* Quantity */}
             <div>
-              <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Quantité perdue</label>
+              <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Quantity lost</label>
               <input
                 type="number"
                 min={1}
@@ -309,7 +309,7 @@ export default function PertesPage() {
 
             <div className="flex gap-2 pt-2">
               <Button variant="secondary" className="flex-1" onClick={() => setShowModal(false)}>
-                Annuler
+                Cancel
               </Button>
               <Button className="flex-1" onClick={handleAddLoss} disabled={!selectedProduct || adjusting}>
                 {adjusting ? "Traitement..." : "Confirmer"}

@@ -581,7 +581,7 @@ export default function StocksPage() {
                   onChange={(e) => setMarkdownReason(e.target.value)}
                   className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-amber-500 bg-white"
                 >
-                  <option value="expiry">Produit expiré</option>
+                  <option value="expiry">Expired product</option>
                   <option value="near_expiry">Expiration proche</option>
                   <option value="clearance">Destockage</option>
                   <option value="promo">Promotion</option>
@@ -599,7 +599,7 @@ export default function StocksPage() {
             </div>
 
             <div className="flex gap-2">
-              <Button variant="secondary" className="flex-1" onClick={closeMarkdownModal}>Annuler</Button>
+              <Button variant="secondary" className="flex-1" onClick={closeMarkdownModal}>Cancel</Button>
               <Button className="flex-1" onClick={handleSetMarkdown} disabled={settingMarkdown || !markdownPrice}>
                 {settingMarkdown ? "Application..." : "Appliquer le markdown"}
               </Button>

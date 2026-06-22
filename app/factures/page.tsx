@@ -393,7 +393,7 @@ export default function FacturesPage() {
     pdf.line(margin + 90, y, pageWidth - margin, y);
     y += 8;
     pdf.setFontSize(10);
-    pdf.text("Sous-total:", margin + 95, y);
+    pdf.text("Subtotal:", margin + 95, y);
     pdf.text(formatCurrency(invoice.subtotal), pageWidth - margin - 5, y, { align: "right" });
     y += 8;
     pdf.text("TVA (15.5%):", margin + 95, y);
@@ -425,16 +425,16 @@ export default function FacturesPage() {
   };
 
   const sendWhatsApp = (invoice: Invoice) => {
-    const msg = `Bonjour ${invoice.clientName},%0A%0AVoici votre facture ${invoice.number} de ${supermarketName}.%0A%0AMontant total: ${formatCurrency(invoice.total)}%0ADate: ${new Date(invoice.date).toLocaleDateString("fr-FR")}%0A%0AMerci pour votre confiance!`;
+    const msg = `Hello ${invoice.clientName},%0A%0AHere is your invoice ${invoice.number} from ${supermarketName}.%0A%0ATotal amount: ${formatCurrency(invoice.total)}%0ADate: ${new Date(invoice.date).toLocaleDateString()}%0A%0AThank you for your business!`;
     window.open(`https://wa.me/${invoice.clientPhone.replace(/[^0-9]/g, "")}?text=${msg}`, "_blank");
     toast(`${t.factures.whatsappOpened} ${invoice.clientName}`, "info");
   };
 
   const sendEmail = (invoice: Invoice) => {
-    const subject = `Facture ${invoice.number} - ${supermarketName}`;
-    const body = `Bonjour ${invoice.clientName},\n\nVeuillez trouver ci-joint votre facture ${invoice.number}.\n\nMontant total: ${formatCurrency(invoice.total)}\nDate: ${new Date(invoice.date).toLocaleDateString("fr-FR")}\n\nMerci pour votre confiance.\n\n${supermarketName}`;
+    const subject = `Invoice ${invoice.number} - ${supermarketName}`;
+    const body = `Hello ${invoice.clientName},\n\nPlease find attached your invoice ${invoice.number}.\n\nTotal amount: ${formatCurrency(invoice.total)}\nDate: ${new Date(invoice.date).toLocaleDateString()}\n\nThank you for your business.\n\n${supermarketName}`;
     window.location.href = `mailto:${invoice.clientEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    toast(`Email préparé pour ${invoice.clientEmail}`, "info");
+    toast(`Email prepared for ${invoice.clientEmail}`, "info");
   };
 
   return (
@@ -460,7 +460,7 @@ export default function FacturesPage() {
             icon={<Download className="w-4 h-4" />}
             onClick={() => {
               if (invoices.length === 0) {
-                toast("Aucune facture à exporter", "warning");
+                toast("No invoices to export", "warning");
                 return;
               }
               exportToCSV(
@@ -582,7 +582,7 @@ export default function FacturesPage() {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">Articles</label>
-                <button onClick={addItem} className="text-xs text-[var(--brand)] font-medium hover:underline">+ Ajouter une ligne</button>
+                <button onClick={addItem} className="text-xs text-[var(--brand)] font-medium hover:underline">+ Add line</button>
               </div>
               <div className="space-y-2">
                 {items.map((item, idx) => (
@@ -621,7 +621,7 @@ export default function FacturesPage() {
             {/* Totals */}
             <div className="bg-slate-50 rounded-xl p-4 space-y-1.5 text-sm">
               <div className="flex justify-between text-[var(--text-muted)]">
-                <span>Sous-total</span>
+                <span>Subtotal</span>
                 <span className="tabular-nums">{formatCurrency(subtotal)}</span>
               </div>
               <div className="flex justify-between text-[var(--text-muted)]">
@@ -635,8 +635,8 @@ export default function FacturesPage() {
             </div>
 
             <div className="flex gap-2">
-              <Button variant="secondary" className="flex-1" onClick={() => setShowModal(false)}>Annuler</Button>
-              <Button className="flex-1" onClick={handleCreate} disabled={!clientName}>Créer la facture</Button>
+              <Button variant="secondary" className="flex-1" onClick={() => setShowModal(false)}>Cancel</Button>
+              <Button className="flex-1" onClick={handleCreate} disabled={!clientName}>Create invoice</Button>
             </div>
           </div>
         </div>
@@ -692,7 +692,7 @@ export default function FacturesPage() {
             <div>
               <div className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-2">Historique des paiements</div>
               {paymentInvoice.payments.length === 0 ? (
-                <div className="text-sm text-[var(--text-muted)] italic py-3 text-center bg-slate-50 rounded-xl">Aucun paiement enregistré</div>
+                <div className="text-sm text-[var(--text-muted)] italic py-3 text-center bg-slate-50 rounded-xl">No payments recorded</div>
               ) : (
                 <div className="space-y-2">
                   {paymentInvoice.payments.map((p) => (
@@ -718,10 +718,10 @@ export default function FacturesPage() {
             {/* Formulaire d'ajout paiement */}
             {paymentInvoice.balance > 0 ? (
               <div className="border-t border-[var(--border)] pt-4 space-y-3">
-                <div className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">Enregistrer un paiement</div>
+                <div className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">Record a payment</div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs text-[var(--text-muted)] mb-1.5 block">Montant</label>
+                    <label className="text-xs text-[var(--text-muted)] mb-1.5 block">Amount</label>
                     <input
                       type="number"
                       value={paymentAmount}
@@ -737,11 +737,11 @@ export default function FacturesPage() {
                       onChange={(e) => setPaymentMethod(e.target.value)}
                       className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)] bg-white"
                     >
-                      <option value="cash">Espèces</option>
+                      <option value="cash">Cash</option>
                       <option value="mobile">Mobile Money</option>
                       <option value="card">Carte</option>
                       <option value="bank">Virement</option>
-                      <option value="check">Chèque</option>
+                      <option value="check">Check</option>
                     </select>
                   </div>
                   <div className="col-span-2">
@@ -757,7 +757,7 @@ export default function FacturesPage() {
                 <div className="flex gap-2">
                   <Button variant="secondary" className="flex-1" onClick={closePaymentModal}>Fermer</Button>
                   <Button className="flex-1" onClick={handleAddPayment} disabled={addingPayment || !paymentAmount}>
-                    {addingPayment ? "Enregistrement..." : "Enregistrer le paiement"}
+                    {addingPayment ? "Saving..." : "Save payment"}
                   </Button>
                 </div>
               </div>
