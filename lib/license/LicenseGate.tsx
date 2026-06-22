@@ -27,24 +27,17 @@ export function LicenseGate({ children }: LicenseGateProps) {
   const { license, loading, isExpired, daysRemaining } = useLicense();
   const { t } = useI18n();
 
-  // Éviter les erreurs SSR
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return <>{children}</>;
-  }
-
   const isPublicPage = PUBLIC_PAGES.some(
     (p) => pathname === p || pathname.startsWith(p + "/")
   );
 
-  // Afficher un warning si la licence expire bientôt (< 30 jours)
-  const showWarning = license && !isExpired && daysRemaining <= 30 && daysRemaining > 0;
+  // ⚠️ TOUS les useEffect AVANT tout return conditionnel (règle des hooks)
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
-    if (loading || isPublicPage) return;
+    if (!mounted || loading || isPublicPage) return;
 
     // Pas de licence → page d'activation
     if (!license) {
@@ -57,7 +50,14 @@ export function LicenseGate({ children }: LicenseGateProps) {
       router.replace("/activate?expired=1");
       return;
     }
-  }, [license, loading, isExpired, isPublicPage, router]);
+  }, [mounted, license, loading, isExpired, isPublicPage, router]);
+
+  if (!mounted) {
+    return <>{children}</>;
+  }
+
+  // Afficher un warning si la licence expire bientôt (< 30 jours)
+  const showWarning = license && !isExpired && daysRemaining <= 30 && daysRemaining > 0;
 
   // Toujours rendre les children pour préserver l'arbre React (évite error #310)
   // Overlay de chargement par-dessus au lieu de remplacer les children

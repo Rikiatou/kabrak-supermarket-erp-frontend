@@ -23,15 +23,6 @@ export function RoleGuard({ children }: RoleGuardProps) {
   const { user, loading } = useAuth();
   const { t } = useI18n();
 
-  // Éviter les erreurs SSR
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return <>{children}</>;
-  }
-
   // Pages publiques = pas de guard
   const PUBLIC_PAGES = ["/login", "/activate", "/pricing", "/"];
   const isPublicPage = PUBLIC_PAGES.some(p => pathname === p || pathname.startsWith(p + "/"));
@@ -41,8 +32,13 @@ export function RoleGuard({ children }: RoleGuardProps) {
   const home = user ? (ROLE_HOME[user.role as Role] || "/dashboard") : "/dashboard";
   const isDenied = user && !hasAccess && pathname === home; // Cas extrême: aucune page accessible
 
+  // ⚠️ TOUS les useEffect AVANT tout return conditionnel (règle des hooks)
   useEffect(() => {
-    if (loading || isPublicPage) return;
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted || loading || isPublicPage) return;
 
     if (!user) {
       router.replace("/login");
@@ -52,7 +48,11 @@ export function RoleGuard({ children }: RoleGuardProps) {
     if (!hasAccess && !isDenied) {
       router.replace(home);
     }
-  }, [user, loading, isPublicPage, hasAccess, isDenied, home, router, pathname]);
+  }, [mounted, user, loading, isPublicPage, hasAccess, isDenied, home, router, pathname]);
+
+  if (!mounted) {
+    return <>{children}</>;
+  }
 
   // Pages publiques = pas de guard
   if (isPublicPage) {
