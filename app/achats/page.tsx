@@ -691,7 +691,7 @@ export default function AchatsPage() {
                           className="border border-[var(--border)] rounded-lg px-2 py-1.5 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--brand)] bg-white truncate"
                         >
                           <option value="">— select —</option>
-                          {allProducts.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                          {allProducts.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.sku}) — Stock: {p.stock} {p.unit}</option>)}
                         </select>
                         <input
                           type="number" min="1" value={line.qty}
