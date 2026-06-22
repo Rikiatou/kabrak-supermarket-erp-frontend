@@ -61,7 +61,7 @@ function useStatusConfig(t: ReturnType<typeof useI18n>["t"]) {
 export default function StocksPage() {
   const { t } = useI18n();
   const { toast } = useToast();
-  const { products: apiProducts } = useProducts();
+  const { products: apiProducts, reload: reloadProducts } = useProducts();
   const { alerts: stockAlertsData } = useStockAlerts();
   const CATEGORIES = [
     t.common.catAll,
@@ -118,6 +118,7 @@ export default function StocksPage() {
       const newProduct = apiProductToFrontend(created);
       setProducts((prev) => [newProduct, ...prev]);
       toast(`${data.name} added to stock`, "success");
+      reloadProducts();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : t.stocks.errorAdd;
       toast(msg, "warning");
@@ -168,6 +169,7 @@ export default function StocksPage() {
         )
       );
       toast(`${t.stocks.markdownApplied} ${markdownProduct.name} → ${formatCurrency(price)}`, "success");
+      reloadProducts();
       closeMarkdownModal();
     } else {
       // Fallback local
@@ -194,6 +196,7 @@ export default function StocksPage() {
         )
       );
       toast(`${t.stocks.markdownRemoved} ${product.name}`, "success");
+      reloadProducts();
     }
   };
 

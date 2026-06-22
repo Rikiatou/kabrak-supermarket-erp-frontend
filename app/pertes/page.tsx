@@ -34,7 +34,7 @@ interface LossEntry {
 export default function PertesPage() {
   const { t } = useI18n();
   const { toast } = useToast();
-  const { products: apiProducts } = useProducts();
+  const { products: apiProducts, reload: reloadProducts } = useProducts();
   const { adjust, adjusting } = useStockAdjust();
   const products = apiProducts.length > 0 ? apiProducts : mockProducts;
 
@@ -74,6 +74,7 @@ export default function PertesPage() {
     try {
       // Ajuster le stock via le backend
       await adjust(product.id, Math.max(0, product.stock - quantity), `${lossType}: ${reason || t.pertes.lossTypes.loss}`);
+      reloadProducts();
     } catch (e) {
       toast("Erreur lors de l'ajustement du stock", "warning");
       return;

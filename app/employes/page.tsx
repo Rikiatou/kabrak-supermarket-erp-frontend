@@ -114,7 +114,7 @@ function EmployeeCard({
 export default function EmployesPage() {
   const { t } = useI18n();
   const { toast } = useToast();
-  const { employees: apiEmployees } = useEmployees();
+  const { employees: apiEmployees, reload: reloadEmployees } = useEmployees();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [search, setSearch] = useState("");
   const [filterRole, setFilterRole] = useState("All");
@@ -177,6 +177,7 @@ export default function EmployesPage() {
       };
       setEmployees((prev) => [newEmp, ...prev]);
       toast(`${data.firstName} ${data.lastName} added — temporary PIN: ${generatedPin}`, "success");
+      reloadEmployees();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : t.employes.errorAdd;
       toast(msg, "warning");
