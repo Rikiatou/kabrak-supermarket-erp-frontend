@@ -39,8 +39,8 @@ import { STORE_INFO, getStoreInfo } from "./store-info";
 import { useLicense } from "@/lib/license/context";
 
 const TAX_RATE = 0.155;
-// Stable backend category keys (always French in DB) - order matches CATEGORIES labels
-const CATEGORY_KEYS = ["Tous", "Épicerie", "Boissons", "Produits laitiers", "Hygiène", "Boucherie", "Boulangerie", "Surgelés"];
+// Stable backend category keys (match DB seed data) - order matches CATEGORIES labels
+const CATEGORY_KEYS = ["Tous", "Grocery", "Beverages", "Dairy", "Hygiene", "Butchery", "Bakery", "Frozen"];
 
 type PaymentMethod = "cash" | "card" | "mobile" | "split";
 type CheckoutStep = "cart" | "payment" | "receipt";
@@ -1577,6 +1577,14 @@ function ReceiptPanel({
 
 function getCategoryEmoji(category: string): string {
   const map: Record<string, string> = {
+    "Grocery": "🧴",
+    "Beverages": "🥤",
+    "Dairy": "🧀",
+    "Hygiene": "🪥",
+    "Butchery": "🥩",
+    "Bakery": "🍞",
+    "Frozen": "🧊",
+    // Legacy French keys (for existing DB data)
     "Épicerie": "🧴",
     "Boissons": "🥤",
     "Produits laitiers": "🧀",
