@@ -13,7 +13,8 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatCurrency(amount: number, currency = "XAF"): string {
+export function formatCurrency(amount: number | null | undefined, currency = "XAF"): string {
+  if (amount == null || isNaN(amount as number)) return "—";
   const locale = getCurrentLocale();
   return new Intl.NumberFormat(locale === "en-US" ? "en-US" : "fr-CM", {
     style: "currency",
@@ -22,25 +23,33 @@ export function formatCurrency(amount: number, currency = "XAF"): string {
   }).format(amount);
 }
 
-export function formatNumber(value: number): string {
+export function formatNumber(value: number | null | undefined): string {
+  if (value == null || isNaN(value as number)) return "—";
   return new Intl.NumberFormat(getCurrentLocale()).format(value);
 }
 
-export function formatPercent(value: number, decimals = 1): string {
+export function formatPercent(value: number | null | undefined, decimals = 1): string {
+  if (value == null || isNaN(value as number)) return "—";
   return `${value >= 0 ? "+" : ""}${value.toFixed(decimals)}%`;
 }
 
-export function formatDate(date: Date | string): string {
+export function formatDate(date: Date | string | null | undefined): string {
+  if (!date) return "—";
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return "—";
   return new Intl.DateTimeFormat(getCurrentLocale(), {
     day: "2-digit",
     month: "short",
     year: "numeric",
-  }).format(new Date(date));
+  }).format(d);
 }
 
-export function formatTime(date: Date | string): string {
+export function formatTime(date: Date | string | null | undefined): string {
+  if (!date) return "—";
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return "—";
   return new Intl.DateTimeFormat(getCurrentLocale(), {
     hour: "2-digit",
     minute: "2-digit",
-  }).format(new Date(date));
+  }).format(d);
 }
