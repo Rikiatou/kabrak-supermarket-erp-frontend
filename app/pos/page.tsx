@@ -432,8 +432,8 @@ export default function POSPage() {
     if (!printWindow) return;
 
     const now = new Date();
-    const dateStr = now.toLocaleDateString("fr-FR");
-    const timeStr = now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    const dateStr = now.toLocaleDateString("en-GB");
+    const timeStr = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 
     const methodLabel =
       receipt.method === "split"
@@ -524,8 +524,8 @@ export default function POSPage() {
     if (!printWindow) return;
 
     const date = new Date(tx.date);
-    const dateStr = date.toLocaleDateString("fr-FR");
-    const timeStr = date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    const dateStr = date.toLocaleDateString("en-GB");
+    const timeStr = date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 
     const methodLabel =
       tx.paymentMethod === "cash"
@@ -540,7 +540,7 @@ export default function POSPage() {
       .map((item) => {
         const unitPrice = item.unitPrice;
         return `<tr>
-          <td style="font-size:11px;vertical-align:top">${item.product?.name || "Produit"}</td>
+          <td style="font-size:11px;vertical-align:top">${item.product?.name || "Product"}</td>
           <td style="text-align:center;font-size:11px;vertical-align:top">${item.quantity}</td>
           <td style="text-align:right;font-size:11px;vertical-align:top">${formatCurrency(unitPrice)}</td>
           <td style="text-align:right;font-size:11px;vertical-align:top">${formatCurrency(unitPrice * item.quantity)}</td>
@@ -635,7 +635,7 @@ export default function POSPage() {
               <button
                 onClick={() => setShowScanner(true)}
                 className="h-10 px-3 flex items-center gap-1.5 text-xs font-medium text-white bg-emerald-600 border border-emerald-700 rounded-xl hover:bg-emerald-700 transition-colors"
-                title="Scanner avec la caméra"
+                title="Scan with camera"
               >
                 <ScanLine className="w-4 h-4" />
                 <span className="hidden sm:inline">Scanner</span>
@@ -1116,7 +1116,7 @@ function HistoryModal({
                   <div>
                     <p className="text-sm font-medium text-[var(--text-primary)]">{tx.transactionNumber}</p>
                     <p className="text-xs text-[var(--text-muted)]">
-                      {new Date(tx.date).toLocaleString("fr-FR", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })} · {tx.paymentMethod}
+                      {new Date(tx.date).toLocaleString("en-GB", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })} · {tx.paymentMethod}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
@@ -1318,7 +1318,7 @@ function PaymentPanel({
                 cash: t.pos.cash,
                 card: t.pos.card,
                 mobile: t.pos.mobile,
-                split: "Mixte",
+                split: "Mixed",
               };
               const Icon = icons[m];
               return (
@@ -1382,12 +1382,12 @@ function PaymentPanel({
         {paymentMethod === "split" && (
           <div className="space-y-3">
             <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">
-              Répartition du paiement
+              Payment split
             </p>
             {[
-              { key: "cash" as const, label: "Espèces", icon: Banknote },
+              { key: "cash" as const, label: "Cash", icon: Banknote },
               { key: "mobile" as const, label: "Mobile Money", icon: Smartphone },
-              { key: "card" as const, label: "Carte", icon: CreditCard },
+              { key: "card" as const, label: "Card", icon: CreditCard },
             ].map(({ key, label, icon: Icon }) => (
               <div key={key}>
                 <label className="text-xs text-[var(--text-secondary)] flex items-center gap-1.5 mb-1">
@@ -1477,8 +1477,8 @@ function ReceiptPanel({
   const storeInfo = getStoreInfo(licenseConfig);
   const methodLabels: Record<string, string> = { cash: t.pos.cash, card: t.pos.card, mobile: t.pos.mobile, split: t.pos.split };
   const now = new Date();
-  const dateStr = now.toLocaleDateString("fr-FR");
-  const timeStr = now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  const dateStr = now.toLocaleDateString("en-GB");
+  const timeStr = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 
   return (
     <div className="flex flex-col h-full">

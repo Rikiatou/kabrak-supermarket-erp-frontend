@@ -58,7 +58,7 @@ function employeeName(shift: ApiShift, employees: ApiEmployee[]): string {
 }
 
 function formatTime(date: string): string {
-  return new Intl.DateTimeFormat("fr-FR", {
+  return new Intl.DateTimeFormat("en-GB", {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(date));

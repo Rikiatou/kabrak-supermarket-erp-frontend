@@ -48,13 +48,13 @@ import {
 
 // ---- Fallback mock data (used when backend returns nothing) ----
 const mockByDay = [
-  { date: "Lun", revenue: 2_840_000, transactions: 240 },
-  { date: "Mar", revenue: 3_120_000, transactions: 268 },
-  { date: "Mer", revenue: 2_950_000, transactions: 251 },
-  { date: "Jeu", revenue: 3_380_000, transactions: 289 },
-  { date: "Ven", revenue: 3_970_000, transactions: 332 },
-  { date: "Sam", revenue: 4_820_000, transactions: 410 },
-  { date: "Dim", revenue: 3_610_000, transactions: 305 },
+  { date: "Mon", revenue: 2_840_000, transactions: 240 },
+  { date: "Tue", revenue: 3_120_000, transactions: 268 },
+  { date: "Wed", revenue: 2_950_000, transactions: 251 },
+  { date: "Thu", revenue: 3_380_000, transactions: 289 },
+  { date: "Fri", revenue: 3_970_000, transactions: 332 },
+  { date: "Sat", revenue: 4_820_000, transactions: 410 },
+  { date: "Sun", revenue: 3_610_000, transactions: 305 },
 ];
 
 const mockSalesReport = {
@@ -65,11 +65,11 @@ const mockSalesReport = {
 };
 
 const mockByCategory = [
-  { category: "Boissons", revenue: 6_200_000, quantity: 1820 },
-  { category: "Alimentation", revenue: 8_400_000, quantity: 3120 },
-  { category: "Hygiène", revenue: 3_100_000, quantity: 980 },
-  { category: "Maison", revenue: 2_690_000, quantity: 540 },
-  { category: "Autres", revenue: 4_300_000, quantity: 1240 },
+  { category: "Beverages", revenue: 6_200_000, quantity: 1820 },
+  { category: "Grocery", revenue: 8_400_000, quantity: 3120 },
+  { category: "Hygiene", revenue: 3_100_000, quantity: 980 },
+  { category: "Home", revenue: 2_690_000, quantity: 540 },
+  { category: "Other", revenue: 4_300_000, quantity: 1240 },
 ];
 
 const mockByEmployee = [
@@ -80,16 +80,16 @@ const mockByEmployee = [
 ];
 
 const mockTopProducts = [
-  { productId: "1", name: "Bière 33 Export 65cl", quantity: 248, revenue: 223_200 },
-  { productId: "2", name: "Riz Parfumé 25kg", quantity: 87, revenue: 1_914_000 },
-  { productId: "3", name: "Eau Minérale 1.5L", quantity: 412, revenue: 164_800 },
-  { productId: "4", name: "Huile Végétale 5L", quantity: 63, revenue: 346_500 },
-  { productId: "5", name: "Savon Lux 200g", quantity: 185, revenue: 83_250 },
-  { productId: "6", name: "Sucre 1kg", quantity: 156, revenue: 109_200 },
-  { productId: "7", name: "Lait en poudre 400g", quantity: 98, revenue: 215_600 },
-  { productId: "8", name: "Thé Lipton 100s", quantity: 74, revenue: 148_000 },
-  { productId: "9", name: "Pâtes 500g", quantity: 230, revenue: 92_000 },
-  { productId: "10", name: "Café Malongo 200g", quantity: 61, revenue: 170_800 },
+  { productId: "1", name: "Beer 65cl", quantity: 248, revenue: 223_200 },
+  { productId: "2", name: "Scented Rice 25kg", quantity: 87, revenue: 1_914_000 },
+  { productId: "3", name: "Mineral Water 1.5L", quantity: 412, revenue: 164_800 },
+  { productId: "4", name: "Vegetable Oil 5L", quantity: 63, revenue: 346_500 },
+  { productId: "5", name: "Lux Soap 200g", quantity: 185, revenue: 83_250 },
+  { productId: "6", name: "Sugar 1kg", quantity: 156, revenue: 109_200 },
+  { productId: "7", name: "Powdered Milk 400g", quantity: 98, revenue: 215_600 },
+  { productId: "8", name: "Lipton Tea 100s", quantity: 74, revenue: 148_000 },
+  { productId: "9", name: "Pasta 500g", quantity: 230, revenue: 92_000 },
+  { productId: "10", name: "Coffee 200g", quantity: 61, revenue: 170_800 },
 ];
 
 const mockProfit = {
@@ -122,7 +122,7 @@ const RevenueTooltip = ({ active, payload, label }: { active?: boolean; payload?
       <p className="font-semibold text-[var(--text-primary)] mb-1.5">{label}</p>
       {payload.map((p) => (
         <div key={p.name} className="flex justify-between gap-4">
-          <span className="text-[var(--text-muted)]">{p.name === "revenue" ? "CA" : p.name}</span>
+          <span className="text-[var(--text-muted)]">{p.name === "revenue" ? "Revenue" : p.name}</span>
           <span className="font-medium tabular-nums">{formatCurrency(p.value)}</span>
         </div>
       ))}
@@ -182,31 +182,31 @@ export default function RapportsPage() {
     },
     {
       label: "Transactions",
-      value: sales.transactionCount.toLocaleString("fr-FR"),
+      value: sales.transactionCount.toLocaleString(),
       icon: ShoppingCart,
       delta: +11.7,
-      sublabel: "sur la période",
+      sublabel: "for the period",
     },
     {
       label: t.rapports.avgBasket,
       value: formatCurrency(sales.avgBasket),
       icon: TrendingUp,
       delta: +3.2,
-      sublabel: "par transaction",
+      sublabel: "per transaction",
     },
     {
       label: t.rapports.grossProfit,
       value: formatCurrency(profitData.grossProfit),
       icon: BarChart2,
       delta: +5.1,
-      sublabel: `Coût : ${formatCurrency(profitData.totalCost)}`,
+      sublabel: `Cost: ${formatCurrency(profitData.totalCost)}`,
     },
     {
       label: t.rapports.achievementRate,
       value: `${marginPct.toFixed(1)}%`,
       icon: Percent,
       delta: marginPct >= 30 ? +2.4 : -1.2,
-      sublabel: "marge brute",
+      sublabel: "gross margin",
     },
   ];
 
@@ -262,9 +262,9 @@ export default function RapportsPage() {
 
         <div className="flex items-center gap-1 bg-white border border-[var(--border)] rounded-xl p-1 shadow-[var(--shadow-sm)]">
           {[
-            { label: "7j", days: 7 },
-            { label: "30j", days: 30 },
-            { label: "90j", days: 90 },
+            { label: "7d", days: 7 },
+            { label: "30d", days: 30 },
+            { label: "90d", days: 90 },
           ].map((p) => (
             <button
               key={p.label}
@@ -465,7 +465,7 @@ export default function RapportsPage() {
           {[
             {
               label: t.rapports.productCount,
-              value: inventoryData.productCount.toLocaleString("fr-FR"),
+              value: inventoryData.productCount.toLocaleString(),
               icon: Package,
               color: "text-blue-600",
               bg: "bg-blue-50",

@@ -334,7 +334,7 @@ export default function FacturesPage() {
     pdf.setFontSize(10);
     pdf.setFont("helvetica", "normal");
     pdf.text(`N° ${invoice.number}`, pageWidth - margin - 50, 62);
-    pdf.text(`Date: ${new Date(invoice.date).toLocaleDateString("fr-FR")}`, pageWidth - margin - 50, 68);
+    pdf.text(`Date: ${new Date(invoice.date).toLocaleDateString("en-GB")}`, pageWidth - margin - 50, 68);
 
     // Client info box
     pdf.setDrawColor(220, 220, 220);
@@ -467,8 +467,8 @@ export default function FacturesPage() {
                 invoices.map((inv) => ({
                   Numero: inv.number,
                   Client: inv.clientName,
-                  Date: new Date(inv.date).toLocaleDateString("fr-FR"),
-                  Echeance: inv.dueDate ? new Date(inv.dueDate).toLocaleDateString("fr-FR") : "",
+                  Date: new Date(inv.date).toLocaleDateString("en-GB"),
+                  Echeance: inv.dueDate ? new Date(inv.dueDate).toLocaleDateString("en-GB") : "",
                   Total: inv.total,
                   Paye: inv.paidAmount,
                   Solde: inv.total - inv.paidAmount,
@@ -514,7 +514,7 @@ export default function FacturesPage() {
                   <tr key={invoice.id} className="border-b border-[var(--border-subtle)] hover:bg-[var(--surface-hover)] transition-colors">
                     <td className="px-4 py-3 text-sm font-mono font-medium text-[var(--text-primary)]">{invoice.number}</td>
                     <td className="px-4 py-3 text-sm text-[var(--text-secondary)]">{invoice.clientName}</td>
-                    <td className="px-4 py-3 text-xs text-[var(--text-muted)]">{new Date(invoice.date).toLocaleDateString("fr-FR")}</td>
+                    <td className="px-4 py-3 text-xs text-[var(--text-muted)]">{new Date(invoice.date).toLocaleDateString("en-GB")}</td>
                     <td className="px-4 py-3 text-sm font-bold text-[var(--text-primary)] tabular-nums text-right">{formatCurrency(invoice.total)}</td>
                     <td className="px-4 py-3 text-sm tabular-nums text-right text-emerald-600 font-medium">{formatCurrency(invoice.paidAmount)}</td>
                     <td className="px-4 py-3 text-sm tabular-nums text-right font-medium">
@@ -704,7 +704,7 @@ export default function FacturesPage() {
                         <div>
                           <div className="text-sm font-medium text-[var(--text-primary)] tabular-nums">{formatCurrency(p.amount)}</div>
                           <div className="text-xs text-[var(--text-muted)]">
-                            {paymentMethodLabels[p.method] || p.method} · {new Date(p.date).toLocaleDateString("fr-FR")}
+                            {paymentMethodLabels[p.method] || p.method} · {new Date(p.date).toLocaleDateString("en-GB")}
                             {p.note && ` · ${p.note}`}
                           </div>
                         </div>

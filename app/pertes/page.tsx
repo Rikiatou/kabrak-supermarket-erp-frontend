@@ -190,7 +190,7 @@ export default function PertesPage() {
                       <td className="px-4 py-3 text-xs text-[var(--text-secondary)]">{loss.reason}</td>
                       <td className="px-4 py-3 text-sm font-semibold text-red-600 tabular-nums text-right">{formatCurrency(loss.value)}</td>
                       <td className="px-4 py-3 text-xs text-[var(--text-muted)]">
-                        {new Date(loss.date).toLocaleDateString("fr-FR")}
+                        {new Date(loss.date).toLocaleDateString("en-GB")}
                       </td>
                       <td className="px-4 py-3">
                         <button
