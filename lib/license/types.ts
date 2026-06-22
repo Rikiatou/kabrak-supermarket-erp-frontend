@@ -31,6 +31,10 @@ export interface ClientConfig {
   phone?: string;
   email?: string;
   website?: string;
+  rccmNumber?: string;
+  taxNumber?: string;
+  legalForm?: string;
+  capital?: string;
   receiptHeader?: string;
   receiptFooter?: string;
   receiptShowLogo: boolean;

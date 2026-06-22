@@ -392,6 +392,64 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      {/* Legal Information */}
+      <div className="bg-white rounded-xl border border-slate-200 p-6">
+        <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+          <Receipt className="w-5 h-5 text-blue-600" />
+          Legal Information (on invoices)
+        </h2>
+        <div className="grid md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">RCCM / RC Number</label>
+            <input
+              type="text"
+              value={(form as any).rccmNumber || ""}
+              onChange={(e) => handleChange("rccmNumber" as any, e.target.value)}
+              disabled={!canEdit}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50"
+              placeholder="CM/YDE/2024/B/123"
+            />
+            <p className="text-xs text-slate-400 mt-1">Shown on invoice header</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Tax ID / N° Contribuable</label>
+            <input
+              type="text"
+              value={(form as any).taxNumber || ""}
+              onChange={(e) => handleChange("taxNumber" as any, e.target.value)}
+              disabled={!canEdit}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50"
+              placeholder="M0123456789012"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Legal Form</label>
+            <input
+              type="text"
+              value={(form as any).legalForm || ""}
+              onChange={(e) => handleChange("legalForm" as any, e.target.value)}
+              disabled={!canEdit}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50"
+              placeholder="SARL, EURL, SA..."
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Capital</label>
+            <input
+              type="text"
+              value={(form as any).capital || ""}
+              onChange={(e) => handleChange("capital" as any, e.target.value)}
+              disabled={!canEdit}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50"
+              placeholder="5,000,000 FCFA"
+            />
+          </div>
+        </div>
+      </div>
+
       {/* Personnalisation Tickets */}
       <div className="bg-white rounded-xl border border-slate-200 p-6">
         <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
@@ -497,20 +555,6 @@ export default function SettingsPage() {
             <label htmlFor="enableAutoPrint" className="text-sm text-slate-700">
               Auto-print receipts after payment
             </label>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Default VAT rate (%)
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              value={form.taxRate ?? 15.5}
-              onChange={(e) => handleChange("taxRate", parseFloat(e.target.value))}
-              disabled={!canEdit}
-              className="w-32 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50"
-            />
           </div>
         </div>
       </div>

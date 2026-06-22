@@ -22,13 +22,14 @@ import { useI18n } from "@/lib/i18n/context";
 import { useToast } from "@/components/ui/Toast";
 import { formatCurrency, cn } from "@/lib/utils";
 import { exportToCSV } from "@/lib/export";
-import { useInvoices, useCreateInvoice, useUpdateInvoiceStatus, useAddPayment } from "@/lib/hooks/useApi";
+import { useInvoices, useCreateInvoice, useUpdateInvoiceStatus, useAddPayment, useProducts } from "@/lib/hooks/useApi";
 import type { ApiInvoicePayment } from "@/lib/api";
 import jsPDF from "jspdf";
 import QRCode from "qrcode";
 import { useLicense } from "@/lib/license/context";
 
 interface InvoiceItem {
+  productId?: string;
   description: string;
   quantity: number;
   unitPrice: number;
@@ -114,6 +115,9 @@ export default function FacturesPage() {
   const supermarketName = licenseConfig?.supermarketName || "KABRAK MARKET";
   const supermarketAddress = licenseConfig?.address || "KABRAK Retail - Yaounde, Cameroon";
   const supermarketPhone = licenseConfig?.phone ? `Tel: ${licenseConfig.phone}` : "Tel: +237 6XX XXX XXX";
+  const logoUrl = licenseConfig?.logoUrl || "";
+  const rccmNumber = (licenseConfig as any)?.rccmNumber || "";
+  const taxNumber = (licenseConfig as any)?.taxNumber || "";
   const invoiceFooter = licenseConfig?.invoiceFooter || `${supermarketName} - ${supermarketAddress} - ${supermarketPhone}`;
 
   const statusConfig: Record<string, { label: string; color: string }> = {
@@ -136,6 +140,7 @@ export default function FacturesPage() {
   const { create: createInvoice, creating: creatingInvoice } = useCreateInvoice();
   const { update: updateStatus } = useUpdateInvoiceStatus();
   const { addPayment, adding: addingPayment } = useAddPayment();
+  const { products } = useProducts();
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
@@ -198,9 +203,24 @@ export default function FacturesPage() {
   const addItem = () => setItems([...items, { description: "", quantity: 1, unitPrice: 0, total: 0 }]);
   const removeItem = (idx: number) => setItems(items.filter((_, i) => i !== idx));
 
+  // When a product is selected from dropdown, auto-fill the line
+  const selectProduct = (idx: number, productId: string) => {
+    const product = products.find((p) => p.id === productId);
+    if (!product) return;
+    const newItems = [...items];
+    newItems[idx] = {
+      productId: product.id,
+      description: product.name,
+      quantity: 1,
+      unitPrice: product.price,
+      total: product.price,
+    };
+    setItems(newItems);
+  };
+
   const subtotal = items.reduce((s, i) => s + i.total, 0);
-  const tax = Math.round(subtotal * 0.155);
-  const total = subtotal + tax;
+  const tax = 0; // No tax — removed per client request
+  const total = subtotal;
 
   const handleCreate = async () => {
     if (!clientName || items.length === 0) return;
@@ -213,6 +233,7 @@ export default function FacturesPage() {
         description: it.description,
         quantity: it.quantity,
         unitPrice: it.unitPrice,
+        productId: it.productId,
       })),
     });
     if (result) {
@@ -307,202 +328,320 @@ export default function FacturesPage() {
   const generatePDF = async (invoice: Invoice) => {
     const pdf = new jsPDF();
     const pageWidth = pdf.internal.pageSize.getWidth();
-    const margin = 20;
+    const margin = 14;
+    const contentWidth = pageWidth - 2 * margin;
 
-    // Header band
+    // ── Header band ──
     pdf.setFillColor(30, 64, 175);
-    pdf.rect(0, 0, pageWidth, 40, "F");
+    pdf.rect(0, 0, pageWidth, 36, "F");
 
-    // Logo / Company name
-    pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(22);
-    pdf.setFont("helvetica", "bold");
-    pdf.text(supermarketName, margin, 20);
-    pdf.setFontSize(10);
-    pdf.setFont("helvetica", "normal");
-    pdf.text(supermarketAddress, margin, 28);
-    pdf.text(`${supermarketPhone} | N° RC: CM/YDE/2024/B/123`, margin, 34);
-
-    // Invoice title
-    pdf.setTextColor(30, 64, 175);
-    pdf.setFontSize(28);
-    pdf.setFont("helvetica", "bold");
-    pdf.text("INVOICE", pageWidth - margin - 50, 55);
-
-    // Invoice info
-    pdf.setTextColor(100, 100, 100);
-    pdf.setFontSize(10);
-    pdf.setFont("helvetica", "normal");
-    pdf.text(`N° ${invoice.number}`, pageWidth - margin - 50, 62);
-    pdf.text(`Date: ${new Date(invoice.date).toLocaleDateString("en-GB")}`, pageWidth - margin - 50, 68);
-    if (invoice.dueDate) {
-      pdf.text(`Due: ${new Date(invoice.dueDate).toLocaleDateString("en-GB")}`, pageWidth - margin - 50, 74);
+    // Logo (if available) or company name
+    let headerTextX = margin;
+    if (logoUrl) {
+      try {
+        // Fetch logo and convert to data URL if it's a URL
+        let logoDataUrl = logoUrl;
+        if (logoUrl.startsWith("http")) {
+          const response = await fetch(logoUrl);
+          const blob = await response.blob();
+          logoDataUrl = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(blob);
+          });
+        }
+        const imgFormat = logoDataUrl.includes("image/png") ? "PNG" : "JPEG";
+        pdf.addImage(logoDataUrl, imgFormat, margin, 6, 24, 24);
+        headerTextX = margin + 30;
+      } catch {}
     }
 
-    // Client info box
+    // Company name + info
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(16);
+    pdf.setFont("helvetica", "bold");
+    pdf.text(supermarketName, headerTextX, 14);
+    pdf.setFontSize(8);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(supermarketAddress, headerTextX, 20);
+    pdf.text(supermarketPhone, headerTextX, 25);
+    if (rccmNumber) pdf.text(`RC: ${rccmNumber}`, headerTextX, 30);
+    if (taxNumber) pdf.text(`Tax ID: ${taxNumber}`, headerTextX + 60, 30);
+
+    // ── Invoice title + info (right side) ──
+    pdf.setTextColor(30, 64, 175);
+    pdf.setFontSize(20);
+    pdf.setFont("helvetica", "bold");
+    pdf.text("INVOICE", pageWidth - margin - 35, 48);
+    pdf.setTextColor(100, 100, 100);
+    pdf.setFontSize(9);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(`N° ${invoice.number}`, pageWidth - margin - 35, 54);
+    pdf.text(`Date: ${new Date(invoice.date).toLocaleDateString("en-GB")}`, pageWidth - margin - 35, 60);
+    if (invoice.dueDate) {
+      pdf.text(`Due: ${new Date(invoice.dueDate).toLocaleDateString("en-GB")}`, pageWidth - margin - 35, 66);
+    }
+
+    // ── Client info box ──
+    const clientBoxY = 78;
     pdf.setDrawColor(220, 220, 220);
     pdf.setFillColor(248, 250, 252);
-    pdf.roundedRect(margin, 80, pageWidth - 2 * margin, 35, 3, 3, "FD");
+    pdf.roundedRect(margin, clientBoxY, contentWidth, 28, 2, 2, "FD");
     pdf.setTextColor(60, 60, 60);
-    pdf.setFontSize(9);
+    pdf.setFontSize(8);
     pdf.setFont("helvetica", "bold");
-    pdf.text("BILLED TO:", margin + 5, 88);
-    pdf.setFontSize(11);
-    pdf.text(invoice.clientName, margin + 5, 96);
+    pdf.text("BILLED TO:", margin + 4, clientBoxY + 7);
+    pdf.setFontSize(10);
+    pdf.text(invoice.clientName, margin + 4, clientBoxY + 14);
     pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(9);
-    pdf.text(invoice.clientPhone, margin + 5, 103);
-    if (invoice.clientEmail) pdf.text(invoice.clientEmail, margin + 5, 108);
+    pdf.setFontSize(8);
+    pdf.text(invoice.clientPhone, margin + 4, clientBoxY + 20);
+    if (invoice.clientEmail) pdf.text(invoice.clientEmail, margin + 4, clientBoxY + 25);
 
     // QR Code (right side of client box)
     try {
-      const qrData = `FACTURE:${invoice.number};TOTAL:${invoice.total};CLIENT:${invoice.clientName}`;
-      const qrDataUrl = await QRCode.toDataURL(qrData, { width: 80, margin: 1 });
-      pdf.addImage(qrDataUrl, "PNG", pageWidth - margin - 25, 82, 22, 22);
+      const qrData = `INV:${invoice.number};TOTAL:${invoice.total};CLIENT:${invoice.clientName}`;
+      const qrDataUrl = await QRCode.toDataURL(qrData, { width: 60, margin: 1 });
+      pdf.addImage(qrDataUrl, "PNG", pageWidth - margin - 22, clientBoxY + 3, 18, 18);
     } catch {}
 
-    // Items table
-    const tableY = 130;
-    pdf.setFillColor(30, 64, 175);
-    pdf.rect(margin, tableY, pageWidth - 2 * margin, 10, "F");
-    pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(9);
-    pdf.setFont("helvetica", "bold");
-    pdf.text("Description", margin + 5, tableY + 7);
-    pdf.text("Qty", margin + 110, tableY + 7, { align: "center" });
-    pdf.text("Prix unit.", margin + 135, tableY + 7, { align: "right" });
-    pdf.text("Total", pageWidth - margin - 5, tableY + 7, { align: "right" });
+    // ── Items table ──
+    const tableY = 118;
+    const colDesc = margin + 4;
+    const colQty = margin + 115;
+    const colPrice = margin + 145;
+    const colTotal = pageWidth - margin - 4;
 
-    let y = tableY + 18;
+    // Header row
+    pdf.setFillColor(30, 64, 175);
+    pdf.rect(margin, tableY, contentWidth, 8, "F");
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(8);
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Description", colDesc, tableY + 5.5);
+    pdf.text("Qty", colQty, tableY + 5.5, { align: "center" });
+    pdf.text("Unit Price", colPrice, tableY + 5.5, { align: "right" });
+    pdf.text("Total", colTotal, tableY + 5.5, { align: "right" });
+
+    // Item rows
+    let y = tableY + 14;
     pdf.setTextColor(50, 50, 50);
     pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(9);
     invoice.items.forEach((item, idx) => {
       if (idx > 0) {
         pdf.setDrawColor(235, 235, 235);
-        pdf.line(margin, y - 5, pageWidth - margin, y - 5);
+        pdf.line(margin, y - 4, pageWidth - margin, y - 4);
       }
-      pdf.text(item.description.substring(0, 50), margin + 5, y);
-      pdf.text(String(item.quantity), margin + 110, y, { align: "center" });
-      pdf.text(formatCurrency(item.unitPrice), margin + 135, y, { align: "right" });
+      // Description (truncate to fit)
+      pdf.text(item.description.substring(0, 55), colDesc, y);
+      // Quantity
+      pdf.text(String(item.quantity), colQty, y, { align: "center" });
+      // Unit price
+      pdf.text(formatCurrency(item.unitPrice), colPrice, y, { align: "right" });
+      // Total
       pdf.setFont("helvetica", "bold");
-      pdf.text(formatCurrency(item.total), pageWidth - margin - 5, y, { align: "right" });
+      pdf.text(formatCurrency(item.total), colTotal, y, { align: "right" });
       pdf.setFont("helvetica", "normal");
-      y += 10;
+      y += 9;
     });
 
-    // Totals
-    y += 10;
+    // ── Totals (no tax) ──
+    y += 6;
     pdf.setDrawColor(200, 200, 200);
     pdf.line(margin + 90, y, pageWidth - margin, y);
-    y += 8;
+    y += 7;
     pdf.setFontSize(10);
-    pdf.text("Subtotal:", margin + 95, y);
-    pdf.text(formatCurrency(invoice.subtotal), pageWidth - margin - 5, y, { align: "right" });
-    y += 8;
-    pdf.text("TVA (15.5%):", margin + 95, y);
-    pdf.text(formatCurrency(invoice.tax), pageWidth - margin - 5, y, { align: "right" });
-    y += 10;
-    pdf.setFillColor(30, 64, 175);
-    pdf.rect(margin + 90, y - 6, pageWidth - margin - 90, 12, "F");
-    pdf.setTextColor(255, 255, 255);
+    pdf.text("Total:", margin + 95, y);
     pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(12);
-    pdf.text("TOTAL TTC:", margin + 95, y + 2);
-    pdf.text(formatCurrency(invoice.total), pageWidth - margin - 5, y + 2, { align: "right" });
+    pdf.text(formatCurrency(invoice.total), pageWidth - margin - 4, y, { align: "right" });
+    pdf.setFont("helvetica", "normal");
 
-    // ── Payment summary (paid + balance) ──
-    y += 18;
+    // ── Payment summary ──
+    y += 12;
     pdf.setDrawColor(200, 200, 200);
     pdf.line(margin + 90, y, pageWidth - margin, y);
-    y += 8;
-    pdf.setFontSize(10);
-    pdf.setFont("helvetica", "normal");
-    pdf.setTextColor(50, 50, 50);
+    y += 7;
+    pdf.setFontSize(9);
 
     // Paid amount
     pdf.text("Amount paid:", margin + 95, y);
-    pdf.setTextColor(22, 163, 74); // emerald
+    pdf.setTextColor(22, 163, 74);
     pdf.setFont("helvetica", "bold");
-    pdf.text(formatCurrency(invoice.paidAmount), pageWidth - margin - 5, y, { align: "right" });
-    y += 8;
+    pdf.text(formatCurrency(invoice.paidAmount), pageWidth - margin - 4, y, { align: "right" });
+    y += 7;
 
     // Balance
     pdf.setFont("helvetica", "normal");
     pdf.setTextColor(50, 50, 50);
     pdf.text("Balance due:", margin + 95, y);
-    if (invoice.balance > 0) {
-      pdf.setTextColor(220, 38, 38); // red
-    } else {
-      pdf.setTextColor(22, 163, 74); // emerald
-    }
+    pdf.setTextColor(invoice.balance > 0 ? 220 : 22, invoice.balance > 0 ? 38 : 163, invoice.balance > 0 ? 38 : 74);
     pdf.setFont("helvetica", "bold");
-    pdf.text(formatCurrency(invoice.balance), pageWidth - margin - 5, y, { align: "right" });
-    y += 8;
+    pdf.text(formatCurrency(invoice.balance), pageWidth - margin - 4, y, { align: "right" });
+    y += 7;
 
-    // Status badge
+    // Status
     pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(9);
+    pdf.setFontSize(8);
     pdf.setTextColor(100, 100, 100);
     pdf.text(`Status: ${invoice.status.toUpperCase()}`, margin + 95, y);
 
-    // ── Payment history table (if any payments) ──
+    // ── Payment history ──
     if (invoice.payments.length > 0) {
-      y += 12;
+      y += 10;
       pdf.setFillColor(248, 250, 252);
-      pdf.rect(margin, y - 4, pageWidth - 2 * margin, 8, "F");
+      pdf.rect(margin, y - 3, contentWidth, 7, "F");
       pdf.setTextColor(60, 60, 60);
       pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(9);
-      pdf.text("PAYMENT HISTORY", margin + 5, y + 1);
-      y += 10;
-
-      // Header row
       pdf.setFontSize(8);
-      pdf.text("Date", margin + 5, y);
-      pdf.text("Method", margin + 60, y);
-      pdf.text("Amount", pageWidth - margin - 5, y, { align: "right" });
-      y += 5;
+      pdf.text("PAYMENT HISTORY", margin + 4, y + 2);
+      y += 9;
+
+      pdf.setFontSize(7);
+      pdf.text("Date", margin + 4, y);
+      pdf.text("Method", margin + 55, y);
+      pdf.text("Amount", pageWidth - margin - 4, y, { align: "right" });
+      y += 4;
       pdf.setDrawColor(220, 220, 220);
       pdf.line(margin, y, pageWidth - margin, y);
-      y += 7;
+      y += 6;
 
-      // Payment rows
       pdf.setFont("helvetica", "normal");
       pdf.setTextColor(80, 80, 80);
       invoice.payments.forEach((p) => {
-        pdf.text(new Date(p.date).toLocaleDateString("en-GB"), margin + 5, y);
-        pdf.text(paymentMethodLabels[p.method] || p.method, margin + 60, y);
+        pdf.text(new Date(p.date).toLocaleDateString("en-GB"), margin + 4, y);
+        pdf.text(paymentMethodLabels[p.method] || p.method, margin + 55, y);
         pdf.setFont("helvetica", "bold");
-        pdf.text(formatCurrency(p.amount), pageWidth - margin - 5, y, { align: "right" });
+        pdf.text(formatCurrency(p.amount), pageWidth - margin - 4, y, { align: "right" });
         pdf.setFont("helvetica", "normal");
         if (p.note) {
-          y += 5;
-          pdf.setFontSize(7);
+          y += 4;
+          pdf.setFontSize(6);
           pdf.setTextColor(150, 150, 150);
-          pdf.text(`  Note: ${p.note.substring(0, 60)}`, margin + 5, y);
-          pdf.setFontSize(8);
+          pdf.text(`  ${p.note.substring(0, 60)}`, margin + 4, y);
+          pdf.setFontSize(7);
           pdf.setTextColor(80, 80, 80);
         }
-        y += 8;
+        y += 7;
       });
     }
 
-    // Footer
-    y = Math.max(y + 10, 250);
+    // ── Footer ──
+    y = Math.max(y + 10, 245);
     pdf.setTextColor(150, 150, 150);
-    pdf.setFontSize(8);
+    pdf.setFontSize(7);
     pdf.setFont("helvetica", "normal");
     pdf.text("Thank you for your business!", pageWidth / 2, y, { align: "center" });
-    pdf.text(invoiceFooter, pageWidth / 2, y + 6, { align: "center" });
-    pdf.text("Payment terms: 30 days. Disputes: Commercial Court of Yaounde.", pageWidth / 2, y + 12, { align: "center" });
+    pdf.text(invoiceFooter, pageWidth / 2, y + 5, { align: "center" });
 
-    // Signature area
+    // Signature
     pdf.setDrawColor(180, 180, 180);
-    pdf.line(margin, y + 25, margin + 50, y + 25);
-    pdf.text("Signature & stamp", margin + 5, y + 32);
+    pdf.line(margin, y + 20, margin + 45, y + 20);
+    pdf.text("Signature & stamp", margin + 2, y + 26);
 
     pdf.save(`${invoice.number}.pdf`);
     toast(`${t.factures.pdfGenerated} ${invoice.number}.pdf`, "success");
+  };
+
+  // ── Print invoice via browser ──
+  const printInvoice = (invoice: Invoice) => {
+    const win = window.open("", "_blank", "width=800,height=600");
+    if (!win) {
+      toast("Please allow popups to print", "warning");
+      return;
+    }
+    const itemsHtml = invoice.items.map((item) => `
+      <tr>
+        <td>${item.description}</td>
+        <td style="text-align:center">${item.quantity}</td>
+        <td style="text-align:right">${formatCurrency(item.unitPrice)}</td>
+        <td style="text-align:right;font-weight:bold">${formatCurrency(item.total)}</td>
+      </tr>
+    `).join("");
+
+    const paymentsHtml = invoice.payments.length > 0 ? `
+      <h3 style="margin-top:20px;font-size:11px;color:#666">PAYMENT HISTORY</h3>
+      <table class="pay-table">
+        <thead><tr><th>Date</th><th>Method</th><th style="text-align:right">Amount</th></tr></thead>
+        <tbody>
+          ${invoice.payments.map((p) => `
+            <tr>
+              <td>${new Date(p.date).toLocaleDateString("en-GB")}</td>
+              <td>${paymentMethodLabels[p.method] || p.method}</td>
+              <td style="text-align:right;font-weight:bold">${formatCurrency(p.amount)}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    ` : "";
+
+    win.document.write(`
+      <html><head><title>Invoice ${invoice.number}</title>
+      <style>
+        * { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+        body { padding: 20px; color: #333; }
+        .header { display: flex; justify-content: space-between; border-bottom: 3px solid #1e40af; padding-bottom: 15px; margin-bottom: 20px; }
+        .company { font-size: 18px; font-weight: bold; color: #1e40af; }
+        .company-info { font-size: 11px; color: #666; margin-top: 3px; }
+        .invoice-title { font-size: 24px; font-weight: bold; color: #1e40af; text-align: right; }
+        .invoice-info { font-size: 11px; color: #666; text-align: right; margin-top: 5px; }
+        .client-box { background: #f8fafc; border: 1px solid #ddd; border-radius: 5px; padding: 12px; margin-bottom: 20px; font-size: 12px; }
+        .client-box b { font-size: 13px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+        th { background: #1e40af; color: white; padding: 8px; font-size: 11px; text-align: left; }
+        td { padding: 8px; border-bottom: 1px solid #eee; font-size: 12px; }
+        .totals { margin-left: auto; width: 250px; font-size: 12px; }
+        .totals td { border: none; padding: 4px 8px; }
+        .total-row { background: #1e40af; color: white; font-weight: bold; font-size: 14px; }
+        .pay-table th { background: #f1f5f9; color: #333; font-size: 10px; }
+        .pay-table td { font-size: 11px; }
+        .status { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase; }
+        .status-paid { background: #d1fae5; color: #065f46; }
+        .status-partial { background: #fef3c7; color: #92400e; }
+        .footer { margin-top: 30px; text-align: center; font-size: 10px; color: #999; border-top: 1px solid #eee; padding-top: 10px; }
+        .signature { margin-top: 30px; border-top: 1px solid #ccc; width: 200px; padding-top: 5px; font-size: 10px; color: #999; }
+        @media print { body { padding: 10px; } }
+      </style></head><body>
+        <div class="header">
+          <div>
+            ${logoUrl ? `<img src="${logoUrl}" style="max-height:50px;margin-bottom:5px"/><br/>` : ""}
+            <div class="company">${supermarketName}</div>
+            <div class="company-info">${supermarketAddress}</div>
+            <div class="company-info">${supermarketPhone}</div>
+            ${rccmNumber ? `<div class="company-info">RC: ${rccmNumber}</div>` : ""}
+            ${taxNumber ? `<div class="company-info">Tax ID: ${taxNumber}</div>` : ""}
+          </div>
+          <div>
+            <div class="invoice-title">INVOICE</div>
+            <div class="invoice-info">N° ${invoice.number}</div>
+            <div class="invoice-info">Date: ${new Date(invoice.date).toLocaleDateString("en-GB")}</div>
+            ${invoice.dueDate ? `<div class="invoice-info">Due: ${new Date(invoice.dueDate).toLocaleDateString("en-GB")}</div>` : ""}
+          </div>
+        </div>
+        <div class="client-box">
+          <b>BILLED TO:</b><br/>
+          <b>${invoice.clientName}</b><br/>
+          ${invoice.clientPhone}<br/>
+          ${invoice.clientEmail || ""}
+        </div>
+        <table>
+          <thead><tr><th>Description</th><th style="text-align:center">Qty</th><th style="text-align:right">Unit Price</th><th style="text-align:right">Total</th></tr></thead>
+          <tbody>${itemsHtml}</tbody>
+        </table>
+        <table class="totals">
+          <tr class="total-row"><td>TOTAL</td><td style="text-align:right">${formatCurrency(invoice.total)}</td></tr>
+          <tr><td>Amount paid</td><td style="text-align:right;color:#16a34a;font-weight:bold">${formatCurrency(invoice.paidAmount)}</td></tr>
+          <tr><td>Balance due</td><td style="text-align:right;color:${invoice.balance > 0 ? '#dc2626' : '#16a34a'};font-weight:bold">${formatCurrency(invoice.balance)}</td></tr>
+          <tr><td colspan="2" style="text-align:right"><span class="status status-${invoice.status}">${invoice.status}</span></td></tr>
+        </table>
+        ${paymentsHtml}
+        <div class="signature">Signature & stamp</div>
+        <div class="footer">${invoiceFooter}</div>
+      </body></html>
+    `);
+    win.document.close();
+    win.focus();
+    setTimeout(() => win.print(), 500);
   };
 
   const sendWhatsApp = (invoice: Invoice) => {
@@ -608,8 +747,11 @@ export default function FacturesPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-1">
-                        <button onClick={() => openPaymentModal(invoice)} title="Suivi paiement" className="p-1.5 hover:bg-amber-50 rounded-lg transition-colors">
+                        <button onClick={() => openPaymentModal(invoice)} title={t.factures.paymentTracking} className="p-1.5 hover:bg-amber-50 rounded-lg transition-colors">
                           <Wallet className="w-4 h-4 text-amber-600" />
+                        </button>
+                        <button onClick={() => printInvoice(invoice)} title="Print" className="p-1.5 hover:bg-blue-50 rounded-lg transition-colors">
+                          <Printer className="w-4 h-4 text-blue-500" />
                         </button>
                         <button onClick={() => generatePDF(invoice)} title="PDF" className="p-1.5 hover:bg-red-50 rounded-lg transition-colors">
                           <FileText className="w-4 h-4 text-red-500" />
@@ -659,41 +801,78 @@ export default function FacturesPage() {
               </div>
             </div>
 
-            {/* Items */}
+            {/* Items — product picker from stock */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">{t.common.product}s</label>
                 <button onClick={addItem} className="text-xs text-[var(--brand)] font-medium hover:underline">+ {t.factures.addItem}</button>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {items.map((item, idx) => (
-                  <div key={idx} className="flex gap-2 items-start">
-                    <input
-                      value={item.description}
-                      onChange={(e) => updateItem(idx, "description", e.target.value)}
-                      placeholder={t.common.description}
-                      className="flex-1 px-3 py-2 border border-[var(--border)] rounded-lg text-sm outline-none focus:border-[var(--brand)]"
-                    />
-                    <input
-                      type="number"
-                      value={item.quantity}
-                      onChange={(e) => updateItem(idx, "quantity", parseInt(e.target.value) || 0)}
-                      placeholder={t.common.quantity}
-                      className="w-16 px-2 py-2 border border-[var(--border)] rounded-lg text-sm tabular-nums text-center outline-none focus:border-[var(--brand)]"
-                    />
-                    <input
-                      type="number"
-                      value={item.unitPrice}
-                      onChange={(e) => updateItem(idx, "unitPrice", parseInt(e.target.value) || 0)}
-                      placeholder={t.common.price}
-                      className="w-24 px-2 py-2 border border-[var(--border)] rounded-lg text-sm tabular-nums text-right outline-none focus:border-[var(--brand)]"
-                    />
-                    <span className="w-28 text-right text-sm font-semibold tabular-nums py-2">{formatCurrency(item.total)}</span>
-                    {items.length > 1 && (
-                      <button onClick={() => removeItem(idx)} className="p-2 hover:bg-red-50 rounded-lg">
-                        <X className="w-3.5 h-3.5 text-[var(--text-muted)] hover:text-red-500" />
-                      </button>
-                    )}
+                  <div key={idx} className="border border-[var(--border)] rounded-xl p-3 space-y-2">
+                    {/* Row 1: Product selector dropdown */}
+                    <div className="flex gap-2 items-center">
+                      <select
+                        value={item.productId || ""}
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            selectProduct(idx, e.target.value);
+                          } else {
+                            updateItem(idx, "productId", "");
+                            updateItem(idx, "description", "");
+                            updateItem(idx, "unitPrice", 0);
+                            updateItem(idx, "total", 0);
+                          }
+                        }}
+                        className="flex-1 px-3 py-2 border border-[var(--border)] rounded-lg text-sm outline-none focus:border-[var(--brand)] bg-white"
+                      >
+                        <option value="">— {t.common.search} {t.common.product} —</option>
+                        {products
+                          .map((p) => (
+                            <option key={p.id} value={p.id} disabled={p.stock <= 0}>
+                              {p.name} ({p.sku}) — {formatCurrency(p.price)} · Stock: {p.stock} {p.unit}
+                            </option>
+                          ))}
+                      </select>
+                      {items.length > 1 && (
+                        <button onClick={() => removeItem(idx)} className="p-2 hover:bg-red-50 rounded-lg shrink-0">
+                          <X className="w-3.5 h-3.5 text-[var(--text-muted)] hover:text-red-500" />
+                        </button>
+                      )}
+                    </div>
+                    {/* Row 2: Qty, unit price, total (auto-filled but editable) */}
+                    <div className="flex gap-2 items-center">
+                      <input
+                        value={item.description}
+                        onChange={(e) => updateItem(idx, "description", e.target.value)}
+                        placeholder={t.common.description}
+                        className="flex-1 px-3 py-2 border border-[var(--border)] rounded-lg text-sm outline-none focus:border-[var(--brand)]"
+                      />
+                      <input
+                        type="number"
+                        value={item.quantity}
+                        onChange={(e) => updateItem(idx, "quantity", parseInt(e.target.value) || 0)}
+                        placeholder={t.common.quantity}
+                        className="w-16 px-2 py-2 border border-[var(--border)] rounded-lg text-sm tabular-nums text-center outline-none focus:border-[var(--brand)]"
+                      />
+                      <input
+                        type="number"
+                        value={item.unitPrice}
+                        onChange={(e) => updateItem(idx, "unitPrice", parseInt(e.target.value) || 0)}
+                        placeholder={t.common.price}
+                        className="w-24 px-2 py-2 border border-[var(--border)] rounded-lg text-sm tabular-nums text-right outline-none focus:border-[var(--brand)]"
+                      />
+                      <span className="w-28 text-right text-sm font-semibold tabular-nums py-2">{formatCurrency(item.total)}</span>
+                    </div>
+                    {/* Stock warning */}
+                    {item.productId && (() => {
+                      const p = products.find((pr) => pr.id === item.productId);
+                      if (!p) return null;
+                      if (item.quantity > p.stock) {
+                        return <p className="text-xs text-red-500">⚠ {t.stocks.noHistory}: stock = {p.stock} {p.unit}</p>;
+                      }
+                      return <p className="text-xs text-[var(--text-muted)]">Stock: {p.stock} {p.unit} → {p.stock - item.quantity} {t.common.after}</p>;
+                    })()}
                   </div>
                 ))}
               </div>
@@ -701,14 +880,6 @@ export default function FacturesPage() {
 
             {/* Totals */}
             <div className="bg-slate-50 rounded-xl p-4 space-y-1.5 text-sm">
-              <div className="flex justify-between text-[var(--text-muted)]">
-                <span>{t.factures.subtotal}</span>
-                <span className="tabular-nums">{formatCurrency(subtotal)}</span>
-              </div>
-              <div className="flex justify-between text-[var(--text-muted)]">
-                <span>{t.factures.tax}</span>
-                <span className="tabular-nums">{formatCurrency(tax)}</span>
-              </div>
               <div className="flex justify-between font-bold text-base pt-1 border-t border-[var(--border)]">
                 <span>{t.factures.total}</span>
                 <span className="tabular-nums text-[var(--brand)]">{formatCurrency(total)}</span>

@@ -76,6 +76,7 @@ export const translations = {
       value: "Valeur",
       days: "jours",
       units: "unités",
+      after: "après",
       // Days of week
       monday: "Lundi",
       tuesday: "Mardi",
@@ -1047,6 +1048,7 @@ export const translations = {
       value: "Value",
       days: "days",
       units: "units",
+      after: "after",
       monday: "Monday",
       tuesday: "Tuesday",
       wednesday: "Wednesday",
