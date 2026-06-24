@@ -6,13 +6,45 @@ import jsPDF from "jspdf";
 import { useI18n } from "@/lib/i18n/context";
 import { cn } from "@/lib/utils";
 
+// Contact info
+const CONTACT = {
+  email: "contact@kabrakeng.com",
+  phone: "+237 653 561 862",
+  whatsapp: "+237 653 561 862",
+  facebook: "Kabrak Eng",
+  website: "www.kabrakeng.com",
+};
+
 export default function PropositionPage() {
   const [generating, setGenerating] = useState(false);
   const { locale, setLocale, t } = useI18n();
   const p = t.proposition;
 
-  const generatePDF = () => {
+  const generatePDF = async () => {
     setGenerating(true);
+
+    // Load logo image
+    let logoDataUrl: string | null = null;
+    try {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      logoDataUrl = await new Promise<string>((resolve, reject) => {
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) return reject(new Error("no ctx"));
+          ctx.drawImage(img, 0, 0);
+          resolve(canvas.toDataURL("image/jpeg", 0.9));
+        };
+        img.onerror = reject;
+        img.src = "/kabrak-logo.jpeg";
+      });
+    } catch {
+      // Logo failed to load — continue without it
+    }
+
     const pdf = new jsPDF({ unit: "mm", format: "a4" });
     const pageWidth = 210;
     const pageHeight = 297;
@@ -23,25 +55,38 @@ export default function PropositionPage() {
     pdf.setFillColor(15, 23, 42);
     pdf.rect(0, 0, pageWidth, 35, "F");
 
+    // Logo in header
+    if (logoDataUrl) {
+      try {
+        pdf.addImage(logoDataUrl, "JPEG", margin, 6, 14, 14);
+      } catch {}
+    }
+
+    // Company name next to logo
     pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(22);
+    pdf.setFontSize(20);
     pdf.setFont("helvetica", "bold");
-    pdf.text("KABRAK", margin, 18);
-    pdf.setFontSize(9);
+    pdf.text("KABRAK", margin + 18, 14);
+    pdf.setFontSize(8);
     pdf.setFont("helvetica", "normal");
     pdf.setTextColor(148, 163, 184);
-    pdf.text("Retail Management Solutions", margin, 24);
-    pdf.text("contact@kabrak.cm  |  +237 6 XX XXX XXX", margin, 29);
+    pdf.text("Retail Management Solutions", margin + 18, 19);
 
+    // Contact info
+    pdf.setFontSize(7.5);
+    pdf.text(`${CONTACT.email}  |  ${CONTACT.phone} (appel & WhatsApp)`, margin + 18, 24);
+    pdf.text(`${CONTACT.facebook}  |  ${CONTACT.website}`, margin + 18, 28.5);
+
+    // Document title (right side)
     pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(11);
     pdf.setFont("helvetica", "bold");
-    pdf.text(p.pdfTitle, pageWidth - margin - 55, 18);
+    pdf.text(p.pdfTitle, pageWidth - margin - 55, 14);
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(8);
     const refText = `${p.pdfRef}: PROP-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`;
-    pdf.text(refText, pageWidth - margin - 55, 24);
-    pdf.text(`${p.pdfDate}: ${new Date().toLocaleDateString(locale === "fr" ? "fr-FR" : "en-GB")}`, pageWidth - margin - 55, 29);
+    pdf.text(refText, pageWidth - margin - 55, 19);
+    pdf.text(`${p.pdfDate}: ${new Date().toLocaleDateString(locale === "fr" ? "fr-FR" : "en-GB")}`, pageWidth - margin - 55, 24);
 
     // ── Introduction ──
     let y = 48;
@@ -160,6 +205,10 @@ export default function PropositionPage() {
     pdf.rect(margin, tableY, contentWidth, y - tableY);
 
     // ── Section 3: Frais de demarrage ──
+    if (y > pageHeight - 60) {
+      pdf.addPage();
+      y = margin;
+    }
     y += 10;
     pdf.setFillColor(30, 64, 175);
     pdf.roundedRect(margin, y, contentWidth, 8, 1.5, 1.5, "F");
@@ -197,6 +246,10 @@ export default function PropositionPage() {
     y += 15;
 
     // ── Section 4: Inclus dans la license ──
+    if (y > pageHeight - 50) {
+      pdf.addPage();
+      y = margin;
+    }
     y += 4;
     pdf.setFillColor(236, 253, 245);
     pdf.roundedRect(margin, y, contentWidth, 8, 1.5, 1.5, "F");
@@ -259,12 +312,12 @@ export default function PropositionPage() {
     pdf.line(margin, y, pageWidth - margin, y);
     y += 5;
     pdf.setTextColor(100, 116, 139);
-    pdf.setFontSize(8);
+    pdf.setFontSize(7.5);
     pdf.setFont("helvetica", "normal");
-    pdf.text("KABRAK Retail  |  contact@kabrak.cm  |  +237 6 XX XXX XXX", margin, y);
-    pdf.text(p.pdfValid30, pageWidth - margin - 50, y);
+    pdf.text(`${CONTACT.email}  |  ${CONTACT.phone} (appel & WhatsApp)  |  ${CONTACT.facebook}  |  ${CONTACT.website}`, margin, y);
     y += 4;
-    pdf.text(p.pdfPoweredBy, margin, y);
+    pdf.text(p.pdfValid30, margin, y);
+    pdf.text(p.pdfPoweredBy, pageWidth - margin - 45, y);
 
     const fileName = locale === "fr"
       ? "KABRAK_Proposition_Commerciale.pdf"
