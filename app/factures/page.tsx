@@ -661,8 +661,8 @@ export default function FacturesPage() {
     <AppShell title={t.factures.title} subtitle={t.factures.subtitle}>
       <div className="space-y-4">
         {/* Header */}
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex-1 relative">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex-1 relative min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
             <input
               type="text"
@@ -786,7 +786,7 @@ export default function FacturesPage() {
             </div>
 
             {/* Client info */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="col-span-2">
                 <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">{t.factures.client} *</label>
                 <input value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder={t.factures.clientName} className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]" />
@@ -909,7 +909,7 @@ export default function FacturesPage() {
             </div>
 
             {/* Résumé facture */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="bg-slate-50 rounded-xl p-3">
                 <div className="text-xs text-[var(--text-muted)] uppercase tracking-wide">{t.factures.total}</div>
                 <div className="text-sm font-bold tabular-nums text-[var(--text-primary)]">{formatCurrency(paymentInvoice.total)}</div>
@@ -971,7 +971,7 @@ export default function FacturesPage() {
             {paymentInvoice.balance > 0 ? (
               <div className="border-t border-[var(--border)] pt-4 space-y-3">
                 <div className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">{t.factures.addPayment}</div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs text-[var(--text-muted)] mb-1.5 block">{t.common.amount}</label>
                     <input

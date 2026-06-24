@@ -7,7 +7,7 @@ import { useI18n } from "@/lib/i18n/context";
 import { ShieldAlert, Loader2 } from "lucide-react";
 
 // Pages qui ne nécessitent PAS de licence
-const PUBLIC_PAGES = ["/login", "/activate", "/pricing", "/"];
+const PUBLIC_PAGES = ["/login", "/activate", "/pricing", "/proposition", "/"];
 
 interface LicenseGateProps {
   children: React.ReactNode;

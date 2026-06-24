@@ -24,7 +24,7 @@ export function RoleGuard({ children }: RoleGuardProps) {
   const { t } = useI18n();
 
   // Pages publiques = pas de guard
-  const PUBLIC_PAGES = ["/login", "/activate", "/pricing", "/"];
+  const PUBLIC_PAGES = ["/login", "/activate", "/pricing", "/proposition", "/"];
   const isPublicPage = PUBLIC_PAGES.some(p => pathname === p || pathname.startsWith(p + "/"));
 
   // Vérifier l'accès (dérivé, pas de state)

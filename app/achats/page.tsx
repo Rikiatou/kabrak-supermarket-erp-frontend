@@ -589,7 +589,7 @@ export default function AchatsPage() {
       {showDeliveryForm && (
         <>
           <div className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-40" onClick={() => setShowDeliveryForm(false)} />
-          <div className="fixed right-0 top-0 h-screen w-[540px] bg-white shadow-[var(--shadow-lg)] z-50 flex flex-col">
+          <div className="fixed right-0 top-0 h-screen w-full sm:w-[540px] bg-white shadow-[var(--shadow-lg)] z-50 flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
               <div className="flex items-center gap-3">
@@ -796,7 +796,7 @@ export default function AchatsPage() {
       {selectedSupplier && (
         <>
           <div className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-40" onClick={() => setSelectedSupplier(null)} />
-          <div className="fixed right-0 top-0 h-screen w-[380px] bg-white shadow-[var(--shadow-lg)] z-50 flex flex-col">
+          <div className="fixed right-0 top-0 h-screen w-full sm:w-[380px] bg-white shadow-[var(--shadow-lg)] z-50 flex flex-col">
             <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
               <h2 className="font-semibold text-[var(--text-primary)]">{t.achats.supplierFile}</h2>
               <button

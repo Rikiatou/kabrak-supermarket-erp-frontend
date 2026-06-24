@@ -22,6 +22,7 @@ import {
   TrendingDown,
   Users,
   History,
+  ShoppingCart,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/Button";
@@ -101,6 +102,7 @@ export default function POSPage() {
   const [selectedCustomer, setSelectedCustomer] = useState<ApiCustomer | null>(null);
   const [showCustomerSearch, setShowCustomerSearch] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [showMobileCart, setShowMobileCart] = useState(false);
   const [autoPrint, setAutoPrint] = useState(() => {
     if (typeof window === "undefined") return false;
     return localStorage.getItem("kabrak_pos_auto_print") === "true";
@@ -607,7 +609,7 @@ export default function POSPage() {
 
   return (
     <AppShell title={t.pos.title} subtitle={t.pos.subtitle}>
-      <div className="flex gap-4 h-[calc(100vh-64px-48px)]">
+      <div className="flex gap-4 h-[calc(100vh-64px-48px)] relative">
 
         {/* LEFT — Product catalog */}
         <div className="flex-1 flex flex-col gap-3 min-w-0">
@@ -742,8 +744,10 @@ export default function POSPage() {
           </div>
         </div>
 
-        {/* RIGHT — Cart / Checkout */}
-        <div className="w-[340px] shrink-0 flex flex-col bg-white border border-[var(--border)] rounded-2xl shadow-[var(--shadow-sm)] overflow-hidden">
+        {/* RIGHT — Cart / Checkout (desktop: fixed sidebar, mobile: bottom drawer) */}
+
+        {/* Desktop cart (also shown full-width on mobile during payment/receipt steps) */}
+        <div className={`${checkoutStep !== "cart" ? "flex lg:w-[340px]" : "hidden lg:flex"} w-full shrink-0 flex-col bg-white border border-[var(--border)] rounded-2xl shadow-[var(--shadow-sm)] overflow-hidden`}>
 
           {checkoutStep === "receipt" && receipt ? (
             <ReceiptPanel
@@ -970,6 +974,109 @@ export default function POSPage() {
             </>
           )}
         </div>
+
+        {/* Mobile cart FAB + bottom drawer */}
+        {cart.length > 0 && checkoutStep === "cart" && (
+          <button
+            onClick={() => setShowMobileCart(true)}
+            className="lg:hidden fixed bottom-20 right-4 z-40 flex items-center gap-2 bg-[var(--brand)] text-white px-4 py-3 rounded-2xl shadow-lg active:scale-95 transition-transform"
+          >
+            <ShoppingCart className="w-5 h-5" />
+            <span className="text-sm font-semibold tabular-nums">{formatCurrency(subtotal)}</span>
+            <span className="bg-white/25 text-[10px] font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center">
+              {cart.reduce((s, i) => s + i.quantity, 0)}
+            </span>
+          </button>
+        )}
+
+        {showMobileCart && (
+          <>
+            <div
+              className="lg:hidden fixed inset-0 bg-black/50 z-50"
+              onClick={() => setShowMobileCart(false)}
+            />
+            <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-2xl shadow-2xl flex flex-col max-h-[85vh]">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] shrink-0">
+                <h2 className="text-sm font-semibold text-[var(--text-primary)]">
+                  {t.pos.currentOrder} ({cart.reduce((s, i) => s + i.quantity, 0)})
+                </h2>
+                <button
+                  onClick={() => setShowMobileCart(false)}
+                  className="p-1 hover:bg-slate-100 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-[var(--text-secondary)]" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto">
+                {cart.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-[var(--text-muted)] py-12">
+                    <ShoppingCart className="w-10 h-10 mb-2 opacity-30" />
+                    <p className="text-sm">{t.pos.emptyCart}</p>
+                  </div>
+                ) : (
+                  <div className="px-3 py-2 space-y-2">
+                    {cart.map((item) => (
+                      <div key={item.product.id} className="flex items-center gap-2 py-2 border-b border-[var(--border-subtle)]">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-[var(--text-primary)] truncate">{item.product.name}</p>
+                          <p className="text-xs text-[var(--text-muted)] tabular-nums">
+                            {formatCurrency(getEffectivePrice(item.product))} x {item.quantity}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <button onClick={() => updateQty(item.product.id, -1)} className="w-7 h-7 flex items-center justify-center rounded-lg border border-[var(--border)] hover:bg-slate-50">
+                            <Minus className="w-3.5 h-3.5" />
+                          </button>
+                          <span className="text-sm font-semibold tabular-nums w-6 text-center">{item.quantity}</span>
+                          <button onClick={() => updateQty(item.product.id, 1)} className="w-7 h-7 flex items-center justify-center rounded-lg border border-[var(--border)] hover:bg-slate-50">
+                            <Plus className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={() => removeItem(item.product.id)} className="w-7 h-7 flex items-center justify-center rounded-lg text-red-500 hover:bg-red-50">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {cart.length > 0 && (
+                <div className="px-4 py-3 border-t border-[var(--border)] shrink-0 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[var(--text-muted)]">{t.pos.subtotal}</span>
+                    <span className="font-semibold tabular-nums">{formatCurrency(subtotal)}</span>
+                  </div>
+                  {cashierDiscountAmount > 0 && (
+                    <div className="flex justify-between text-sm text-emerald-600">
+                      <span>{t.pos.discount}</span>
+                      <span className="font-semibold tabular-nums">-{formatCurrency(cashierDiscountAmount)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[var(--text-muted)]">{t.pos.tax}</span>
+                    <span className="font-semibold tabular-nums">{formatCurrency(tax)}</span>
+                  </div>
+                  <div className="flex justify-between text-base font-bold pt-1 border-t border-[var(--border-subtle)]">
+                    <span>{t.pos.total}</span>
+                    <span className="tabular-nums">{formatCurrency(total)}</span>
+                  </div>
+                  <Button
+                    className="w-full h-11 text-sm"
+                    disabled={hasStockIssues}
+                    onClick={() => {
+                      setShowMobileCart(false);
+                      setCheckoutStep("payment");
+                    }}
+                    icon={<ChevronRight className="w-4 h-4" />}
+                    iconPosition="right"
+                  >
+                    {t.pos.checkout}
+                  </Button>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
       {showScanner && (
         <BarcodeScanner
