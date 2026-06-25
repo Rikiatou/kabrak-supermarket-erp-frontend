@@ -52,10 +52,8 @@ export function useProducts() {
       setProducts(response.data.map(apiProductToFrontend));
     } catch (e: any) {
       setError(e.message);
-      // Fallback: use mock data so the UI is not empty during demo
-      console.warn("Backend indisponible, utilisation des données mock");
-      const { products: mockProducts } = await import("@/lib/mock-data");
-      setProducts(mockProducts);
+      console.warn("Backend indisponible, impossible de charger les produits");
+      setProducts([]);
     } finally {
       setLoading(false);
     }
@@ -592,9 +590,8 @@ export function useSuppliers() {
       const result = await suppliersApi.list();
       setSuppliers(result);
     } catch (e) {
-      console.warn("Backend indisponible, utilisation des données mock");
-      const { suppliers: mockSuppliers } = await import("@/lib/mock-data");
-      setSuppliers(mockSuppliers as any);
+      console.warn("Backend indisponible, impossible de charger les fournisseurs");
+      setSuppliers([]);
     } finally {
       setLoading(false);
     }
@@ -620,9 +617,8 @@ export function useEmployees() {
       const result = await employeesApi.list();
       setEmployees(result);
     } catch (e) {
-      console.warn("Backend indisponible, utilisation des données mock");
-      const { employees: mockEmployees } = await import("@/lib/mock-data");
-      setEmployees(mockEmployees as any);
+      console.warn("Backend indisponible, impossible de charger les employés");
+      setEmployees([]);
     } finally {
       setLoading(false);
     }
