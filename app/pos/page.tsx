@@ -336,8 +336,9 @@ export default function POSPage() {
     }
     const defaultCashierId = user.id;
 
-    // Trouver la caisse ouverte par cet utilisateur
-    const myShift = activeShifts?.find((s) => s.employeeId === user.id && s.status === "open");
+    // Trouver la caisse ouverte par cet utilisateur (ou n'importe quelle caisse ouverte)
+    const myShift = activeShifts?.find((s) => s.employeeId === user.id && s.status === "open")
+      || activeShifts?.find((s) => s.status === "open");
     const registerId = myShift?.registerId;
 
     // Déterminer le montant payé et la monnaie selon le mode

@@ -509,8 +509,10 @@ export default function CaissesPage() {
     setCloseExpectedCash(shift.openingCash); // fallback
     try {
       const report = await shiftsApi.zReport(shift.id);
+      console.log("Z-Report for shift:", shift.id, "cashDrawerTotal:", report.cashDrawerTotal, "grossSales:", report.grossSales, "customerCount:", report.customerCount);
       setCloseExpectedCash(report.cashDrawerTotal);
-    } catch {
+    } catch (e: any) {
+      console.error("Z-Report fetch failed:", e?.message);
       // si le backend ne répond pas, on garde le fonds d'ouverture
     } finally {
       setLoadingCloseSummary(false);
