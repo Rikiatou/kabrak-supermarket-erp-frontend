@@ -31,7 +31,7 @@ import { Badge } from "@/components/ui/Badge";
 import { products as mockProducts } from "@/lib/mock-data";
 import { formatCurrency, cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/context";
-import { useProducts, useCreateTransaction, useCustomers, useRecentTransactions } from "@/lib/hooks/useApi";
+import { useProducts, useCreateTransaction, useCustomers, useRecentTransactions, useActiveShifts } from "@/lib/hooks/useApi";
 import type { ApiCustomer, ApiTransaction } from "@/lib/api";
 import { useAuth } from "@/lib/auth/context";
 import { getEffectivePrice, hasActiveMarkdown, daysToExpiry } from "@/lib/api";
@@ -74,6 +74,7 @@ export default function POSPage() {
   const { transactions: recentTransactions, reload: reloadRecentTransactions } = useRecentTransactions(10);
   const { create: createTransaction, creating } = useCreateTransaction();
   const { user } = useAuth();
+  const { data: activeShifts } = useActiveShifts();
   const { config: licenseConfig } = useLicense();
   const storeInfo = getStoreInfo(licenseConfig);
   const CATEGORIES = [
@@ -335,6 +336,10 @@ export default function POSPage() {
     }
     const defaultCashierId = user.id;
 
+    // Trouver la caisse ouverte par cet utilisateur
+    const myShift = activeShifts?.find((s) => s.employeeId === user.id && s.status === "open");
+    const registerId = myShift?.registerId;
+
     // Déterminer le montant payé et la monnaie selon le mode
     const splitTotal = splitPayment.cash + splitPayment.mobile + splitPayment.card;
     const isSplit = paymentMethod === "split";
@@ -361,6 +366,7 @@ export default function POSPage() {
 
     const tx = await createTransaction({
       cashierId: defaultCashierId,
+      registerId,
       subtotal,
       discount,
       tax,
