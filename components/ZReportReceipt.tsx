@@ -93,7 +93,9 @@ export function ZReportReceipt({
     }, 250);
   };
 
-  const diff = report.difference ?? 0;
+  const diff = report.closingCash !== null
+    ? report.closingCash - (report.totalExpected ?? report.expectedCash ?? 0)
+    : (report.difference ?? 0);
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
