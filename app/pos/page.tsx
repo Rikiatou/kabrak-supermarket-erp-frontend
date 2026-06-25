@@ -124,8 +124,13 @@ export default function POSPage() {
   const searchRef = useRef<HTMLInputElement>(null);
   const beepRef = useRef<HTMLAudioElement>(null);
 
-  // Utiliser les vrais produits du backend, fallback sur mock si backend down
-  const products = apiProducts.length > 0 ? apiProducts : mockProducts;
+  // Utiliser uniquement les vrais produits du backend (pas de fallback mock)
+  // Les produits mock ont des IDs qui n'existent pas dans la DB, ce qui cause
+  // des erreurs de foreign key lors de la création de transactions
+  const products = apiProducts;
+
+  // Afficher une erreur si les produits ne chargent pas
+  const productsError = !loading && apiProducts.length === 0;
 
   const filtered = products.filter((p) => {
     const activeCategory = CATEGORY_KEYS[activeCategoryIdx];
@@ -679,7 +684,13 @@ export default function POSPage() {
 
           {/* Product grid */}
           <div className="flex-1 overflow-y-auto">
-            {filtered.length === 0 ? (
+            {productsError ? (
+              <div className="flex flex-col items-center justify-center h-40 text-red-600">
+                <AlertCircle className="w-8 h-8 mb-2" />
+                <p className="text-sm font-medium">Impossible de charger les produits</p>
+                <p className="text-xs text-[var(--text-muted)] mt-1">Vérifiez votre connexion</p>
+              </div>
+            ) : filtered.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-40 text-[var(--text-muted)]">
                 <Search className="w-8 h-8 mb-2 opacity-30" />
                 <p className="text-sm">{t.common.noResults}</p>
