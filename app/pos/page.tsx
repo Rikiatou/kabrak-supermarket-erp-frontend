@@ -39,7 +39,7 @@ import type { Product, CartItem } from "@/lib/types";
 import { STORE_INFO, getStoreInfo } from "./store-info";
 import { useLicense } from "@/lib/license/context";
 
-const TAX_RATE = 0.155;
+const TAX_RATE = 0;
 // Stable backend category keys (match DB seed data) - order matches CATEGORIES labels
 const CATEGORY_KEYS = ["Tous", "Grocery", "Beverages", "Dairy", "Hygiene", "Butchery", "Bakery", "Frozen"];
 
@@ -1101,10 +1101,12 @@ export default function POSPage() {
                       <span className="font-semibold tabular-nums">-{formatCurrency(discount)}</span>
                     </div>
                   )}
+                  {tax > 0 && (
                   <div className="flex justify-between text-sm">
                     <span className="text-[var(--text-muted)]">{t.pos.tax}</span>
                     <span className="font-semibold tabular-nums">{formatCurrency(tax)}</span>
                   </div>
+                  )}
                   <div className="flex justify-between text-base font-bold pt-1 border-t border-[var(--border-subtle)]">
                     <span>{t.pos.total}</span>
                     <span className="tabular-nums">{formatCurrency(total)}</span>
