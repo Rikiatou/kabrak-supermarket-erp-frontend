@@ -85,7 +85,7 @@ function OpenShiftModal({
   onCancel: () => void;
 }) {
   const [employeeId, setEmployeeId] = useState(defaultEmployeeId);
-  const [openingCash, setOpeningCash] = useState("0");
+  const [openingCash, setOpeningCash] = useState("100000");
   const { t } = useI18n();
 
   const cash = Number(openingCash) || 0;
