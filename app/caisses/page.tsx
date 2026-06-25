@@ -183,6 +183,7 @@ function CloseShiftModal({
   shift,
   employees,
   closing,
+  expectedCash: initialExpected,
   onConfirm,
   onCancel,
 }: {
@@ -190,14 +191,15 @@ function CloseShiftModal({
   shift: ApiShift;
   employees: ApiEmployee[];
   closing: boolean;
+  expectedCash: number;
   onConfirm: (closingCash: number, expectedCash: number, notes: string) => void;
   onCancel: () => void;
 }) {
   const [closingCash, setClosingCash] = useState(
-    String(shift.openingCash),
+    String(initialExpected),
   );
   const [expectedCash, setExpectedCash] = useState(
-    String(shift.openingCash),
+    String(initialExpected),
   );
   const [notes, setNotes] = useState("");
   const { t } = useI18n();
@@ -251,10 +253,13 @@ function CloseShiftModal({
                 type="number"
                 min={0}
                 value={expectedCash}
-                onChange={(e) => setExpectedCash(e.target.value)}
-                className="w-full bg-white border border-[var(--border)] rounded-xl pl-9 pr-3 py-2.5 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--brand)] transition-colors tabular-nums"
+                readOnly
+                className="w-full bg-slate-50 border border-[var(--border)] rounded-xl pl-9 pr-3 py-2.5 text-sm text-[var(--text-primary)] outline-none tabular-nums font-semibold"
               />
             </div>
+            <p className="text-[10px] text-[var(--text-muted)] mt-1">
+              {t.caisses.openingCash}: {formatCurrency(shift.openingCash)} + {t.caisses.zReport?.cash || "Espèces"}
+            </p>
           </div>
 
           <div>
@@ -468,6 +473,8 @@ export default function CaissesPage() {
   const [closeShift, setCloseShift] = useState<ApiShift | null>(null);
   const [zReport, setZReport] = useState<ApiZReport | null>(null);
   const [loadingZReport, setLoadingZReport] = useState(false);
+  const [closeExpectedCash, setCloseExpectedCash] = useState<number>(0);
+  const [loadingCloseSummary, setLoadingCloseSummary] = useState(false);
 
   // Map registerId -> active shift
   const shiftByRegister = useMemo(() => {
@@ -494,6 +501,21 @@ export default function CaissesPage() {
   }, [shifts]);
 
   const defaultEmployeeId = user?.id ?? cashiers[0]?.id ?? "";
+
+  // Quand on clique sur "Fermer", récupérer le résumé du shift pour calculer le expected cash
+  const handleCloseClick = async (shift: ApiShift) => {
+    setCloseShift(shift);
+    setLoadingCloseSummary(true);
+    setCloseExpectedCash(shift.openingCash); // fallback
+    try {
+      const report = await shiftsApi.zReport(shift.id);
+      setCloseExpectedCash(report.cashDrawerTotal);
+    } catch {
+      // si le backend ne répond pas, on garde le fonds d'ouverture
+    } finally {
+      setLoadingCloseSummary(false);
+    }
+  };
 
   const handleOpen = async (employeeId: string, openingCash: number) => {
     if (!openRegister) return;
@@ -607,7 +629,7 @@ export default function CaissesPage() {
             shift={shiftByRegister.get(register.id)}
             employees={employees}
             onOpen={() => setOpenRegister(register.id)}
-            onClose={(s) => setCloseShift(s)}
+            onClose={(s) => handleCloseClick(s)}
           />
         ))}
       </div>
@@ -643,6 +665,7 @@ export default function CaissesPage() {
           shift={closeShift}
           employees={employees}
           closing={closing}
+          expectedCash={closeExpectedCash}
           onConfirm={handleClose}
           onCancel={() => setCloseShift(null)}
         />
