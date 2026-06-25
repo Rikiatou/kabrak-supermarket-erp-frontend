@@ -26,7 +26,7 @@ import {
   useCloseShift,
   useEmployees,
 } from "@/lib/hooks/useApi";
-import { shiftsApi } from "@/lib/api";
+import { shiftsApi, transactionsApi } from "@/lib/api";
 import type { ApiShift, ApiEmployee, ApiZReport } from "@/lib/api";
 import { ZReportReceipt } from "@/components/ZReportReceipt";
 
@@ -506,22 +506,48 @@ export default function CaissesPage() {
 
   const defaultEmployeeId = user?.id ?? cashiers[0]?.id ?? "";
 
-  // Quand on clique sur "Fermer", récupérer le résumé du shift pour calculer le expected cash
+  // Quand on clique sur "Fermer", calculer le expected cash depuis les transactions
   const handleCloseClick = async (shift: ApiShift) => {
     setCloseShift(shift);
     setLoadingCloseSummary(true);
-    setCloseExpectedCash(shift.openingCash); // fallback
+    setCloseExpectedCash(shift.openingCash); // fallback initial
     try {
-      const report = await shiftsApi.zReport(shift.id);
-      console.log("Z-Report for shift:", shift.id, "cashDrawerTotal:", report.cashDrawerTotal, "grossSales:", report.grossSales, "customerCount:", report.customerCount);
-      setCloseExpectedCash(report.cashDrawerTotal);
-      if (report.customerCount > 0) {
-        toast(`${report.customerCount} ventes — caisse attendue: ${formatCurrency(report.cashDrawerTotal)}`, "info");
+      // Récupérer les transactions de cet employé
+      const response = await transactionsApi.list(1, 200, shift.employeeId);
+      const shiftStart = new Date(shift.openedAt).getTime();
+      const now = Date.now();
+
+      // Filtrer les transactions dans la période du shift
+      const shiftTx = response.data.filter((tx) => {
+        const txTime = new Date(tx.date).getTime();
+        return txTime >= shiftStart && txTime <= now && tx.status === "completed";
+      });
+
+      // Calculer le expected cash = ouverture + ventes cash - monnaie rendue
+      const cashSales = shiftTx
+        .filter((tx) => tx.paymentMethod === "cash")
+        .reduce((sum, tx) => sum + (tx.cashGiven || tx.total), 0);
+      const changeGiven = shiftTx.reduce((sum, tx) => sum + (tx.change || 0), 0);
+      const expected = shift.openingCash + cashSales - changeGiven;
+
+      console.log("Close shift calc:", { openingCash: shift.openingCash, cashSales, changeGiven, expected, txCount: shiftTx.length });
+      setCloseExpectedCash(expected);
+
+      if (shiftTx.length > 0) {
+        toast(`${shiftTx.length} ventes — caisse attendue: ${formatCurrency(expected)}`, "info");
       }
     } catch (e: any) {
-      console.error("Z-Report fetch failed:", e?.message);
-      toast("Impossible de récupérer le résumé — caisse attendue = fonds d'ouverture", "warning");
-      // si le backend ne répond pas, on garde le fonds d'ouverture
+      console.error("Failed to calculate expected cash:", e?.message);
+      // Essayer le Z-report en fallback
+      try {
+        const report = await shiftsApi.zReport(shift.id);
+        setCloseExpectedCash(report.cashDrawerTotal);
+        if (report.customerCount > 0) {
+          toast(`${report.customerCount} ventes — caisse attendue: ${formatCurrency(report.cashDrawerTotal)}`, "info");
+        }
+      } catch {
+        toast("Caisse attendue = fonds d'ouverture (récupération des ventes impossible)", "warning");
+      }
     } finally {
       setLoadingCloseSummary(false);
     }
