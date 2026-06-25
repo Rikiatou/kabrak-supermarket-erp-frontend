@@ -75,10 +75,10 @@ const mockByCategory = [
 ];
 
 const mockByEmployee = [
-  { cashierId: "1", firstName: "Awa", lastName: "Diallo", revenue: 7_820_000, transactions: 680 },
-  { cashierId: "2", firstName: "Moussa", lastName: "Traoré", revenue: 6_540_000, transactions: 560 },
-  { cashierId: "3", firstName: "Fatou", lastName: "Bambara", revenue: 5_930_000, transactions: 510 },
-  { cashierId: "4", firstName: "Ibrahim", lastName: "Konaté", revenue: 4_400_000, transactions: 345 },
+  { employeeId: "1", employeeName: "Awa Diallo", employeeNumber: "EMP001", revenue: 7_820_000, transactions: 680 },
+  { employeeId: "2", employeeName: "Moussa Traoré", employeeNumber: "EMP002", revenue: 6_540_000, transactions: 560 },
+  { employeeId: "3", employeeName: "Fatou Bambara", employeeNumber: "EMP003", revenue: 5_930_000, transactions: 510 },
+  { employeeId: "4", employeeName: "Ibrahim Konaté", employeeNumber: "EMP004", revenue: 4_400_000, transactions: 345 },
 ];
 
 const mockTopProducts = [
@@ -329,7 +329,7 @@ export default function RapportsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
         <Card className="lg:col-span-2">
           <CardHeader title={t.rapports.revenueEvolution} subtitle={t.rapports.revenueEvolutionSub} />
-          <div className="h-72 px-2 pb-2">
+          <div className="h-72 px-2 pb-2 min-w-0 w-full">
             {loadingSales ? (
               <div className="h-full flex items-center justify-center text-sm text-[var(--text-muted)]">{t.common.loading}</div>
             ) : (
@@ -349,7 +349,7 @@ export default function RapportsPage() {
 
         <Card>
           <CardHeader title={t.rapports.salesByCategory} subtitle={t.rapports.salesByCategorySub} />
-          <div className="h-72 px-2 pb-2">
+          <div className="h-72 px-2 pb-2 min-w-0 w-full">
             {loadingCat ? (
               <div className="h-full flex items-center justify-center text-sm text-[var(--text-muted)]">{t.common.loading}</div>
             ) : (
@@ -380,7 +380,7 @@ export default function RapportsPage() {
       {/* Sales by category bar chart */}
       <Card className="mb-5">
         <CardHeader title={t.rapports.salesByCategoryDetail} subtitle={t.rapports.salesByCategoryDetailSub} />
-        <div className="h-64 px-2 pb-2">
+        <div className="h-64 px-2 pb-2 min-w-0 w-full">
           {loadingCat ? (
             <div className="h-full flex items-center justify-center text-sm text-[var(--text-muted)]">{t.common.loading}</div>
           ) : (
@@ -454,14 +454,18 @@ export default function RapportsPage() {
                     <td colSpan={4} className="px-4 py-8 text-center text-sm text-[var(--text-muted)]">{t.common.loading}</td>
                   </tr>
                 ) : (
-                  employees.map((e) => (
-                    <tr key={e.cashierId} className="border-b border-[var(--border)] last:border-0 hover:bg-slate-50/50">
+                  employees.map((e, idx) => {
+                    const name = e.employeeName || "—";
+                    const parts = name.split(" ");
+                    const initials = (parts[0]?.charAt(0) || "?") + (parts[1]?.charAt(0) || "");
+                    return (
+                    <tr key={e.employeeId || idx} className="border-b border-[var(--border)] last:border-0 hover:bg-slate-50/50">
                       <td className="px-4 py-2.5">
                         <div className="flex items-center gap-2">
                           <div className="w-7 h-7 rounded-full bg-[var(--brand-light)] text-[var(--brand-dark)] flex items-center justify-center text-xs font-bold">
-                            {e.firstName.charAt(0)}{e.lastName.charAt(0)}
+                            {initials.toUpperCase()}
                           </div>
-                          <span className="font-medium text-[var(--text-primary)]">{e.firstName} {e.lastName}</span>
+                          <span className="font-medium text-[var(--text-primary)]">{name}</span>
                         </div>
                       </td>
                       <td className="px-4 py-2.5 text-right tabular-nums text-[var(--text-secondary)]">{e.transactions}</td>
@@ -470,7 +474,8 @@ export default function RapportsPage() {
                         {formatCurrency(e.transactions > 0 ? e.revenue / e.transactions : 0)}
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>

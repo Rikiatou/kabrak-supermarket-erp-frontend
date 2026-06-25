@@ -640,7 +640,7 @@ export const reportsApi = {
   salesByCategory: (startDate: string, endDate: string) =>
     fetchAPI<Array<{ category: string; revenue: number; quantity: number }>>(`/reports/sales/by-category?startDate=${startDate}&endDate=${endDate}`),
   salesByEmployee: (startDate: string, endDate: string) =>
-    fetchAPI<Array<{ cashierId: string; firstName: string; lastName: string; revenue: number; transactions: number }>>(`/reports/sales/by-employee?startDate=${startDate}&endDate=${endDate}`),
+    fetchAPI<Array<{ employeeId: string; employeeName: string; employeeNumber: string; revenue: number; transactions: number }>>(`/reports/sales/by-employee?startDate=${startDate}&endDate=${endDate}`),
   topProducts: (startDate: string, endDate: string, limit?: number) =>
     fetchAPI<Array<{ productId: string; name: string; quantity: number; revenue: number }>>(`/reports/products/top?startDate=${startDate}&endDate=${endDate}${limit ? `&limit=${limit}` : ""}`),
   worstProducts: (startDate: string, endDate: string, limit?: number) =>
