@@ -61,7 +61,10 @@ const mockByDay = [
 
 const mockSalesReport = {
   totalRevenue: 24_690_000,
-  transactionCount: 2095,
+  totalSubtotal: 25_190_000,
+  totalDiscount: 500_000,
+  totalTax: 0,
+  transactionsCount: 2095,
   avgBasket: 11_780,
   byDay: mockByDay,
 };
@@ -193,7 +196,7 @@ export default function RapportsPage() {
     },
     {
       label: "Transactions",
-      value: (sales.transactionCount ?? 0).toLocaleString(),
+      value: (sales.transactionsCount ?? 0).toLocaleString(),
       icon: ShoppingCart,
       delta: +11.7,
       sublabel: "for the period",
@@ -221,9 +224,9 @@ export default function RapportsPage() {
     },
     {
       label: t.rapports.totalDiscounts,
-      value: formatCurrency(discounts.totalDiscount ?? 0),
+      value: formatCurrency(sales.totalDiscount ?? discounts.totalDiscount ?? 0),
       icon: Tag,
-      delta: discounts.transactionsCount > 0 ? 0 : undefined,
+      delta: (discounts.transactionsCount ?? 0) > 0 ? 0 : undefined,
       sublabel: `${discounts.transactionsCount ?? 0} ${t.rapports.discountsCount.toLowerCase()}`,
     },
   ];

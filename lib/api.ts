@@ -31,6 +31,16 @@ async function fetchAPI<T>(
     headers,
   });
 
+  if (res.status === 401 && typeof window !== "undefined") {
+    // Token invalide ou expiré — nettoyer et rediriger vers login
+    localStorage.removeItem("kabrak_auth_token");
+    localStorage.removeItem("kabrak_auth_user");
+    if (!window.location.pathname.startsWith("/login")) {
+      window.location.href = "/login";
+    }
+    throw new Error("Session expirée");
+  }
+
   if (!res.ok) {
     const error = await res.json().catch(() => ({ message: "Erreur API" }));
     throw new Error(error.message || `Erreur ${res.status}`);
@@ -636,7 +646,7 @@ export const customersApi = {
 // ========================================
 export const reportsApi = {
   sales: (startDate: string, endDate: string) =>
-    fetchAPI<{ totalRevenue: number; totalSubtotal: number; totalDiscount: number; totalTax: number; transactionCount: number; avgBasket: number; byDay: Array<{ date: string; revenue: number; transactions: number }> }>(`/reports/sales?startDate=${startDate}&endDate=${endDate}`),
+    fetchAPI<{ totalRevenue: number; totalSubtotal: number; totalDiscount: number; totalTax: number; transactionsCount: number; avgBasket: number; byDay: Array<{ date: string; revenue: number; transactions: number }> }>(`/reports/sales?startDate=${startDate}&endDate=${endDate}`),
   salesByCategory: (startDate: string, endDate: string) =>
     fetchAPI<Array<{ category: string; revenue: number; quantity: number }>>(`/reports/sales/by-category?startDate=${startDate}&endDate=${endDate}`),
   salesByEmployee: (startDate: string, endDate: string) =>
