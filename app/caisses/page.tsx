@@ -198,21 +198,19 @@ function CloseShiftModal({
   const [closingCash, setClosingCash] = useState(
     String(initialExpected),
   );
-  const [expectedCash, setExpectedCash] = useState(
-    String(initialExpected),
-  );
   const [notes, setNotes] = useState("");
   const { t } = useI18n();
 
-  // Mettre à jour quand le Z-report arrive avec le vrai expected cash
+  // expectedCash vient directement du parent (calculé par le Z-report)
+  // Pas de useState — on utilise la prop directement
+  const expectedNum = initialExpected;
+  const closingNum = Number(closingCash) || 0;
+  const difference = closingNum - expectedNum;
+
+  // Mettre à jour closingCash quand le Z-report arrive
   useEffect(() => {
-    setExpectedCash(String(initialExpected));
     setClosingCash(String(initialExpected));
   }, [initialExpected]);
-
-  const closingNum = Number(closingCash) || 0;
-  const expectedNum = Number(expectedCash) || 0;
-  const difference = closingNum - expectedNum;
 
   return (
     <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
@@ -258,7 +256,7 @@ function CloseShiftModal({
               <input
                 type="number"
                 min={0}
-                value={expectedCash}
+                value={initialExpected}
                 readOnly
                 className="w-full bg-slate-50 border border-[var(--border)] rounded-xl pl-9 pr-3 py-2.5 text-sm text-[var(--text-primary)] outline-none tabular-nums font-semibold"
               />
@@ -517,8 +515,12 @@ export default function CaissesPage() {
       const report = await shiftsApi.zReport(shift.id);
       console.log("Z-Report for shift:", shift.id, "cashDrawerTotal:", report.cashDrawerTotal, "grossSales:", report.grossSales, "customerCount:", report.customerCount);
       setCloseExpectedCash(report.cashDrawerTotal);
+      if (report.customerCount > 0) {
+        toast(`${report.customerCount} ventes — caisse attendue: ${formatCurrency(report.cashDrawerTotal)}`, "info");
+      }
     } catch (e: any) {
       console.error("Z-Report fetch failed:", e?.message);
+      toast("Impossible de récupérer le résumé — caisse attendue = fonds d'ouverture", "warning");
       // si le backend ne répond pas, on garde le fonds d'ouverture
     } finally {
       setLoadingCloseSummary(false);
