@@ -368,23 +368,23 @@ export default function POSPage() {
     const tx = await createTransaction({
       cashierId: defaultCashierId,
       registerId,
-      subtotal,
-      discount,
-      tax,
-      total,
+      subtotal: Math.round(subtotal),
+      discount: Math.round(discount),
+      tax: Math.round(tax),
+      total: Math.round(total),
       paymentMethod: recordedMethod,
-      cashGiven: effectiveCashGiven,
-      change: effectiveChange,
+      cashGiven: Math.round(effectiveCashGiven),
+      change: Math.round(effectiveChange),
       customerId: selectedCustomer?.id,
       items: cart.map((item, idx) => {
         const effPrice = getEffectivePrice(item.product);
         return {
           productId: item.product.id,
           quantity: item.quantity,
-          unitPrice: effPrice,
-          discount: allocatedDiscount[idx],
+          unitPrice: Math.round(effPrice),
+          discount: Math.round(allocatedDiscount[idx]),
           tax: 0,
-          total: effPrice * item.quantity - allocatedDiscount[idx],
+          total: Math.round(effPrice * item.quantity - allocatedDiscount[idx]),
         };
       }),
     });
