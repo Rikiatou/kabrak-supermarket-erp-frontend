@@ -746,7 +746,7 @@ export default function POSPage() {
         {/* RIGHT — Cart / Checkout (desktop: fixed sidebar, mobile: bottom drawer) */}
 
         {/* Desktop cart (also shown full-width on mobile during payment/receipt steps) */}
-        <div className={`${checkoutStep !== "cart" ? "flex lg:w-[340px]" : "hidden lg:flex"} w-full shrink-0 flex-col bg-white border border-[var(--border)] rounded-2xl shadow-[var(--shadow-sm)] overflow-hidden`}>
+        <div className={`${checkoutStep !== "cart" ? "flex w-full lg:w-[340px]" : "hidden lg:flex lg:w-[340px]"} shrink-0 flex-col bg-white border border-[var(--border)] rounded-2xl shadow-[var(--shadow-sm)] overflow-hidden`}>
 
           {checkoutStep === "receipt" && receipt ? (
             <ReceiptPanel
