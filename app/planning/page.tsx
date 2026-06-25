@@ -78,9 +78,9 @@ export default function PlanningPage() {
     notes: "",
   });
 
-  // Filtrer les employés assignables (tous rôles sauf inactifs)
+  // Filtrer les employés assignables (tous les employés actifs)
   const cashiers = useMemo(
-    () => employees.filter((e) => ["cashier", "supervisor", "manager", "boss", "stockist", "accountant"].includes(e.role)),
+    () => employees.filter((e) => e.status !== "inactive"),
     [employees],
   );
 
@@ -213,7 +213,7 @@ export default function PlanningPage() {
                       <div className="flex flex-col items-center">
                         <span>{day.label}</span>
                         {day.num === today && (
-                          <span className="text-[9px] bg-[var(--brand)] text-white px-1.5 py-0 rounded-full mt-0.5">Aujourd&apos;hui</span>
+                          <span className="text-[9px] bg-[var(--brand)] text-white px-1.5 py-0 rounded-full mt-0.5">{t.common.today}</span>
                         )}
                       </div>
                     </th>
@@ -225,7 +225,7 @@ export default function PlanningPage() {
                   <tr>
                     <td colSpan={8} className="px-4 py-12 text-center">
                       <User className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                      <p className="text-sm text-[var(--text-muted)]">No cashier/supervisor employees found</p>
+                      <p className="text-sm text-[var(--text-muted)]">{t.planning.noCashiers}</p>
                     </td>
                   </tr>
                 ) : (
@@ -234,7 +234,7 @@ export default function PlanningPage() {
                       <td className="px-3 py-3 sticky left-0 bg-white z-10">
                         <div className="flex items-center gap-2">
                           <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
-                            {employee.firstName.charAt(0)}{employee.lastName.charAt(0)}
+                            {employee.firstName?.charAt(0) || "?"}{employee.lastName?.charAt(0) || "?"}
                           </div>
                           <div className="min-w-0">
                             <p className="text-sm font-medium text-[var(--text-primary)] truncate">
@@ -278,7 +278,7 @@ export default function PlanningPage() {
                                     <button
                                       onClick={() => handleDelete(slot.id, `${employee.firstName} ${day.label}`)}
                                       className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-white/50"
-                                      title="Delete"
+                                      title={t.planning.delete}
                                     >
                                       <Trash2 className="w-3 h-3" />
                                     </button>
@@ -290,7 +290,7 @@ export default function PlanningPage() {
                                 className="w-full flex items-center justify-center gap-1 py-1 rounded-lg border border-dashed border-slate-200 text-[10px] text-[var(--text-muted)] hover:border-[var(--brand)] hover:text-[var(--brand)] transition-colors"
                               >
                                 <Plus className="w-3 h-3" />
-                                {slots.length === 0 ? "Add" : "Another"}
+                                {slots.length === 0 ? t.planning.add : t.planning.another}
                               </button>
                             </div>
                           </td>
@@ -331,7 +331,7 @@ export default function PlanningPage() {
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-[var(--brand)]" />
                 <h3 className="text-sm font-bold text-[var(--text-primary)]">
-                  New shift — {addEmployee.firstName} {addEmployee.lastName}
+                  {t.planning.newSlot} — {addEmployee.firstName} {addEmployee.lastName}
                 </h3>
               </div>
               <button onClick={() => setShowAddModal(false)} className="p-1 hover:bg-slate-100 rounded-lg">
@@ -340,13 +340,13 @@ export default function PlanningPage() {
             </div>
 
             <div className="bg-slate-50 rounded-xl p-3 text-sm">
-              <p className="text-[var(--text-muted)] text-xs">Jour</p>
+              <p className="text-[var(--text-muted)] text-xs">{t.planning.day}</p>
               <p className="font-semibold">{DAYS.find((d) => d.num === addDay)?.label}</p>
             </div>
 
             <div className="space-y-3">
               <div>
-                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Caisse</label>
+                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">{t.planning.register}</label>
                 <select
                   value={form.registerId}
                   onChange={(e) => setForm({ ...form, registerId: e.target.value })}
@@ -360,7 +360,7 @@ export default function PlanningPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Start</label>
+                  <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">{t.planning.start}</label>
                   <select
                     value={form.startTime}
                     onChange={(e) => setForm({ ...form, startTime: e.target.value })}
@@ -370,7 +370,7 @@ export default function PlanningPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Fin</label>
+                  <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">{t.planning.end}</label>
                   <select
                     value={form.endTime}
                     onChange={(e) => setForm({ ...form, endTime: e.target.value })}
@@ -383,7 +383,7 @@ export default function PlanningPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Break start (optional)</label>
+                  <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">{t.planning.breakStart}</label>
                   <select
                     value={form.breakStart}
                     onChange={(e) => setForm({ ...form, breakStart: e.target.value })}
@@ -394,7 +394,7 @@ export default function PlanningPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Pause fin (optionnel)</label>
+                  <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">{t.planning.breakEnd}</label>
                   <select
                     value={form.breakEnd}
                     onChange={(e) => setForm({ ...form, breakEnd: e.target.value })}
@@ -407,11 +407,11 @@ export default function PlanningPage() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Note (optionnel)</label>
+                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">{t.planning.note}</label>
                 <input
                   value={form.notes}
                   onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                  placeholder="Remplacement, heures supp..."
+                  placeholder={t.planning.notePh}
                   className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]"
                 />
               </div>
@@ -420,14 +420,14 @@ export default function PlanningPage() {
             {form.startTime >= form.endTime && (
               <div className="flex items-center gap-2 text-amber-600 text-xs bg-amber-50 rounded-lg p-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
-                Start time must be before end time
+                {t.planning.errorTime}
               </div>
             )}
 
             <div className="flex gap-2">
-              <Button variant="secondary" className="flex-1" onClick={() => setShowAddModal(false)}>Cancel</Button>
+              <Button variant="secondary" className="flex-1" onClick={() => setShowAddModal(false)}>{t.planning.cancel}</Button>
               <Button className="flex-1" onClick={handleSubmit} disabled={creating || form.startTime >= form.endTime}>
-                {creating ? "Adding..." : "Add slot"}
+                {creating ? t.planning.adding : t.planning.addSlot}
               </Button>
             </div>
           </div>

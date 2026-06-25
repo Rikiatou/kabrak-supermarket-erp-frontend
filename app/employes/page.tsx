@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   Search,
   Plus,
@@ -46,7 +47,7 @@ const avatarGradients = [
 ];
 
 function getInitials(emp: Employee) {
-  return `${emp.firstName[0]}${emp.lastName[0]}`;
+  return `${emp.firstName?.[0] || "?"}${emp.lastName?.[0] || "?"}`;
 }
 
 function EmployeeCard({
@@ -411,6 +412,7 @@ function EmployeeDetailPanel({
   const { t } = useI18n();
   const { toast } = useToast();
   const { user } = useAuth();
+  const router = useRouter();
   const gradient = avatarGradients[index % avatarGradients.length];
   const [showPin, setShowPin] = useState(false);
   const [pinValue, setPinValue] = useState<string | null>(null);
@@ -425,9 +427,9 @@ function EmployeeDetailPanel({
       await employeesApi.update(employee.id, { pin: newPin });
       setPinValue(newPin);
       setShowPin(true);
-      toast(`PIN reset for ${employee.firstName} — new PIN: ${newPin}`, "success");
+      toast(`${t.employes.pinResetOk} ${employee.firstName} — PIN: ${newPin}`, "success");
     } catch {
-      toast("Failed to reset PIN", "warning");
+      toast(t.employes.pinResetFail, "warning");
     } finally {
       setResetting(false);
     }
@@ -510,7 +512,7 @@ function EmployeeDetailPanel({
           {canManagePin && (
             <div className="space-y-2">
               <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">
-                Login PIN
+                {t.employes.loginPin || "Login PIN"}
               </p>
               <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-xl">
                 <span className="flex-1 font-mono text-sm tracking-widest text-[var(--text-primary)]">
@@ -521,7 +523,7 @@ function EmployeeDetailPanel({
                 <button
                   onClick={() => setShowPin((v) => !v)}
                   className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
-                  title={showPin ? "Hide" : "Show"}
+                  title={showPin ? (t.employes.hide || "Hide") : (t.employes.show || "Show")}
                 >
                   {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -529,21 +531,21 @@ function EmployeeDetailPanel({
                   onClick={handleResetPin}
                   disabled={resetting}
                   className="flex items-center gap-1 text-xs text-[var(--brand)] hover:text-[var(--brand-hover)] font-medium transition-colors disabled:opacity-50"
-                  title="Generate new PIN"
+                  title={t.employes.resetPin || "Generate new PIN"}
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${resetting ? "animate-spin" : ""}`} />
-                  Reset
+                  {t.employes.reset || "Reset"}
                 </button>
               </div>
               <p className="text-[11px] text-[var(--text-muted)]">
-                Only you can see this. Share the new PIN directly with the employee.
+                {t.employes.pinNote || "Only you can see this. Share the new PIN directly with the employee."}
               </p>
             </div>
           )}
         </div>
 
         <div className="p-4 border-t border-[var(--border)] flex gap-2">
-          <Button variant="secondary" className="flex-1" size="md" icon={<Calendar className="w-4 h-4" />} onClick={() => toast(`${t.employes.weeklySchedule} — ${employee.firstName} ${employee.lastName}`, "info")}>
+          <Button variant="secondary" className="flex-1" size="md" icon={<Calendar className="w-4 h-4" />} onClick={() => router.push("/planning")}>
             {t.employes.schedule}
           </Button>
           <Button className="flex-1" size="md" onClick={() => toast(`${t.common.edit} — ${employee.firstName} ${employee.lastName}`, "info")}>
