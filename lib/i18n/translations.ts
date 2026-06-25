@@ -864,6 +864,15 @@ export const translations = {
       errorDelete: "Erreur lors de la suppression",
       delete: "Supprimer",
     },
+    // Settings
+    settings: {
+      title: "Paramètres",
+      subtitle: "Nom, logo, tickets, factures",
+      save: "Enregistrer",
+      saving: "Enregistrement...",
+      saved: "Enregistré!",
+      onlyBoss: "Seul le manager (Boss) peut modifier ces paramètres.",
+    },
     // Scanner
     scanner: {
       title: "Scanner d'Inventaire",
@@ -1925,6 +1934,14 @@ export const translations = {
       errorAdd: "Error adding slot",
       errorDelete: "Error deleting",
       delete: "Delete",
+    },
+    settings: {
+      title: "Settings",
+      subtitle: "Name, logo, receipts, invoices",
+      save: "Save",
+      saving: "Saving...",
+      saved: "Saved!",
+      onlyBoss: "Only the manager (Boss) can edit these settings.",
     },
     scanner: {
       title: "Inventory Scanner",

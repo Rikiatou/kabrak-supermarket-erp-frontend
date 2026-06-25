@@ -241,7 +241,7 @@ function CloseShiftModal({
 
           <div>
             <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">
-              Caisse attendue
+              {t.caisses.expectedCash}
             </label>
             <div className="relative">
               <Calculator className="w-4 h-4 text-[var(--text-muted)] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -257,7 +257,7 @@ function CloseShiftModal({
 
           <div>
             <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">
-              Actual cash counted
+              {t.caisses.countedCash}
             </label>
             <div className="relative">
               <Wallet className="w-4 h-4 text-[var(--text-muted)] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -282,7 +282,7 @@ function CloseShiftModal({
             )}
           >
             <span className="text-xs font-medium text-[var(--text-secondary)]">
-              Variance
+              {t.caisses.difference}
             </span>
             <span
               className={cn(
@@ -301,13 +301,13 @@ function CloseShiftModal({
 
           <div>
             <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">
-              Notes (optionnel)
+              {t.caisses.notes}
             </label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={2}
-              placeholder="Anomalies, explications…"
+              placeholder={t.caisses.notesPh}
               className="w-full bg-white border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--brand)] transition-colors resize-none"
             />
           </div>
@@ -315,7 +315,7 @@ function CloseShiftModal({
 
         <div className="flex items-center gap-3 mt-6">
           <Button variant="secondary" className="flex-1" onClick={onCancel}>
-            Cancel
+            {t.common.cancel}
           </Button>
           <Button
             variant="danger"
@@ -324,7 +324,7 @@ function CloseShiftModal({
             disabled={closingNum <= 0 || expectedNum <= 0}
             onClick={() => onConfirm(closingNum, expectedNum, notes)}
           >
-            Fermer la caisse
+            {t.caisses.closeCashier}
           </Button>
         </div>
       </Card>
@@ -348,6 +348,7 @@ function RegisterCard({
   onOpen: () => void;
   onClose: (shift: ApiShift) => void;
 }) {
+  const { t } = useI18n();
   const isOpen = !!shift;
 
   return (
@@ -382,7 +383,7 @@ function RegisterCard({
           </div>
         </div>
         <Badge variant={isOpen ? "success" : "neutral"} size="sm">
-          {isOpen ? "Open" : "Closed"}
+          {isOpen ? t.caisses.registerOpen : t.caisses.registerClosed}
         </Badge>
       </div>
 
@@ -397,14 +398,14 @@ function RegisterCard({
             </div>
             <div className="flex items-center gap-2 text-sm">
               <Wallet className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-              <span className="text-[var(--text-muted)]">Fonds:</span>
+              <span className="text-[var(--text-muted)]">{t.caisses.funds}</span>
               <span className="font-semibold text-[var(--text-primary)] tabular-nums ml-auto">
                 {formatCurrency(shift.openingCash)}
               </span>
             </div>
             <div className="flex items-center gap-2 text-sm">
               <Clock className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-              <span className="text-[var(--text-muted)]">Opened at:</span>
+              <span className="text-[var(--text-muted)]">{t.caisses.openedAt}</span>
               <span className="font-medium text-[var(--text-primary)] tabular-nums ml-auto">
                 {formatTime(shift.openedAt)}
               </span>
@@ -416,7 +417,7 @@ function RegisterCard({
             icon={<Lock className="w-4 h-4" />}
             onClick={() => onClose(shift)}
           >
-            Fermer
+            {t.caisses.close}
           </Button>
         </div>
       ) : (
@@ -425,7 +426,7 @@ function RegisterCard({
             <Lock className="w-6 h-6 text-slate-300" />
           </div>
           <p className="text-xs text-[var(--text-muted)] text-center mb-4">
-            No register open
+            {t.caisses.noRegisterOpen}
           </p>
           <Button
             variant="success"
@@ -433,7 +434,7 @@ function RegisterCard({
             icon={<Unlock className="w-4 h-4" />}
             onClick={onOpen}
           >
-            Ouvrir
+            {t.caisses.open}
           </Button>
         </div>
       )}
@@ -502,11 +503,11 @@ export default function CaissesPage() {
         employeeName: emp ? `${emp.firstName} ${emp.lastName}` : employeeId,
         openingCash,
       });
-      toast("Register opened", "success");
+      toast(t.caisses.successOpen, "success");
       setOpenRegister(null);
       reload();
     } catch (e) {
-      toast("Erreur lors de l'ouverture de la caisse", "warning");
+      toast(t.caisses.errorOpen, "warning");
     }
   };
 
@@ -518,29 +519,29 @@ export default function CaissesPage() {
     if (!closeShift) return;
     try {
       await close(closeShift.id, { closingCash, expectedCash, notes });
-      toast("Register closed", "success");
+      toast(t.caisses.successClose, "success");
       setCloseShift(null);
       reload();
     } catch (e) {
-      toast("Erreur lors de la fermeture de la caisse", "warning");
+      toast(t.caisses.errorClose, "warning");
     }
   };
 
   const kpis = [
     {
-      label: "Caisses ouvertes",
+      label: t.caisses.openRegisters,
       value: `${openCount} / ${REGISTERS.length}`,
       icon: <Wallet className="w-5 h-5" />,
       tone: "text-emerald-600 bg-emerald-100",
     },
     {
-      label: "CA total caisses",
+      label: t.caisses.totalRegisterRevenue,
       value: formatCurrency(totalRevenue),
       icon: <TrendingUp className="w-5 h-5" />,
       tone: "text-blue-600 bg-blue-100",
     },
     {
-      label: "Total variance",
+      label: t.caisses.totalDifferences,
       value: formatCurrency(totalDifference),
       icon: <AlertTriangle className="w-5 h-5" />,
       tone:
@@ -554,8 +555,8 @@ export default function CaissesPage() {
 
   return (
     <AppShell
-      title={t.pos.title}
-      subtitle="Gestion multi-caisses — ouvertures et fermetures de shifts"
+      title={t.caisses.title}
+      subtitle={t.caisses.subtitle}
     >
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
@@ -600,7 +601,7 @@ export default function CaissesPage() {
       {/* Loading overlay hint */}
       {loading && shifts === null && (
         <p className="text-xs text-[var(--text-muted)] text-center mt-6">
-          Loading active registers...
+          {t.caisses.loadingRegisters}
         </p>
       )}
 

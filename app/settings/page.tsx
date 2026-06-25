@@ -19,6 +19,7 @@ import {
   Upload,
   Image as ImageIcon,
 } from "lucide-react";
+import { AppShell } from "@/components/layout/AppShell";
 import type { ClientConfig } from "@/lib/license/types";
 
 export default function SettingsPage() {
@@ -111,23 +112,26 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-      </div>
+      <AppShell title={t.settings?.title || "Settings"} subtitle={t.settings?.subtitle || ""}>
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+        </div>
+      </AppShell>
     );
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6">
+    <AppShell title={t.settings?.title || "Settings"} subtitle={t.settings?.subtitle || "Nom, logo, tickets, factures"}>
+    <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-[var(--text-primary)] flex items-center gap-2">
             <Store className="w-6 h-6" />
-            Store Settings
+            {t.settings?.title || "Settings"}
           </h1>
           <p className="text-sm text-[var(--text-muted)] mt-1">
-            Personnalisez votre ERP: nom, logo, tickets, factures
+            {t.settings?.subtitle || "Personnalisez votre ERP: nom, logo, tickets, factures"}
           </p>
         </div>
         {canEdit && (
@@ -135,17 +139,17 @@ export default function SettingsPage() {
             {saving ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Enregistrement...
+                {t.settings?.saving || "Enregistrement..."}
               </>
             ) : saved ? (
               <>
                 <CheckCircle2 className="w-4 h-4 text-green-500" />
-                Saved!
+                {t.settings?.saved || "Saved!"}
               </>
             ) : (
               <>
                 <Save className="w-4 h-4" />
-                Save
+                {t.settings?.save || "Save"}
               </>
             )}
           </Button>
@@ -584,9 +588,10 @@ export default function SettingsPage() {
       {/* Read-only notice */}
       {!canEdit && (
         <div className="text-center text-sm text-slate-400">
-          Only the manager (Boss) can edit these settings.
+          {t.settings?.onlyBoss || "Only the manager (Boss) can edit these settings."}
         </div>
       )}
     </div>
+    </AppShell>
   );
 }
