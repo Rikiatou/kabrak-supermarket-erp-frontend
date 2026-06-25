@@ -13,6 +13,7 @@ import {
   DollarSign,
   Percent,
   Boxes,
+  Tag,
 } from "lucide-react";
 import {
   BarChart,
@@ -44,6 +45,7 @@ import {
   useTopProducts,
   useProfitAnalysis,
   useInventoryValuation,
+  useDiscountsReport,
 } from "@/lib/hooks/useApi";
 
 // ---- Fallback mock data (used when backend returns nothing) ----
@@ -106,6 +108,13 @@ const mockInventory = {
   productCount: 1248,
 };
 
+const mockDiscounts = {
+  totalDiscount: 0,
+  transactionsCount: 0,
+  transactions: [],
+  byProduct: [],
+};
+
 const PIE_COLORS = ["#2563eb", "#16a34a", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#ec4899", "#84cc16"];
 
 function toISODate(d: Date): string {
@@ -161,6 +170,7 @@ export default function RapportsPage() {
   const { data: topProducts, loading: loadingTop } = useTopProducts(startDate, endDate, 10);
   const { data: profit, loading: loadingProfit } = useProfitAnalysis(startDate, endDate);
   const { data: inventory, loading: loadingInv } = useInventoryValuation();
+  const { data: discountsData, loading: loadingDiscounts } = useDiscountsReport(startDate, endDate);
 
   // Fallback to mock if backend returns nothing
   const sales = salesReport ?? mockSalesReport;
@@ -169,6 +179,7 @@ export default function RapportsPage() {
   const top = topProducts && topProducts.length > 0 ? topProducts : mockTopProducts;
   const profitData = profit ?? mockProfit;
   const inventoryData = inventory ?? mockInventory;
+  const discounts = discountsData ?? mockDiscounts;
 
   const marginPct = profitData.marginRate ?? (profitData.totalRevenue > 0 ? (profitData.grossProfit / profitData.totalRevenue) * 100 : 0);
 
@@ -207,6 +218,13 @@ export default function RapportsPage() {
       icon: Percent,
       delta: marginPct >= 30 ? +2.4 : -1.2,
       sublabel: "gross margin",
+    },
+    {
+      label: t.rapports.totalDiscounts,
+      value: formatCurrency(discounts.totalDiscount ?? 0),
+      icon: Tag,
+      delta: discounts.transactionsCount > 0 ? 0 : undefined,
+      sublabel: `${discounts.transactionsCount ?? 0} ${t.rapports.discountsCount.toLowerCase()}`,
     },
   ];
 
@@ -291,10 +309,12 @@ export default function RapportsPage() {
           <div key={label} className="bg-white border border-[var(--border)] rounded-2xl p-4 shadow-[var(--shadow-sm)]">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-[var(--text-muted)]">{label}</span>
-              <div className={cn("flex items-center gap-0.5 text-[11px] font-semibold", delta >= 0 ? "text-emerald-600" : "text-red-500")}>
-                {delta >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-                {Math.abs(delta ?? 0).toFixed(1)}%
-              </div>
+              {delta !== undefined && (
+                <div className={cn("flex items-center gap-0.5 text-[11px] font-semibold", delta >= 0 ? "text-emerald-600" : "text-red-500")}>
+                  {delta >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+                  {Math.abs(delta).toFixed(1)}%
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <Icon className="w-4 h-4 text-[var(--brand)] shrink-0" />
@@ -505,6 +525,126 @@ export default function RapportsPage() {
         </div>
         {loadingInv && (
           <div className="px-4 pb-4 text-xs text-[var(--text-muted)]">{t.rapports.loadingValuation}</div>
+        )}
+      </Card>
+
+      {/* ════════ DISCOUNTS SECTION ════════ */}
+      <Card>
+        <CardHeader title={t.rapports.discounts} subtitle={t.rapports.discountsSub} />
+
+        {/* Summary stats */}
+        <div className="grid grid-cols-2 gap-4 p-4">
+          <div className="flex items-center gap-3 p-3 rounded-xl border border-[var(--border)]">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-rose-50">
+              <Tag className="w-5 h-5 text-rose-600" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-[var(--text-muted)] mb-0.5">{t.rapports.totalDiscounts}</p>
+              <p className="text-base font-bold text-[var(--text-primary)] tabular-nums truncate">
+                {formatCurrency(discounts.totalDiscount ?? 0)}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 p-3 rounded-xl border border-[var(--border)]">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-orange-50">
+              <ShoppingCart className="w-5 h-5 text-orange-600" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-[var(--text-muted)] mb-0.5">{t.rapports.discountsCount}</p>
+              <p className="text-base font-bold text-[var(--text-primary)] tabular-nums truncate">
+                {(discounts.transactionsCount ?? 0).toLocaleString()}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {loadingDiscounts ? (
+          <div className="px-4 pb-4 text-xs text-[var(--text-muted)]">Loading…</div>
+        ) : (discounts.transactionsCount ?? 0) === 0 ? (
+          <div className="px-4 pb-4 text-xs text-[var(--text-muted)]">{t.rapports.noDiscounts}</div>
+        ) : (
+          <>
+            {/* Discounts by product */}
+            <div className="px-4 pb-2">
+              <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">
+                {t.rapports.discountsByProduct}
+              </h4>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-[var(--border)] text-xs text-[var(--text-muted)]">
+                      <th className="text-left py-2 px-2 font-medium">{t.rapports.colProduct}</th>
+                      <th className="text-left py-2 px-2 font-medium">SKU</th>
+                      <th className="text-right py-2 px-2 font-medium">{t.rapports.colDiscount}</th>
+                      <th className="text-right py-2 px-2 font-medium">{t.rapports.colOccur}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(discounts.byProduct ?? []).slice(0, 10).map((p, i) => (
+                      <tr key={i} className="border-b border-[var(--border)]/50">
+                        <td className="py-2 px-2 text-[var(--text-primary)]">{p.productName}</td>
+                        <td className="py-2 px-2 text-[var(--text-muted)] text-xs">{p.sku || "—"}</td>
+                        <td className="py-2 px-2 text-right tabular-nums text-rose-600 font-medium">
+                          {formatCurrency(p.totalDiscount)}
+                        </td>
+                        <td className="py-2 px-2 text-right tabular-nums text-[var(--text-muted)]">
+                          {p.occurrences}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Discounts history */}
+            <div className="px-4 pb-4 pt-4">
+              <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">
+                {t.rapports.discountsHistory}
+              </h4>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-[var(--border)] text-xs text-[var(--text-muted)]">
+                      <th className="text-left py-2 px-2 font-medium">{t.rapports.colTxNumber}</th>
+                      <th className="text-left py-2 px-2 font-medium">{t.rapports.colDate}</th>
+                      <th className="text-left py-2 px-2 font-medium">{t.rapports.colCashier}</th>
+                      <th className="text-right py-2 px-2 font-medium">{t.rapports.colSubtotal}</th>
+                      <th className="text-right py-2 px-2 font-medium">{t.rapports.colDiscount}</th>
+                      <th className="text-right py-2 px-2 font-medium">{t.rapports.colRevenue}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(discounts.transactions ?? []).slice(0, 20).map((tx, i) => (
+                      <tr key={i} className="border-b border-[var(--border)]/50">
+                        <td className="py-2 px-2 text-[var(--text-primary)] text-xs font-mono">
+                          {tx.transactionNumber}
+                        </td>
+                        <td className="py-2 px-2 text-[var(--text-muted)] text-xs">
+                          {new Date(tx.date).toLocaleDateString()}
+                        </td>
+                        <td className="py-2 px-2 text-[var(--text-primary)]">{tx.cashierName}</td>
+                        <td className="py-2 px-2 text-right tabular-nums text-[var(--text-muted)]">
+                          {formatCurrency(tx.subtotal)}
+                        </td>
+                        <td className="py-2 px-2 text-right tabular-nums text-rose-600 font-medium">
+                          -{formatCurrency(tx.discount)}
+                        </td>
+                        <td className="py-2 px-2 text-right tabular-nums text-[var(--text-primary)] font-medium">
+                          {formatCurrency(tx.total)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {(discounts.transactions ?? []).length > 20 && (
+                <p className="text-xs text-[var(--text-muted)] mt-2">
+                  {(discounts.transactions ?? []).length} transactions au total — 20 affichées
+                </p>
+              )}
+            </div>
+          </>
         )}
       </Card>
       </div>

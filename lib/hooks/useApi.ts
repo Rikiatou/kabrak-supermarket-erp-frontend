@@ -783,6 +783,9 @@ export function useSalesByDay(startDate: string, endDate: string) {
 export function useInventoryValuation() {
   return useApi(() => reportsApi.inventoryValuation(), []);
 }
+export function useDiscountsReport(startDate: string, endDate: string) {
+  return useApi(() => reportsApi.discounts(startDate, endDate), [startDate, endDate]);
+}
 
 // ========================================
 // HOOKS: Accounting (Comptabilité)

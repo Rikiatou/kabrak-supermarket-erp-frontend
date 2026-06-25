@@ -636,7 +636,7 @@ export const customersApi = {
 // ========================================
 export const reportsApi = {
   sales: (startDate: string, endDate: string) =>
-    fetchAPI<{ totalRevenue: number; transactionCount: number; avgBasket: number; byDay: Array<{ date: string; revenue: number; transactions: number }> }>(`/reports/sales?startDate=${startDate}&endDate=${endDate}`),
+    fetchAPI<{ totalRevenue: number; totalSubtotal: number; totalDiscount: number; totalTax: number; transactionCount: number; avgBasket: number; byDay: Array<{ date: string; revenue: number; transactions: number }> }>(`/reports/sales?startDate=${startDate}&endDate=${endDate}`),
   salesByCategory: (startDate: string, endDate: string) =>
     fetchAPI<Array<{ category: string; revenue: number; quantity: number }>>(`/reports/sales/by-category?startDate=${startDate}&endDate=${endDate}`),
   salesByEmployee: (startDate: string, endDate: string) =>
@@ -653,6 +653,22 @@ export const reportsApi = {
     fetchAPI<Array<{ month: number; revenue: number; transactions: number }>>(`/reports/sales/by-month?year=${year}`),
   inventoryValuation: () =>
     fetchAPI<{ totalCostValue: number; totalSaleValue: number; potentialMargin: number; productCount: number }>(`/reports/inventory/valuation`),
+  discounts: (startDate: string, endDate: string) =>
+    fetchAPI<{
+      totalDiscount: number;
+      transactionsCount: number;
+      transactions: Array<{
+        id: string;
+        transactionNumber: string;
+        date: string;
+        cashierName: string;
+        subtotal: number;
+        discount: number;
+        total: number;
+        items: Array<{ productName: string; sku: string; quantity: number; discount: number }>;
+      }>;
+      byProduct: Array<{ productName: string; sku: string; totalDiscount: number; occurrences: number }>;
+    }>(`/reports/discounts?startDate=${startDate}&endDate=${endDate}`),
 };
 
 // ========================================
