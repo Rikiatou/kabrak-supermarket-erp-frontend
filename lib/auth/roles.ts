@@ -67,6 +67,7 @@ export const ROLE_PERMISSIONS: Record<Role, string[]> = {
     "/scanner",
     "/clients",
     "/historique",
+    "/factures",
   ],
   stockist: [
     "/dashboard",
@@ -76,6 +77,7 @@ export const ROLE_PERMISSIONS: Record<Role, string[]> = {
     "/pertes",
     "/scanner",
     "/historique",
+    "/factures",
   ],
 };
 
