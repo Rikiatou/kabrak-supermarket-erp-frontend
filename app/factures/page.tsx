@@ -346,6 +346,15 @@ export default function FacturesPage() {
 
   const generatePDF = async (invoice: Invoice) => {
     const pdf = new jsPDF();
+
+    // Formatage simple pour jsPDF (sans caractères Unicode problématiques)
+    const pdfCurrency = (n: number | null | undefined) => {
+      if (n == null || isNaN(n as number)) return "0 FCFA";
+      return new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 0 })
+        .format(n)
+        .replace(/\u202F|\u00A0/g, " ") // Remplacer espaces insécables
+        .replace(/,/g, " ") + " FCFA";
+    };
     const pageWidth = pdf.internal.pageSize.getWidth();
     const margin = 14;
     const contentWidth = pageWidth - 2 * margin;
@@ -457,10 +466,10 @@ export default function FacturesPage() {
       // Quantity
       pdf.text(String(item.quantity), colQty, y, { align: "center" });
       // Unit price
-      pdf.text(formatCurrency(item.unitPrice), colPrice, y, { align: "right" });
+      pdf.text(pdfCurrency(item.unitPrice), colPrice, y, { align: "right" });
       // Total
       pdf.setFont("helvetica", "bold");
-      pdf.text(formatCurrency(item.total), colTotal, y, { align: "right" });
+      pdf.text(pdfCurrency(item.total), colTotal, y, { align: "right" });
       pdf.setFont("helvetica", "normal");
       y += 9;
     });
@@ -473,7 +482,7 @@ export default function FacturesPage() {
     pdf.setFontSize(10);
     pdf.text("Total:", margin + 95, y);
     pdf.setFont("helvetica", "bold");
-    pdf.text(formatCurrency(invoice.total), pageWidth - margin - 4, y, { align: "right" });
+    pdf.text(pdfCurrency(invoice.total), pageWidth - margin - 4, y, { align: "right" });
     pdf.setFont("helvetica", "normal");
 
     // ── Payment summary ──
@@ -487,7 +496,7 @@ export default function FacturesPage() {
     pdf.text("Amount paid:", margin + 95, y);
     pdf.setTextColor(22, 163, 74);
     pdf.setFont("helvetica", "bold");
-    pdf.text(formatCurrency(invoice.paidAmount), pageWidth - margin - 4, y, { align: "right" });
+    pdf.text(pdfCurrency(invoice.paidAmount), pageWidth - margin - 4, y, { align: "right" });
     y += 7;
 
     // Balance
@@ -496,7 +505,7 @@ export default function FacturesPage() {
     pdf.text("Balance due:", margin + 95, y);
     pdf.setTextColor(invoice.balance > 0 ? 220 : 22, invoice.balance > 0 ? 38 : 163, invoice.balance > 0 ? 38 : 74);
     pdf.setFont("helvetica", "bold");
-    pdf.text(formatCurrency(invoice.balance), pageWidth - margin - 4, y, { align: "right" });
+    pdf.text(pdfCurrency(invoice.balance), pageWidth - margin - 4, y, { align: "right" });
     y += 7;
 
     // Status
@@ -531,7 +540,7 @@ export default function FacturesPage() {
         pdf.text(new Date(p.date).toLocaleDateString("en-GB"), margin + 4, y);
         pdf.text(paymentMethodLabels[p.method] || p.method, margin + 55, y);
         pdf.setFont("helvetica", "bold");
-        pdf.text(formatCurrency(p.amount), pageWidth - margin - 4, y, { align: "right" });
+        pdf.text(pdfCurrency(p.amount), pageWidth - margin - 4, y, { align: "right" });
         pdf.setFont("helvetica", "normal");
         if (p.note) {
           y += 4;
