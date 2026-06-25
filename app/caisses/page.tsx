@@ -523,12 +523,18 @@ export default function CaissesPage() {
         return txTime >= shiftStart && txTime <= now && tx.status === "completed";
       });
 
-      // Calculer le expected cash = ouverture + ventes cash - monnaie rendue
+      // Calculer le expected total = ouverture + toutes les ventes - monnaie rendue
       const cashSales = shiftTx
         .filter((tx) => tx.paymentMethod === "cash")
         .reduce((sum, tx) => sum + (tx.cashGiven || tx.total), 0);
+      const cardSales = shiftTx
+        .filter((tx) => tx.paymentMethod === "card")
+        .reduce((sum, tx) => sum + tx.total, 0);
+      const mobileSales = shiftTx
+        .filter((tx) => tx.paymentMethod === "mobile")
+        .reduce((sum, tx) => sum + tx.total, 0);
       const changeGiven = shiftTx.reduce((sum, tx) => sum + (tx.change || 0), 0);
-      const expected = shift.openingCash + cashSales - changeGiven;
+      const expected = shift.openingCash + cashSales + cardSales + mobileSales - changeGiven;
 
       console.log("Close shift calc:", { openingCash: shift.openingCash, cashSales, changeGiven, expected, txCount: shiftTx.length });
       setCloseExpectedCash(expected);
@@ -541,9 +547,9 @@ export default function CaissesPage() {
       // Essayer le Z-report en fallback
       try {
         const report = await shiftsApi.zReport(shift.id);
-        setCloseExpectedCash(report.cashDrawerTotal);
+        setCloseExpectedCash(report.totalExpected || report.cashDrawerTotal);
         if (report.customerCount > 0) {
-          toast(`${report.customerCount} ventes — caisse attendue: ${formatCurrency(report.cashDrawerTotal)}`, "info");
+          toast(`${report.customerCount} ventes — caisse attendue: ${formatCurrency(report.totalExpected || report.cashDrawerTotal)}`, "info");
         }
       } catch {
         toast("Caisse attendue = fonds d'ouverture (récupération des ventes impossible)", "warning");

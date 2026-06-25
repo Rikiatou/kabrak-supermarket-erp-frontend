@@ -48,6 +48,7 @@ export function ZReportReceipt({
     openingCash: "Fonds d'ouverture",
     cashReceived: "Espèces reçues",
     cashDrawerTotal: "Total caisse",
+    totalExpected: "Total attendu",
     expectedCash: "Caisse attendue",
     closingCash: "Caisse comptée",
     difference: "Écart",
@@ -232,7 +233,7 @@ export function ZReportReceipt({
               </p>
               <div className="flex justify-between text-sm">
                 <span>{z.expectedCash}</span>
-                <span className="tabular-nums">{formatCurrency(report.expectedCash ?? 0)}</span>
+                <span className="tabular-nums">{formatCurrency(report.totalExpected ?? report.expectedCash ?? 0)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>{z.closingCash}</span>

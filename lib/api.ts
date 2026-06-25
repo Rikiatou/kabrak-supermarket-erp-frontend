@@ -601,6 +601,7 @@ export interface ApiZReport {
   changeGiven: number;
   cashReceived: number;
   cashDrawerTotal: number;
+  totalExpected: number;
   customerCount: number;
   averageSale: number;
   transactions: Array<{
