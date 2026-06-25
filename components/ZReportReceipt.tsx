@@ -46,6 +46,7 @@ export function ZReportReceipt({
     totalReceipts: "Total encaissements",
     changeGiven: "Monnaie rendue",
     openingCash: "Fonds d'ouverture",
+    cashReceived: "Espèces reçues",
     cashDrawerTotal: "Total caisse",
     expectedCash: "Caisse attendue",
     closingCash: "Caisse comptée",
@@ -210,8 +211,8 @@ export function ZReportReceipt({
               <span className="tabular-nums">{formatCurrency(report.openingCash)}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span>{z.cash}</span>
-              <span className="tabular-nums">+{formatCurrency(report.receiptsByMethod.cash)}</span>
+              <span>{z.cashReceived}</span>
+              <span className="tabular-nums">+{formatCurrency(report.cashReceived || report.receiptsByMethod.cash)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span>{z.changeGiven}</span>

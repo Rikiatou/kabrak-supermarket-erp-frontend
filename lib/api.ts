@@ -599,6 +599,7 @@ export interface ApiZReport {
   };
   totalReceipts: number;
   changeGiven: number;
+  cashReceived: number;
   cashDrawerTotal: number;
   customerCount: number;
   averageSale: number;
