@@ -572,6 +572,45 @@ export interface ApiShift {
   notes?: string;
 }
 
+export interface ApiZReport {
+  shiftId: string;
+  registerId: string;
+  registerName: string;
+  employeeId: string;
+  employeeName: string;
+  openedAt: string;
+  closedAt: string | null;
+  openingCash: number;
+  closingCash: number | null;
+  expectedCash: number | null;
+  difference: number | null;
+  notes: string | null;
+  grossSales: number;
+  returnsAndCredits: number;
+  totalDiscount: number;
+  totalTax: number;
+  netSales: number;
+  nonTaxableSales: number;
+  receiptsByMethod: {
+    cash: number;
+    card: number;
+    mobile: number;
+    split: number;
+  };
+  totalReceipts: number;
+  changeGiven: number;
+  cashDrawerTotal: number;
+  customerCount: number;
+  averageSale: number;
+  transactions: Array<{
+    id: string;
+    transactionNumber: string;
+    date: string;
+    total: number;
+    paymentMethod: string;
+  }>;
+}
+
 export const shiftsApi = {
   list: () => fetchAPI<ApiShift[]>(`/shifts`),
   active: () => fetchAPI<ApiShift[]>(`/shifts/active`),
@@ -580,6 +619,7 @@ export const shiftsApi = {
   close: (id: string, data: { closingCash: number; expectedCash: number; notes?: string }) =>
     fetchAPI<ApiShift>(`/shifts/${id}/close`, { method: "POST", body: JSON.stringify(data) }),
   byEmployee: (employeeId: string) => fetchAPI<ApiShift[]>(`/shifts/employee/${employeeId}`),
+  zReport: (shiftId: string) => fetchAPI<ApiZReport>(`/shifts/${shiftId}/z-report`),
 };
 
 // ========================================

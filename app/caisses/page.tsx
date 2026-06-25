@@ -26,7 +26,9 @@ import {
   useCloseShift,
   useEmployees,
 } from "@/lib/hooks/useApi";
-import type { ApiShift, ApiEmployee } from "@/lib/api";
+import { shiftsApi } from "@/lib/api";
+import type { ApiShift, ApiEmployee, ApiZReport } from "@/lib/api";
+import { ZReportReceipt } from "@/components/ZReportReceipt";
 
 // ========================================
 // MOCK DATA
@@ -464,6 +466,8 @@ export default function CaissesPage() {
 
   const [openRegister, setOpenRegister] = useState<string | null>(null);
   const [closeShift, setCloseShift] = useState<ApiShift | null>(null);
+  const [zReport, setZReport] = useState<ApiZReport | null>(null);
+  const [loadingZReport, setLoadingZReport] = useState(false);
 
   // Map registerId -> active shift
   const shiftByRegister = useMemo(() => {
@@ -522,6 +526,16 @@ export default function CaissesPage() {
       toast(t.caisses.successClose, "success");
       setCloseShift(null);
       reload();
+      // Fetch Z-report
+      setLoadingZReport(true);
+      try {
+        const report = await shiftsApi.zReport(closeShift.id);
+        setZReport(report);
+      } catch {
+        toast(t.caisses.errorClose, "warning");
+      } finally {
+        setLoadingZReport(false);
+      }
     } catch (e) {
       toast(t.caisses.errorClose, "warning");
     }
@@ -631,6 +645,14 @@ export default function CaissesPage() {
           closing={closing}
           onConfirm={handleClose}
           onCancel={() => setCloseShift(null)}
+        />
+      )}
+
+      {/* Z-Report after close */}
+      {zReport && (
+        <ZReportReceipt
+          report={zReport}
+          onClose={() => setZReport(null)}
         />
       )}
     </AppShell>
