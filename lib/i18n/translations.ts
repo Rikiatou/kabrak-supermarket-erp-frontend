@@ -823,6 +823,10 @@ export const translations = {
         overdue: "En retard",
         cancelled: "Annulée",
       },
+      advance: "Acompte (avance)",
+      cash: "Espèces",
+      card: "Carte",
+      transfer: "Virement",
     },
     // Pertes
     pertes: {
@@ -894,6 +898,12 @@ export const translations = {
       errorAdd: "Erreur lors de l'ajout du créneau",
       errorDelete: "Erreur lors de la suppression",
       delete: "Supprimer",
+    },
+    // Historique
+    historique: {
+      mySales: "Mes ventes",
+      salesCount: "ventes récentes",
+      noSales: "Aucune vente",
     },
     // Settings
     settings: {
@@ -1927,6 +1937,10 @@ export const translations = {
         overdue: "Overdue",
         cancelled: "Cancelled",
       },
+      advance: "Deposit (advance)",
+      cash: "Cash",
+      card: "Card",
+      transfer: "Transfer",
     },
     pertes: {
       title: "Loss Management",
@@ -1996,6 +2010,11 @@ export const translations = {
       errorAdd: "Error adding slot",
       errorDelete: "Error deleting",
       delete: "Delete",
+    },
+    historique: {
+      mySales: "My sales",
+      salesCount: "recent sales",
+      noSales: "No sales",
     },
     settings: {
       title: "Settings",

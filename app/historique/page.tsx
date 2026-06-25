@@ -20,11 +20,13 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { useI18n } from "@/lib/i18n/context";
 import { useToast } from "@/components/ui/Toast";
-import { useProducts } from "@/lib/hooks/useApi";
+import { useProducts, useRecentTransactions } from "@/lib/hooks/useApi";
 import { stockApi } from "@/lib/api";
-import type { ApiStockMovement } from "@/lib/api";
+import type { ApiStockMovement, ApiTransaction } from "@/lib/api";
 import type { Product } from "@/lib/types";
 import { formatCurrency, formatDate, formatTime, cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth/context";
+import { ShoppingCart, Wallet, Clock, User } from "lucide-react";
 
 type MovementType = "in" | "out" | "adjustment";
 type TypeFilter = "all" | MovementType;
@@ -97,6 +99,11 @@ function MovementTableSkeleton() {
 export default function HistoriquePage() {
   const { t } = useI18n();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<"stock" | "sales">("stock");
+
+  // Mes ventes (transactions récentes)
+  const { transactions: mySales, loading: loadingSales } = useRecentTransactions(50);
 
   // MOVEMENT_CONFIG inside component so it reads t live
   const MOVEMENT_CONFIG: Record<MovementType, { label: string; variant: "success" | "danger" | "warning"; icon: typeof ArrowDownToLine }> = {
@@ -259,6 +266,87 @@ export default function HistoriquePage() {
 
   return (
     <AppShell title={t.stocks.historyPageTitle} subtitle={t.stocks.historyPageSubtitle}>
+      {/* Tabs */}
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => setActiveTab("stock")}
+          className={cn(
+            "px-4 py-2 rounded-xl text-sm font-medium transition-colors",
+            activeTab === "stock" ? "bg-[var(--brand)] text-white" : "bg-slate-100 text-[var(--text-secondary)] hover:bg-slate-200"
+          )}
+        >
+          {t.stocks.historyPageTitle}
+        </button>
+        <button
+          onClick={() => setActiveTab("sales")}
+          className={cn(
+            "px-4 py-2 rounded-xl text-sm font-medium transition-colors",
+            activeTab === "sales" ? "bg-[var(--brand)] text-white" : "bg-slate-100 text-[var(--text-secondary)] hover:bg-slate-200"
+          )}
+        >
+          {t.historique?.mySales || "Mes ventes"}
+        </button>
+      </div>
+
+      {/* Tab: Mes ventes */}
+      {activeTab === "sales" && (
+        <Card padding="none">
+          <div className="p-4 border-b border-[var(--border)]">
+            <h3 className="text-sm font-bold text-[var(--text-primary)]">{t.historique?.mySales || "Mes ventes"}</h3>
+            <p className="text-xs text-[var(--text-muted)] mt-0.5">
+              {mySales.length} {t.historique?.salesCount || "ventes récentes"}
+            </p>
+          </div>
+          {loadingSales ? (
+            <div className="p-8 text-center text-sm text-[var(--text-muted)]">...</div>
+          ) : mySales.length === 0 ? (
+            <div className="p-8 text-center text-sm text-[var(--text-muted)]">{t.historique?.noSales || "Aucune vente"}</div>
+          ) : (
+            <div className="divide-y divide-[var(--border-subtle)]">
+              {mySales.map((tx) => (
+                <div key={tx.id} className="p-4 flex items-center gap-3 hover:bg-slate-50 transition-colors">
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
+                    <ShoppingCart className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-[var(--text-primary)]">{tx.transactionNumber}</span>
+                      <span className={cn(
+                        "text-[10px] px-1.5 py-0.5 rounded-full font-medium",
+                        tx.paymentMethod === "cash" ? "bg-emerald-100 text-emerald-700" :
+                        tx.paymentMethod === "mobile" ? "bg-purple-100 text-purple-700" :
+                        "bg-blue-100 text-blue-700"
+                      )}>
+                        {tx.paymentMethod}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-[var(--text-muted)] mt-0.5">
+                      <span className="flex items-center gap-1">
+                        <User className="w-3 h-3" />
+                        {tx.cashier ? `${tx.cashier.firstName} ${tx.cashier.lastName}` : tx.cashierId}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {formatDate(tx.date)} {formatTime(tx.date)}
+                      </span>
+                      <span>{tx.items?.length || 0} articles</span>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="text-sm font-bold tabular-nums text-[var(--text-primary)]">{formatCurrency(tx.total)}</div>
+                    {tx.discount > 0 && (
+                      <div className="text-xs text-red-500 tabular-nums">-{formatCurrency(tx.discount)}</div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* Tab: Stock movements */}
+      {activeTab === "stock" && (
       <div className="flex flex-col lg:flex-row gap-4" style={{ minHeight: "calc(100vh - 120px)" }}>
 
         {/* ── LEFT: Product selector ── */}
@@ -617,6 +705,7 @@ export default function HistoriquePage() {
           )}
         </div>
       </div>
+      )}
     </AppShell>
   );
 }

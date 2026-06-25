@@ -183,6 +183,8 @@ export default function FacturesPage() {
   const [clientName, setClientName] = useState("");
   const [clientPhone, setClientPhone] = useState("");
   const [clientEmail, setClientEmail] = useState("");
+  const [advancePayment, setAdvancePayment] = useState("");
+  const [advanceMethod, setAdvanceMethod] = useState("cash");
   const [items, setItems] = useState<InvoiceItem[]>([{ description: "", quantity: 1, unitPrice: 0, total: 0 }]);
 
   const filtered = invoices.filter(
@@ -237,7 +239,22 @@ export default function FacturesPage() {
       })),
     });
     if (result) {
-      toast(`${t.factures.invoiceCreated}: ${result.number}`, "success");
+      // Si un acompte a été saisi, l'enregistrer comme premier versement
+      const advance = parseFloat(advancePayment) || 0;
+      if (advance > 0 && advance <= result.total) {
+        try {
+          await addPayment(result.id, {
+            amount: advance,
+            method: advanceMethod,
+            note: "Acompte initial",
+          });
+          toast(`${t.factures.invoiceCreated}: ${result.number} — ${t.factures.advance || "Acompte"}: ${formatCurrency(advance)}`, "success");
+        } catch {
+          toast(`${t.factures.invoiceCreated}: ${result.number} (${t.factures.advance || "Acompte"} non enregistré)`, "warning");
+        }
+      } else {
+        toast(`${t.factures.invoiceCreated}: ${result.number}`, "success");
+      }
       reload();
     } else {
       toast(t.factures.invoiceCreatedLocal, "warning");
@@ -246,6 +263,8 @@ export default function FacturesPage() {
     setClientName("");
     setClientPhone("");
     setClientEmail("");
+    setAdvancePayment("");
+    setAdvanceMethod("cash");
     setItems([{ description: "", quantity: 1, unitPrice: 0, total: 0 }]);
   };
 
@@ -747,6 +766,12 @@ export default function FacturesPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-1">
+                        {invoice.balance > 0 && (
+                          <button onClick={() => openPaymentModal(invoice)} className="px-2 py-1 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors flex items-center gap-1">
+                            <Wallet className="w-3.5 h-3.5" />
+                            {t.factures.addPayment || "Add payment"}
+                          </button>
+                        )}
                         <button onClick={() => openPaymentModal(invoice)} title={t.factures.paymentTracking} className="p-1.5 hover:bg-amber-50 rounded-lg transition-colors">
                           <Wallet className="w-4 h-4 text-amber-600" />
                         </button>
@@ -884,6 +909,42 @@ export default function FacturesPage() {
                 <span>{t.factures.total}</span>
                 <span className="tabular-nums text-[var(--brand)]">{formatCurrency(total)}</span>
               </div>
+            </div>
+
+            {/* Acompte (avance) */}
+            <div className="border border-[var(--border)] rounded-xl p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <Wallet className="w-4 h-4 text-[var(--brand)]" />
+                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">
+                  {t.factures.advance || "Acompte (avance)"}
+                </label>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <input
+                  type="number"
+                  min={0}
+                  value={advancePayment}
+                  onChange={(e) => setAdvancePayment(e.target.value)}
+                  placeholder="0"
+                  className="px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm tabular-nums outline-none focus:border-[var(--brand)]"
+                />
+                <select
+                  value={advanceMethod}
+                  onChange={(e) => setAdvanceMethod(e.target.value)}
+                  className="px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)] bg-white"
+                >
+                  <option value="cash">{t.factures.cash || "Espèces"}</option>
+                  <option value="mobile">Mobile Money</option>
+                  <option value="card">{t.factures.card || "Carte"}</option>
+                  <option value="transfer">{t.factures.transfer || "Virement"}</option>
+                </select>
+              </div>
+              {advancePayment && parseFloat(advancePayment) > 0 && (
+                <div className="flex justify-between text-xs bg-amber-50 rounded-lg px-3 py-2">
+                  <span className="text-amber-700">{t.factures.remainingBalance || "Reste à payer"}:</span>
+                  <span className="font-bold text-amber-700 tabular-nums">{formatCurrency(total - (parseFloat(advancePayment) || 0))}</span>
+                </div>
+              )}
             </div>
 
             <div className="flex gap-2">
