@@ -104,8 +104,8 @@ export default function StocksPage() {
     try {
       // Sauvegarder dans le backend
       const created = await productsApi.create({
-        sku: data.sku,
-        barcode: data.barcode || data.sku,
+        sku: data.sku || undefined,
+        barcode: data.barcode || undefined,
         name: data.name,
         category: data.category,
         price: data.price,

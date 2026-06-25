@@ -54,7 +54,6 @@ export function NewProductModal({ onClose, onSave }: NewProductModalProps) {
   const validate = (): boolean => {
     const errs: Partial<FormData> = {};
     if (!form.name.trim()) errs.name = t.common.required;
-    if (!form.sku.trim()) errs.sku = t.common.required;
     if (!form.category) errs.category = t.common.required;
     if (!form.price || isNaN(Number(form.price))) errs.price = t.common.required;
     if (!form.costPrice || isNaN(Number(form.costPrice))) errs.costPrice = t.common.required;
@@ -137,10 +136,10 @@ export function NewProductModal({ onClose, onSave }: NewProductModalProps) {
                         className={inputClass(!!errors.name)}
                       />
                     </Field>
-                    <Field label={t.forms.sku} error={errors.sku} required>
+                    <Field label={t.forms.sku}>
                       <input type="text" value={form.sku} onChange={set("sku")}
-                        placeholder={t.forms.skuPh}
-                        className={inputClass(!!errors.sku)} />
+                        placeholder={t.forms.skuPh || "Auto-généré si vide"}
+                        className={inputClass(false)} />
                     </Field>
                     <Field label={t.forms.barcode}>
                       <input type="text" value={form.barcode} onChange={set("barcode")}
