@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Wallet,
   TrendingUp,
@@ -203,6 +203,12 @@ function CloseShiftModal({
   );
   const [notes, setNotes] = useState("");
   const { t } = useI18n();
+
+  // Mettre à jour quand le Z-report arrive avec le vrai expected cash
+  useEffect(() => {
+    setExpectedCash(String(initialExpected));
+    setClosingCash(String(initialExpected));
+  }, [initialExpected]);
 
   const closingNum = Number(closingCash) || 0;
   const expectedNum = Number(expectedCash) || 0;
@@ -676,7 +682,10 @@ export default function CaissesPage() {
       {/* Z-Report after close */}
       {zReport && (
         <ZReportReceipt
-          report={zReport}
+          report={{
+            ...zReport,
+            registerName: REGISTERS.find((r) => r.id === zReport.registerId)?.name ?? zReport.registerName,
+          }}
           onClose={() => setZReport(null)}
         />
       )}
