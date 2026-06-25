@@ -31,7 +31,7 @@ import { Badge } from "@/components/ui/Badge";
 import { products as mockProducts } from "@/lib/mock-data";
 import { formatCurrency, cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/context";
-import { useProducts, useCreateTransaction, useCustomers, useRecentTransactions, useActiveShifts } from "@/lib/hooks/useApi";
+import { useProducts, useCreateTransaction, useCustomers, useCreateCustomer, useRecentTransactions, useActiveShifts } from "@/lib/hooks/useApi";
 import type { ApiCustomer, ApiTransaction } from "@/lib/api";
 import { useAuth } from "@/lib/auth/context";
 import { getEffectivePrice, hasActiveMarkdown, daysToExpiry } from "@/lib/api";
@@ -73,19 +73,20 @@ export default function POSPage() {
   const { data: apiCustomers } = useCustomers();
   const { transactions: recentTransactions, reload: reloadRecentTransactions } = useRecentTransactions(10);
   const { create: createTransaction, creating } = useCreateTransaction();
+  const { create: createCustomer } = useCreateCustomer();
   const { user } = useAuth();
   const { data: activeShifts } = useActiveShifts();
   const { config: licenseConfig } = useLicense();
   const storeInfo = getStoreInfo(licenseConfig);
   const CATEGORIES = [
-    t.common.catAll,
-    t.common.catGrocery,
-    t.common.catDrinks,
-    t.common.catDairy,
-    t.common.catHygiene,
-    t.common.catButcher,
-    t.common.catBakery,
-    t.common.catFrozen,
+    t.common?.catAll || "Tous",
+    t.common?.catGrocery || "Grocery",
+    t.common?.catDrinks || "Beverages",
+    t.common?.catDairy || "Dairy",
+    t.common?.catHygiene || "Hygiene",
+    t.common?.catButcher || "Butchery",
+    t.common?.catBakery || "Bakery",
+    t.common?.catFrozen || "Frozen",
   ];
   const [cart, setCart] = useState<CartItem[]>([]);
   const [search, setSearch] = useState("");
@@ -101,6 +102,7 @@ export default function POSPage() {
   const [splitPayment, setSplitPayment] = useState<SplitPayment>({ cash: 0, mobile: 0, card: 0 });
   const [selectedCustomer, setSelectedCustomer] = useState<ApiCustomer | null>(null);
   const [showCustomerSearch, setShowCustomerSearch] = useState(false);
+  const [showCustomerCreateModal, setShowCustomerCreateModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showMobileCart, setShowMobileCart] = useState(false);
   const [autoPrint, setAutoPrint] = useState(() => {
@@ -1170,6 +1172,20 @@ export default function POSPage() {
             setSelectedCustomer(null);
             setShowCustomerSearch(false);
           }}
+          onCreate={() => {
+            setShowCustomerSearch(false);
+            setShowCustomerCreateModal(true);
+          }}
+        />
+      )}
+      {showCustomerCreateModal && (
+        <CustomerCreateModal
+          show={showCustomerCreateModal}
+          onClose={() => setShowCustomerCreateModal(false)}
+          onSuccess={(c) => {
+            setSelectedCustomer(c);
+            setShowCustomerCreateModal(false);
+          }}
         />
       )}
       {showHistoryModal && (
@@ -1254,12 +1270,14 @@ function CustomerSearchModal({
   onClose,
   onSelect,
   onClear,
+  onCreate,
 }: {
   customers: ApiCustomer[];
   selected: ApiCustomer | null;
   onClose: () => void;
   onSelect: (c: ApiCustomer) => void;
   onClear: () => void;
+  onCreate: () => void;
 }) {
   const { t } = useI18n();
   const [query, setQuery] = useState("");
@@ -1291,6 +1309,13 @@ function CustomerSearchModal({
             autoFocus
           />
         </div>
+        <button
+          onClick={onCreate}
+          className="w-full mb-3 flex items-center justify-center gap-2 px-4 py-2.5 bg-[var(--brand)] text-white rounded-xl text-sm font-medium hover:bg-[var(--brand-dark)] transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          {t.clients?.add || t.common?.add || "Créer un client"}
+        </button>
         <div className="flex-1 overflow-y-auto -mx-2 px-2">
           {selected && (
             <div className="mb-3 p-3 bg-emerald-50 rounded-xl border border-emerald-100">
@@ -1334,6 +1359,111 @@ function CustomerSearchModal({
           <Button variant="secondary" className="flex-1" onClick={onClear}>{t.pos.clearCustomer}</Button>
           <Button className="flex-1" onClick={onClose}>{t.common.confirm}</Button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Customer Create Modal
+function CustomerCreateModal({
+  show,
+  onClose,
+  onSuccess,
+}: {
+  show: boolean;
+  onClose: () => void;
+  onSuccess: (customer: ApiCustomer) => void;
+}) {
+  const { t } = useI18n();
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { create: createCustomer } = useCreateCustomer();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!firstName || !lastName || !phone) return;
+
+    setLoading(true);
+    try {
+      const newCustomer = await createCustomer({
+        firstName,
+        lastName,
+        phone,
+        email: "",
+      });
+      onSuccess(newCustomer);
+      onClose();
+      setFirstName("");
+      setLastName("");
+      setPhone("");
+    } catch (err) {
+      console.error("Failed to create customer:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!show) return null;
+
+  return (
+    <div className="fixed inset-0 z-[210] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-[var(--shadow-lg)] w-full max-w-md p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-base font-semibold text-[var(--text-primary)]">
+            {t.clients?.add || t.common?.add || "Créer un client"}
+          </h3>
+          <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded-lg transition-colors">
+            <X className="w-4 h-4 text-slate-500" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div>
+            <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+              {t.clients?.firstName || "Prénom"}
+            </label>
+            <input
+              type="text"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              className="w-full border border-[var(--border)] rounded-xl px-3 py-2 text-sm outline-none focus:border-[var(--brand)]"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+              {t.clients?.lastName || "Nom"}
+            </label>
+            <input
+              type="text"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              className="w-full border border-[var(--border)] rounded-xl px-3 py-2 text-sm outline-none focus:border-[var(--brand)]"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+              {t.clients?.phone || "Téléphone"}
+            </label>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="w-full border border-[var(--border)] rounded-xl px-3 py-2 text-sm outline-none focus:border-[var(--brand)]"
+              required
+            />
+          </div>
+          <div className="flex gap-3 pt-2">
+            <Button variant="secondary" className="flex-1" onClick={onClose}>
+              {t.common.cancel}
+            </Button>
+            <Button className="flex-1" disabled={loading || !firstName || !lastName || !phone}>
+              {loading ? "..." : t.common.confirm}
+            </Button>
+          </div>
+        </form>
       </div>
     </div>
   );
