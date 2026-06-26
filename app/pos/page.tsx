@@ -123,8 +123,54 @@ export default function POSPage() {
     }
     return null;
   });
+  const [isOnline, setIsOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
+  const [pendingTxCount, setPendingTxCount] = useState(0);
   const searchRef = useRef<HTMLInputElement>(null);
   const beepRef = useRef<HTMLAudioElement>(null);
+
+  // Détection online/offline
+  useEffect(() => {
+    const goOnline = () => { setIsOnline(true); syncPendingTransactions(); };
+    const goOffline = () => setIsOnline(false);
+    window.addEventListener("online", goOnline);
+    window.addEventListener("offline", goOffline);
+    // Au montage, synchroniser les transactions en attente
+    syncPendingTransactions();
+    return () => {
+      window.removeEventListener("online", goOnline);
+      window.removeEventListener("offline", goOffline);
+    };
+  }, []);
+
+  // Compter les transactions en attente
+  const refreshPendingCount = () => {
+    try {
+      const pending = JSON.parse(localStorage.getItem("kabrak_pending_tx") || "[]");
+      setPendingTxCount(pending.length);
+    } catch { setPendingTxCount(0); }
+  };
+
+  // Synchroniser les transactions en attente quand online
+  const syncPendingTransactions = async () => {
+    if (typeof navigator !== "undefined" && !navigator.onLine) return;
+    try {
+      const pending = JSON.parse(localStorage.getItem("kabrak_pending_tx") || "[]");
+      if (pending.length === 0) return;
+      const remaining: any[] = [];
+      for (const tx of pending) {
+        try {
+          await createTransaction(tx);
+        } catch {
+          remaining.push(tx);
+        }
+      }
+      localStorage.setItem("kabrak_pending_tx", JSON.stringify(remaining));
+      refreshPendingCount();
+      if (remaining.length === 0 && pending.length > 0) {
+        // toast de succès silencieux
+      }
+    } catch {}
+  };
 
   // Utiliser uniquement les vrais produits du backend (pas de fallback mock)
   // Les produits mock ont des IDs qui n'existent pas dans la DB, ce qui cause
@@ -372,7 +418,7 @@ export default function POSPage() {
       allocatedDiscount[0] += discount - allocatedSum;
     }
 
-    const tx = await createTransaction({
+    const txPayload = {
       cashierId: defaultCashierId,
       registerId,
       subtotal: Math.round(subtotal),
@@ -394,7 +440,26 @@ export default function POSPage() {
           total: Math.round(effPrice * item.quantity - allocatedDiscount[idx]),
         };
       }),
-    });
+    };
+
+    let tx: any = null;
+    if (isOnline) {
+      try {
+        tx = await createTransaction(txPayload);
+      } catch (err) {
+        // Échec réseau — stocker en local pour sync ultérieure
+        const pending = JSON.parse(localStorage.getItem("kabrak_pending_tx") || "[]");
+        pending.push({ ...txPayload, _createdAt: Date.now() });
+        localStorage.setItem("kabrak_pending_tx", JSON.stringify(pending));
+        refreshPendingCount();
+      }
+    } else {
+      // Mode offline — stocker en local
+      const pending = JSON.parse(localStorage.getItem("kabrak_pending_tx") || "[]");
+      pending.push({ ...txPayload, _createdAt: Date.now() });
+      localStorage.setItem("kabrak_pending_tx", JSON.stringify(pending));
+      refreshPendingCount();
+    }
 
     // Utiliser l'ID du backend si disponible, sinon générer
     const id = tx?.transactionNumber || `TXN-${Date.now()}`;
@@ -622,6 +687,20 @@ export default function POSPage() {
 
   return (
     <AppShell title={t.pos.title} subtitle={t.pos.subtitle}>
+      {/* Bannière offline */}
+      {!isOnline && (
+        <div className="mb-2 bg-amber-100 border border-amber-300 text-amber-800 text-sm px-4 py-2 rounded-lg flex items-center gap-2">
+          <span className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></span>
+          {t.pos?.offlineMode || "Mode hors ligne — les ventes seront synchronisées au retour de la connexion."}
+        </div>
+      )}
+      {isOnline && pendingTxCount > 0 && (
+        <div className="mb-2 bg-blue-50 border border-blue-200 text-blue-700 text-sm px-4 py-2 rounded-lg flex items-center gap-2">
+          <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+          {(t.pos?.pendingSync || "{n} vente(s) en attente de synchronisation.").replace("{n}", String(pendingTxCount))}
+        </div>
+      )}
+
       <div className="flex gap-4 h-[calc(100vh-64px-48px)] relative">
 
         {/* LEFT — Product catalog */}

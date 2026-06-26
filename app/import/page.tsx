@@ -124,8 +124,8 @@ RIZ-25-002,0640055667788,Scented Rice 25kg,Grocery,Rice,Import Asia,22000,17500,
           />
           <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-2">
             {[
-              { name: "sku", required: true, desc: t.import.colSku },
-              { name: "barcode", required: true, desc: t.import.colBarcode },
+              { name: "sku", required: false, desc: t.import.colSku },
+              { name: "barcode", required: false, desc: t.import.colBarcode },
               { name: "name", required: true, desc: t.import.colName },
               { name: "category", required: true, desc: t.import.colCategory },
               { name: "price", required: true, desc: t.import.colPrice },

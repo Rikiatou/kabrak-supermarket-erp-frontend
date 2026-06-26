@@ -12,6 +12,7 @@ import {
   X,
   ChevronDown,
   Tag,
+  Printer,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Card } from "@/components/ui/Card";
@@ -777,9 +778,86 @@ function ProductDetailPanel({
             {t.stocks.restockAction}
           </Button>
         </div>
+
+        {/* Print Label */}
+        <div className="px-4 pb-4">
+          <Button
+            variant="secondary"
+            className="w-full"
+            size="md"
+            icon={<Printer className="w-4 h-4" />}
+            onClick={() => printProductLabel(product)}
+          >
+            {t.stocks?.printLabel || "Imprimer étiquette"}
+          </Button>
+        </div>
       </div>
     </>
   );
+}
+
+// ========================================
+// FONCTION: Imprimer étiquette produit
+// ========================================
+function printProductLabel(product: Product) {
+  const win = window.open("", "_blank", "width=400,height=300");
+  if (!win) return;
+
+  const price = new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 0 })
+    .format(product.price)
+    .replace(/\u202F|\u00A0/g, " ");
+
+  win.document.write(`
+    <html>
+      <head>
+        <title>Étiquette - ${product.name}</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { width: 200px; padding: 8px; font-family: Arial, sans-serif; }
+          .label { border: 1px solid #000; padding: 8px; text-align: center; }
+          .store { font-size: 10px; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #000; padding-bottom: 4px; margin-bottom: 6px; }
+          .name { font-size: 12px; font-weight: bold; margin-bottom: 4px; line-height: 1.2; }
+          .barcode-wrap { margin: 6px 0; }
+          .barcode-wrap svg { width: 100%; height: 40px; }
+          .sku { font-size: 9px; color: #666; margin-bottom: 4px; font-family: monospace; }
+          .price { font-size: 16px; font-weight: bold; }
+          .unit { font-size: 9px; color: #666; }
+          @media print { body { width: auto; } }
+        </style>
+        <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+      </head>
+      <body>
+        <div class="label">
+          <div class="store">KABRAK Supermarket</div>
+          <div class="name">${product.name}</div>
+          <div class="sku">${product.sku}</div>
+          <div class="barcode-wrap">
+            <svg id="barcode"></svg>
+          </div>
+          <div class="price">${price} FCFA</div>
+          <div class="unit">${product.unit}</div>
+        </div>
+        <script>
+          try {
+            JsBarcode("#barcode", "${product.barcode || product.sku}", {
+              format: "CODE128",
+              width: 2,
+              height: 40,
+              displayValue: true,
+              fontSize: 10,
+              margin: 0
+            });
+          } catch(e) {
+            document.getElementById('barcode').innerHTML = '<div style="font-size:10px">Code: ${product.sku}</div>';
+          }
+          window.onload = function() {
+            setTimeout(function() { window.print(); }, 500);
+          };
+        </script>
+      </body>
+    </html>
+  `);
+  win.document.close();
 }
 
 function movementReasonLabel(t: ReturnType<typeof useI18n>["t"], reason?: string) {
