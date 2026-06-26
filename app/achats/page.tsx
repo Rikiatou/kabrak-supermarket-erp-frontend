@@ -19,6 +19,7 @@ import {
   Truck,
   Printer,
   Trash2,
+  ScanLine,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { useI18n } from "@/lib/i18n/context";
@@ -30,7 +31,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { suppliers as mockSuppliers } from "@/lib/mock-data";
 import { useSuppliers, usePurchaseOrders, useCreatePurchaseOrder, useProducts } from "@/lib/hooks/useApi";
-import { suppliersApi, purchaseOrdersApi } from "@/lib/api";
+import { suppliersApi, purchaseOrdersApi, productsApi } from "@/lib/api";
 import { formatCurrency, cn } from "@/lib/utils";
 import type { Supplier } from "@/lib/types";
 
@@ -150,24 +151,70 @@ export default function AchatsPage() {
   const [supplierSuggestions, setSupplierSuggestions] = useState<Supplier[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [deliveryProductSearch, setDeliveryProductSearch] = useState<string[]>([]);
-  type DeliveryLine = { productId: string; qty: number; unitPrice: number };
+  const [scanInput, setScanInput] = useState("");
+  const [scanMode, setScanMode] = useState(false);
+  type DeliveryLine = {
+    productId: string;
+    qty: number;
+    unitPrice: number;       // prix d'achat (cost)
+    sellPrice: number;       // prix de vente
+    expiryDate: string;      // date d'expiration
+    // Champs pour nouveau produit
+    isNewProduct: boolean;
+    newProductName: string;
+    newProductBarcode: string;
+    newProductCategory: string;
+    newProductUnit: string;
+  };
   const [deliveryLines, setDeliveryLines] = useState<DeliveryLine[]>([
-    { productId: "", qty: 1, unitPrice: 0 },
+    { productId: "", qty: 1, unitPrice: 0, sellPrice: 0, expiryDate: "", isNewProduct: false, newProductName: "", newProductBarcode: "", newProductCategory: "Grocery", newProductUnit: "pc" },
   ]);
   const [printDelivery, setPrintDelivery] = useState<null | {
     ref: string; date: string; supplier: string; lines: Array<{ name: string; qty: number; unitPrice: number; total: number }>; grandTotal: number;
   }>(null);
 
-  const addDeliveryLine = () => setDeliveryLines((l) => [...l, { productId: "", qty: 1, unitPrice: 0 }]);
+  const addDeliveryLine = () => setDeliveryLines((l) => [...l, { productId: "", qty: 1, unitPrice: 0, sellPrice: 0, expiryDate: "", isNewProduct: false, newProductName: "", newProductBarcode: "", newProductCategory: "Grocery", newProductUnit: "pc" }]);
   const removeDeliveryLine = (i: number) => setDeliveryLines((l) => l.filter((_, idx) => idx !== i));
-  const updateDeliveryLine = (i: number, field: keyof DeliveryLine, value: string | number) =>
+  const updateDeliveryLine = (i: number, field: keyof DeliveryLine, value: string | number | boolean) =>
     setDeliveryLines((l) => l.map((line, idx) => idx === i ? { ...line, [field]: value } : line));
+
+  // Scanner: cherche par barcode ou SKU et ajoute une ligne
+  const handleScanProduct = useCallback(async () => {
+    const code = scanInput.trim();
+    if (!code) return;
+    // Chercher dans les produits déjà chargés
+    const found = allProducts.find((p) => p.barcode === code || p.sku.toLowerCase() === code.toLowerCase());
+    if (found) {
+      // Vérifier si déjà dans les lignes
+      const existingIdx = deliveryLines.findIndex((l) => l.productId === found.id);
+      if (existingIdx >= 0) {
+        updateDeliveryLine(existingIdx, "qty", deliveryLines[existingIdx].qty + 1);
+      } else {
+        setDeliveryLines((l) => [...l, {
+          productId: found.id, qty: 1, unitPrice: found.costPrice || 0,
+          sellPrice: found.price || 0, expiryDate: found.expiryDate ? found.expiryDate.split("T")[0] : "",
+          isNewProduct: false, newProductName: "", newProductBarcode: "", newProductCategory: "Grocery", newProductUnit: "pc",
+        }]);
+      }
+      setScanInput("");
+      toast(`${found.name} ajouté au bordereau`, "success");
+    } else {
+      // Produit non trouvé → créer une ligne "nouveau produit" avec le barcode pré-rempli
+      setDeliveryLines((l) => [...l, {
+        productId: "", qty: 1, unitPrice: 0, sellPrice: 0, expiryDate: "",
+        isNewProduct: true, newProductName: "", newProductBarcode: code, newProductCategory: "Grocery", newProductUnit: "pc",
+      }]);
+      setScanInput("");
+      toast(`Produit non trouvé — créez-le (barcode: ${code})`, "info");
+    }
+  }, [scanInput, allProducts, deliveryLines, toast]);
 
   const deliveryGrandTotal = deliveryLines.reduce((s, l) => s + l.qty * l.unitPrice, 0);
 
   const resetDeliveryForm = () => {
     setDeliveryRef(""); setDeliveryDate(new Date().toISOString().split("T")[0]);
-    setDeliverySupplierId(""); setDeliverySupplierName(""); setDeliveryLines([{ productId: "", qty: 1, unitPrice: 0 }]);
+    setDeliverySupplierId(""); setDeliverySupplierName(""); setDeliveryLines([{ productId: "", qty: 1, unitPrice: 0, sellPrice: 0, expiryDate: "", isNewProduct: false, newProductName: "", newProductBarcode: "", newProductCategory: "Grocery", newProductUnit: "pc" }]);
+    setScanInput(""); setScanMode(false);
   };
 
   const handleSaveDelivery = useCallback(async () => {
@@ -183,8 +230,12 @@ export default function AchatsPage() {
       }
     }
     if (!supplierId) { toast("Enter or select a supplier", "warning"); return; }
-    const validLines = deliveryLines.filter((l) => l.productId && l.qty > 0 && l.unitPrice > 0);
-    if (validLines.length === 0) { toast("Add at least one product with qty and price", "warning"); return; }
+    // Valider les lignes: soit produit existant, soit nouveau produit avec nom
+    const validLines = deliveryLines.filter((l) =>
+      (l.productId && l.qty > 0 && l.unitPrice > 0) ||
+      (l.isNewProduct && l.newProductName.trim() && l.qty > 0 && l.unitPrice > 0)
+    );
+    if (validLines.length === 0) { toast("Add at least one product with qty and buy price", "warning"); return; }
     setSavingDelivery(true);
     try {
       await purchaseOrdersApi.createDirect({
@@ -192,9 +243,20 @@ export default function AchatsPage() {
         expectedDate: deliveryDate,
         invoiceNumber: deliveryRef || undefined,
         notes: deliveryRef ? `Bordereau ref: ${deliveryRef}` : undefined,
-        items: validLines.map((l) => ({ productId: l.productId, quantity: l.qty, unitCost: l.unitPrice })),
+        items: validLines.map((l) => ({
+          productId: l.productId || "NEW",
+          quantity: l.qty,
+          unitCost: l.unitPrice,
+          isNewProduct: l.isNewProduct,
+          newProductName: l.isNewProduct ? l.newProductName.trim() : undefined,
+          newProductBarcode: l.isNewProduct ? l.newProductBarcode.trim() : undefined,
+          newProductCategory: l.isNewProduct ? l.newProductCategory : undefined,
+          newProductUnit: l.isNewProduct ? l.newProductUnit : undefined,
+          sellPrice: l.sellPrice > 0 ? l.sellPrice : undefined,
+          expiryDate: l.expiryDate || undefined,
+        })),
       });
-      toast(`Delivery saved — stock updated for ${validLines.length} product(s)`, "success");
+      toast(`Bordereau sauvegardé — stock mis à jour pour ${validLines.length} produit(s)`, "success");
       reloadOrders();
       reloadSuppliers();
       setShowDeliveryForm(false);
@@ -597,8 +659,8 @@ export default function AchatsPage() {
                   <Truck className="w-4 h-4 text-emerald-600" />
                 </div>
                 <div>
-                  <h2 className="font-semibold text-[var(--text-primary)] text-sm">New Delivery Note</h2>
-                  <p className="text-xs text-[var(--text-muted)]">Bordereau de Livraison — stock auto-updated on save</p>
+                  <h2 className="font-semibold text-[var(--text-primary)] text-sm">{t.achats.newDelivery}</h2>
+                  <p className="text-xs text-[var(--text-muted)]">Bordereau de Livraison — stock mis à jour à la sauvegarde</p>
                 </div>
               </div>
               <button onClick={() => setShowDeliveryForm(false)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors">
@@ -664,6 +726,27 @@ export default function AchatsPage() {
                 />
               </div>
 
+              {/* Scanner barcode */}
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+                <div className="flex items-center gap-2">
+                  <ScanLine className="w-4 h-4 text-blue-600 shrink-0" />
+                  <input
+                    type="text"
+                    value={scanInput}
+                    onChange={(e) => setScanInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleScanProduct(); } }}
+                    placeholder="Scanner ou saisir code-barres / SKU…"
+                    className="flex-1 border border-blue-300 rounded-lg px-3 py-1.5 text-sm text-[var(--text-primary)] outline-none focus:border-blue-500 bg-white"
+                  />
+                  <Button size="sm" onClick={handleScanProduct} disabled={!scanInput.trim()}>
+                    {t.common.add || "Ajouter"}
+                  </Button>
+                </div>
+                <p className="text-[11px] text-blue-600 mt-1.5">
+                  Scannez un produit existant → ajout automatique. Produit inconnu → création automatique avec le barcode pré-rempli.
+                </p>
+              </div>
+
               {/* Items table */}
               <div>
                 <div className="flex items-center justify-between mb-2">
@@ -674,45 +757,131 @@ export default function AchatsPage() {
                 </div>
 
                 {/* Header */}
-                <div className="grid grid-cols-[1fr_72px_90px_90px_32px] gap-1.5 mb-1">
-                  {["Product", "QTE", "P.U. (FCFA)", "P. TOTAL", ""].map((h) => (
+                <div className="grid grid-cols-[1fr_60px_80px_80px_80px_90px_30px] gap-1.5 mb-1">
+                  {["Produit", "Qté", "P. Achat", "P. Vente", "Total", "Expire", ""].map((h) => (
                     <span key={h} className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wide px-1">{h}</span>
                   ))}
                 </div>
 
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   {deliveryLines.map((line, i) => {
                     const lineTotal = line.qty * line.unitPrice;
                     return (
-                      <div key={i} className="grid grid-cols-[1fr_72px_90px_90px_32px] gap-1.5 items-center">
-                        <select
-                          value={line.productId}
-                          onChange={(e) => updateDeliveryLine(i, "productId", e.target.value)}
-                          className="border border-[var(--border)] rounded-lg px-2 py-1.5 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--brand)] bg-white truncate"
-                        >
-                          <option value="">— select —</option>
-                          {allProducts.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.sku}) — Stock: {p.stock} {p.unit}</option>)}
-                        </select>
-                        <input
-                          type="number" min="1" value={line.qty}
-                          onChange={(e) => updateDeliveryLine(i, "qty", Math.max(1, parseInt(e.target.value) || 1))}
-                          className="border border-[var(--border)] rounded-lg px-2 py-1.5 text-xs text-center outline-none focus:border-[var(--brand)] tabular-nums"
-                        />
-                        <input
-                          type="number" min="0" value={line.unitPrice}
-                          onChange={(e) => updateDeliveryLine(i, "unitPrice", parseFloat(e.target.value) || 0)}
-                          className="border border-[var(--border)] rounded-lg px-2 py-1.5 text-xs text-right outline-none focus:border-[var(--brand)] tabular-nums"
-                        />
-                        <div className="text-xs font-semibold text-[var(--text-primary)] text-right tabular-nums px-1">
-                          {lineTotal > 0 ? formatCurrency(lineTotal) : "—"}
+                      <div key={i} className="border border-[var(--border)] rounded-lg p-2 space-y-1.5">
+                        {/* Ligne 1: Produit select ou nouveau produit fields */}
+                        {!line.isNewProduct ? (
+                          <div className="grid grid-cols-[1fr_30px] gap-1.5 items-center">
+                            <select
+                              value={line.productId}
+                              onChange={(e) => {
+                                const prod = allProducts.find((p) => p.id === e.target.value);
+                                updateDeliveryLine(i, "productId", e.target.value);
+                                if (prod) {
+                                  updateDeliveryLine(i, "unitPrice", prod.costPrice || 0);
+                                  updateDeliveryLine(i, "sellPrice", prod.price || 0);
+                                  if (prod.expiryDate) updateDeliveryLine(i, "expiryDate", prod.expiryDate.split("T")[0]);
+                                }
+                              }}
+                              className="border border-[var(--border)] rounded-lg px-2 py-1.5 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--brand)] bg-white truncate"
+                            >
+                              <option value="">— select —</option>
+                              {allProducts.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.sku}) — Stock: {p.stock} {p.unit}</option>)}
+                            </select>
+                            <button
+                              onClick={() => updateDeliveryLine(i, "isNewProduct", true)}
+                              title="Créer un nouveau produit"
+                              className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-blue-50 text-blue-500 transition-colors"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 space-y-1.5">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-bold text-amber-700 uppercase">Nouveau produit</span>
+                              <button
+                                onClick={() => updateDeliveryLine(i, "isNewProduct", false)}
+                                className="text-[10px] text-amber-600 hover:underline"
+                              >
+                                ← Produit existant
+                              </button>
+                            </div>
+                            <input
+                              type="text"
+                              value={line.newProductName}
+                              onChange={(e) => updateDeliveryLine(i, "newProductName", e.target.value)}
+                              placeholder="Nom du produit *"
+                              className="w-full border border-amber-300 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-amber-500 bg-white"
+                            />
+                            <div className="grid grid-cols-2 gap-1.5">
+                              <input
+                                type="text"
+                                value={line.newProductBarcode}
+                                onChange={(e) => updateDeliveryLine(i, "newProductBarcode", e.target.value)}
+                                placeholder="Code-barres"
+                                className="border border-amber-300 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-amber-500 bg-white"
+                              />
+                              <select
+                                value={line.newProductCategory}
+                                onChange={(e) => updateDeliveryLine(i, "newProductCategory", e.target.value)}
+                                className="border border-amber-300 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-amber-500 bg-white"
+                              >
+                                <option value="Grocery">Épicerie</option>
+                                <option value="Beverages">Boissons</option>
+                                <option value="Dairy">Produits laitiers</option>
+                                <option value="Hygiene">Hygiène</option>
+                                <option value="Butchery">Boucherie</option>
+                                <option value="Bakery">Boulangerie</option>
+                                <option value="Frozen">Surgelés</option>
+                              </select>
+                            </div>
+                            <input
+                              type="text"
+                              value={line.newProductUnit}
+                              onChange={(e) => updateDeliveryLine(i, "newProductUnit", e.target.value)}
+                              placeholder="Unité (pc, kg, L, sac...)"
+                              className="w-full border border-amber-300 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-amber-500 bg-white"
+                            />
+                          </div>
+                        )}
+
+                        {/* Ligne 2: Qté, P. Achat, P. Vente, Total, Expiration, Delete */}
+                        <div className="grid grid-cols-[60px_80px_80px_80px_90px_30px] gap-1.5 items-center">
+                          <input
+                            type="number" min="1" value={line.qty}
+                            onChange={(e) => updateDeliveryLine(i, "qty", Math.max(1, parseInt(e.target.value) || 1))}
+                            className="border border-[var(--border)] rounded-lg px-2 py-1.5 text-xs text-center outline-none focus:border-[var(--brand)] tabular-nums"
+                            placeholder="Qté"
+                          />
+                          <input
+                            type="number" min="0" value={line.unitPrice}
+                            onChange={(e) => updateDeliveryLine(i, "unitPrice", parseFloat(e.target.value) || 0)}
+                            className="border border-[var(--border)] rounded-lg px-2 py-1.5 text-xs text-right outline-none focus:border-[var(--brand)] tabular-nums"
+                            placeholder="P. Achat"
+                          />
+                          <input
+                            type="number" min="0" value={line.sellPrice}
+                            onChange={(e) => updateDeliveryLine(i, "sellPrice", parseFloat(e.target.value) || 0)}
+                            className="border border-[var(--border)] rounded-lg px-2 py-1.5 text-xs text-right outline-none focus:border-[var(--brand)] tabular-nums"
+                            placeholder="P. Vente"
+                          />
+                          <div className="text-xs font-semibold text-[var(--text-primary)] text-right tabular-nums px-1">
+                            {lineTotal > 0 ? formatCurrency(lineTotal) : "—"}
+                          </div>
+                          <input
+                            type="date"
+                            value={line.expiryDate}
+                            onChange={(e) => updateDeliveryLine(i, "expiryDate", e.target.value)}
+                            className="border border-[var(--border)] rounded-lg px-1 py-1.5 text-[10px] outline-none focus:border-[var(--brand)]"
+                          />
+                          <button
+                            onClick={() => removeDeliveryLine(i)}
+                            disabled={deliveryLines.length === 1}
+                            className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-[var(--text-muted)] hover:text-red-500 transition-colors disabled:opacity-30"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
-                        <button
-                          onClick={() => removeDeliveryLine(i)}
-                          disabled={deliveryLines.length === 1}
-                          className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-[var(--text-muted)] hover:text-red-500 transition-colors disabled:opacity-30"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
                       </div>
                     );
                   })}
@@ -727,7 +896,7 @@ export default function AchatsPage() {
 
               <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3">
                 <p className="text-xs text-emerald-700 font-medium">
-                  Stock auto-update: saving this delivery note will immediately add the quantities to each product's current stock and create stock movement entries.
+                  Mise à jour auto du stock: la sauvegarde de ce bordereau ajoutera les quantités au stock de chaque produit et créera des mouvements de stock. Les nouveaux produits seront créés automatiquement dans le stock.
                 </p>
               </div>
             </div>
