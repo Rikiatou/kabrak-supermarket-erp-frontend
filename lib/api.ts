@@ -5,7 +5,7 @@
 const PRIMARY_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
 
 // URL de fallback (cloud) — utilisée si le serveur local ne répond pas
-const FALLBACK_API_URL = "https://kabrak-api.onrender.com/api";
+const FALLBACK_API_URL = "https://kabrak-api-production.up.railway.app/api";
 
 // Suivre quel serveur est actif
 let activeApiUrl = PRIMARY_API_URL;
