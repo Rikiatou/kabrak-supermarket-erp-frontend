@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Search,
   Plus,
@@ -153,6 +153,14 @@ export default function AchatsPage() {
   const [deliveryProductSearch, setDeliveryProductSearch] = useState<string[]>([]);
   const [scanInput, setScanInput] = useState("");
   const [scanMode, setScanMode] = useState(false);
+  const scanInputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-focus le champ scan quand le formulaire de livraison s'ouvre
+  useEffect(() => {
+    if (showDeliveryForm) {
+      setTimeout(() => scanInputRef.current?.focus(), 300);
+    }
+  }, [showDeliveryForm]);
   type DeliveryLine = {
     productId: string;
     qty: number;
@@ -198,6 +206,7 @@ export default function AchatsPage() {
       }
       setScanInput("");
       toast(`${found.name} ${t.achats.scanProductAdded}`, "success");
+      setTimeout(() => scanInputRef.current?.focus(), 50);
     } else {
       // Produit non trouvé → créer une ligne "nouveau produit" avec le barcode pré-rempli
       setDeliveryLines((l) => [...l, {
@@ -206,6 +215,7 @@ export default function AchatsPage() {
       }]);
       setScanInput("");
       toast(`${t.achats.scanProductNotFound} ${code})`, "info");
+      setTimeout(() => scanInputRef.current?.focus(), 50);
     }
   }, [scanInput, allProducts, deliveryLines, toast]);
 
@@ -733,6 +743,7 @@ export default function AchatsPage() {
                 <div className="flex items-center gap-2">
                   <ScanLine className="w-4 h-4 text-blue-600 shrink-0" />
                   <input
+                    ref={scanInputRef}
                     type="text"
                     value={scanInput}
                     onChange={(e) => setScanInput(e.target.value)}
