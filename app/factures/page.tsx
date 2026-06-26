@@ -114,7 +114,7 @@ export default function FacturesPage() {
   const { config: licenseConfig } = useLicense();
   const supermarketName = licenseConfig?.supermarketName || "KABRAK MARKET";
   const supermarketAddress = licenseConfig?.address || "KABRAK Retail - Yaounde, Cameroon";
-  const supermarketPhone = licenseConfig?.phone ? `Tel: ${licenseConfig.phone}` : "Tel: +237 6XX XXX XXX";
+  const supermarketPhone = licenseConfig?.phone ? `Tel: ${licenseConfig.phone}` : "Tel: +237 233 332 600";
   const logoUrl = licenseConfig?.logoUrl || "";
   const rccmNumber = (licenseConfig as any)?.rccmNumber || "";
   const taxNumber = (licenseConfig as any)?.taxNumber || "";
@@ -559,8 +559,9 @@ export default function FacturesPage() {
     pdf.setTextColor(150, 150, 150);
     pdf.setFontSize(7);
     pdf.setFont("helvetica", "normal");
-    pdf.text("Thank you for your business!", pageWidth / 2, y, { align: "center" });
-    pdf.text(invoiceFooter, pageWidth / 2, y + 5, { align: "center" });
+    pdf.text("Goods sold are non refundable", pageWidth / 2, y, { align: "center" });
+    pdf.text("Thanks for patronizing us", pageWidth / 2, y + 4, { align: "center" });
+    pdf.text(invoiceFooter, pageWidth / 2, y + 9, { align: "center" });
 
     // Signature
     pdf.setDrawColor(180, 180, 180);
@@ -673,14 +674,14 @@ export default function FacturesPage() {
   };
 
   const sendWhatsApp = (invoice: Invoice) => {
-    const msg = `Hello ${invoice.clientName},%0A%0AHere is your invoice ${invoice.number} from ${supermarketName}.%0A%0ATotal amount: ${formatCurrency(invoice.total)}%0ADate: ${new Date(invoice.date).toLocaleDateString()}%0A%0AThank you for your business!`;
+    const msg = `Hello ${invoice.clientName},%0A%0AHere is your invoice ${invoice.number} from ${supermarketName}.%0A%0ATotal amount: ${formatCurrency(invoice.total)}%0ADate: ${new Date(invoice.date).toLocaleDateString()}%0A%0AGoods sold are non refundable.%0AThanks for patronizing us!`;
     window.open(`https://wa.me/${invoice.clientPhone.replace(/[^0-9]/g, "")}?text=${msg}`, "_blank");
     toast(`${t.factures.whatsappOpened} ${invoice.clientName}`, "info");
   };
 
   const sendEmail = (invoice: Invoice) => {
     const subject = `Invoice ${invoice.number} - ${supermarketName}`;
-    const body = `Hello ${invoice.clientName},\n\nPlease find attached your invoice ${invoice.number}.\n\nTotal amount: ${formatCurrency(invoice.total)}\nDate: ${new Date(invoice.date).toLocaleDateString()}\n\nThank you for your business.\n\n${supermarketName}`;
+    const body = `Hello ${invoice.clientName},\n\nPlease find attached your invoice ${invoice.number}.\n\nTotal amount: ${formatCurrency(invoice.total)}\nDate: ${new Date(invoice.date).toLocaleDateString()}\n\nGoods sold are non refundable.\nThanks for patronizing us.\n\n${supermarketName}`;
     window.location.href = `mailto:${invoice.clientEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     toast(`Email prepared for ${invoice.clientEmail}`, "info");
   };

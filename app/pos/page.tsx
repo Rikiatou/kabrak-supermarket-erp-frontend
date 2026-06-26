@@ -615,7 +615,7 @@ export default function POSPage() {
           <tr><td class="small">- ${t.pos.card}</td><td class="right small">${formatCurrency(receipt.split.card)}</td></tr>
         </table>` : ""}
         <div class="dashed"></div>
-        <p class="center small" style="margin-top:8px">${storeInfo.receiptFooter || t.pos.thankYou}</p>
+        <p class="center small" style="margin-top:8px">${(storeInfo.receiptFooter || t.pos.thankYou).split("\n").map((line: string, idx: number) => idx === 0 ? line : `<br/>${line}`).join("")}</p>
         <p class="center small">${storeInfo.name}</p>
       </body>
       </html>
@@ -701,7 +701,7 @@ export default function POSPage() {
           ${tx.change != null ? `<tr><td class="small">${t.pos.change}</td><td class="right small">${formatCurrency(tx.change)}</td></tr>` : ""}
         </table>
         <div class="dashed"></div>
-        <p class="center small" style="margin-top:8px">${storeInfo.receiptFooter || t.pos.thankYou}</p>
+        <p class="center small" style="margin-top:8px">${(storeInfo.receiptFooter || t.pos.thankYou).split("\n").map((line: string, idx: number) => idx === 0 ? line : `<br/>${line}`).join("")}</p>
         <p class="center small">${storeInfo.name}</p>
         <p class="center small">(REPRINT)</p>
       </body>
@@ -1928,7 +1928,9 @@ function ReceiptPanel({
             </>
           )}
           <div className="border-t border-dashed border-slate-300 my-2" />
-          <p className="text-center text-[var(--text-muted)] mt-1">{t.pos.thankYou}</p>
+          <p className="text-center text-[var(--text-muted)] mt-1">{(storeInfo.receiptFooter || t.pos.thankYou).split("\n").map((line, idx) => (
+            <span key={idx} className="block">{line}</span>
+          ))}</p>
         </div>
       </div>
 

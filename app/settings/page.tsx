@@ -352,7 +352,7 @@ export default function SettingsPage() {
               onChange={(e) => handleChange("phone", e.target.value)}
               disabled={!canEdit}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50"
-              placeholder="+237 6 XX XX XX XX"
+              placeholder="+237 233 332 600"
             />
           </div>
 
@@ -485,7 +485,7 @@ export default function SettingsPage() {
               disabled={!canEdit}
               rows={2}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50"
-              placeholder="Thank you for your visit! See you soon at Easy Shop"
+              placeholder="Goods sold are non refundable. Thanks for patronizing us"
             />
           </div>
 

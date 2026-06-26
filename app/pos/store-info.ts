@@ -4,8 +4,8 @@ import type { ClientConfig } from "@/lib/license/types";
 export const STORE_INFO = {
   name: "KABRAK MARKET",
   address: "Supermarket Pro - Yaoundé, Cameroun",
-  phone: "Tel: +237 6XX XXX XXX",
-  receiptFooter: "Merci de votre visite!",
+  phone: "Tel: +237 233 332 600",
+  receiptFooter: "Goods sold are non refundable\nThanks for patronizing us",
   logoUrl: null as string | null,
 };
 
