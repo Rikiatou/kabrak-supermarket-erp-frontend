@@ -197,7 +197,7 @@ export default function AchatsPage() {
         }]);
       }
       setScanInput("");
-      toast(`${found.name} ajouté au bordereau`, "success");
+      toast(`${found.name} ${t.achats.scanProductAdded}`, "success");
     } else {
       // Produit non trouvé → créer une ligne "nouveau produit" avec le barcode pré-rempli
       setDeliveryLines((l) => [...l, {
@@ -205,7 +205,7 @@ export default function AchatsPage() {
         isNewProduct: true, newProductName: "", newProductBarcode: code, newProductCategory: "Grocery", newProductUnit: "pc",
       }]);
       setScanInput("");
-      toast(`Produit non trouvé — créez-le (barcode: ${code})`, "info");
+      toast(`${t.achats.scanProductNotFound} ${code})`, "info");
     }
   }, [scanInput, allProducts, deliveryLines, toast]);
 
@@ -226,16 +226,16 @@ export default function AchatsPage() {
         supplierId = created.id;
         reloadSuppliers();
       } catch {
-        toast("Could not create supplier automatically", "warning"); return;
+        toast(t.achats.errorAdd, "warning"); return;
       }
     }
-    if (!supplierId) { toast("Enter or select a supplier", "warning"); return; }
+    if (!supplierId) { toast(t.achats.selectSupplier, "warning"); return; }
     // Valider les lignes: soit produit existant, soit nouveau produit avec nom
     const validLines = deliveryLines.filter((l) =>
       (l.productId && l.qty > 0 && l.unitPrice > 0) ||
       (l.isNewProduct && l.newProductName.trim() && l.qty > 0 && l.unitPrice > 0)
     );
-    if (validLines.length === 0) { toast("Add at least one product with qty and buy price", "warning"); return; }
+    if (validLines.length === 0) { toast(t.achats.deliveryNeedQty, "warning"); return; }
     setSavingDelivery(true);
     try {
       await purchaseOrdersApi.createDirect({
@@ -256,13 +256,13 @@ export default function AchatsPage() {
           expiryDate: l.expiryDate || undefined,
         })),
       });
-      toast(`Bordereau sauvegardé — stock mis à jour pour ${validLines.length} produit(s)`, "success");
+      toast(`${t.achats.deliverySaved} ${validLines.length} ${t.achats.deliverySavedProducts}`, "success");
       reloadOrders();
       reloadSuppliers();
       setShowDeliveryForm(false);
       resetDeliveryForm();
     } catch (e: unknown) {
-      toast(e instanceof Error ? e.message : "Failed to save delivery note", "warning");
+      toast(e instanceof Error ? e.message : t.achats.deliveryErrorSave, "warning");
     } finally {
       setSavingDelivery(false);
     }
@@ -595,14 +595,14 @@ export default function AchatsPage() {
             {deliveries.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <Truck className="w-10 h-10 text-[var(--text-muted)] mb-3 opacity-40" />
-                <p className="text-sm font-medium text-[var(--text-secondary)]">No delivery notes yet</p>
-                <p className="text-xs text-[var(--text-muted)] mt-1">Click t.achats.newDelivery to record a received delivery</p>
+                <p className="text-sm font-medium text-[var(--text-secondary)]">{t.achats.noDeliveries}</p>
+                <p className="text-xs text-[var(--text-muted)] mt-1">{t.achats.noDeliveriesSub}</p>
               </div>
             ) : (
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-[var(--border)] bg-slate-50/60">
-                    {["Ref / Order #", "Supplier", "Date", "Products", "Total", ""].map((h) => (
+                    {[t.achats.deliveryRef, t.achats.suppliers, t.achats.orderDate, t.achats.items, t.achats.amount, ""].map((h) => (
                       <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">{h}</th>
                     ))}
                   </tr>
@@ -625,7 +625,7 @@ export default function AchatsPage() {
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5 text-sm text-[var(--text-secondary)]">
                           <Package className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-                          {d.itemCount} items
+                          {d.itemCount} {t.achats.items}
                         </div>
                       </td>
                       <td className="px-4 py-3 text-sm font-semibold text-[var(--text-primary)] tabular-nums">{formatCurrency(d.total)}</td>
@@ -635,7 +635,7 @@ export default function AchatsPage() {
                           className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-colors"
                         >
                           <Printer className="w-3 h-3" />
-                          Print
+                          {t.achats.printDelivery}
                         </button>
                       </td>
                     </tr>
@@ -660,7 +660,7 @@ export default function AchatsPage() {
                 </div>
                 <div>
                   <h2 className="font-semibold text-[var(--text-primary)] text-sm">{t.achats.newDelivery}</h2>
-                  <p className="text-xs text-[var(--text-muted)]">Bordereau de Livraison — stock mis à jour à la sauvegarde</p>
+                  <p className="text-xs text-[var(--text-muted)]">{t.achats.deliverySubtitle}</p>
                 </div>
               </div>
               <button onClick={() => setShowDeliveryForm(false)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors">
@@ -674,7 +674,7 @@ export default function AchatsPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="relative">
                   <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 uppercase tracking-wide">
-                    Supplier * {!deliverySupplierId && deliverySupplierName.trim() && <span className="text-emerald-600 normal-case font-normal">(will be created)</span>}
+                    {t.achats.suppliers} * {!deliverySupplierId && deliverySupplierName.trim() && <span className="text-emerald-600 normal-case font-normal">{t.achats.supplierWillBeCreated}</span>}
                   </label>
                   <input
                     type="text"
@@ -689,7 +689,7 @@ export default function AchatsPage() {
                     }}
                     onFocus={() => { if (deliverySupplierName.length > 0) setShowSuggestions(true); }}
                     onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                    placeholder="Type supplier name..."
+                    placeholder={t.achats.supplierPlaceholder}
                     className="w-full border border-[var(--border)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--brand)]"
                   />
                   {showSuggestions && supplierSuggestions.length > 0 && (
@@ -704,7 +704,7 @@ export default function AchatsPage() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 uppercase tracking-wide">Date *</label>
+                  <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 uppercase tracking-wide">{t.achats.dateLabel}</label>
                   <input
                     type="date"
                     value={deliveryDate}
@@ -716,7 +716,7 @@ export default function AchatsPage() {
 
               {/* Ref number */}
               <div>
-                <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 uppercase tracking-wide">Bordereau Reference #</label>
+                <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 uppercase tracking-wide">{t.achats.deliveryRef}</label>
                 <input
                   type="text"
                   value={deliveryRef}
@@ -735,31 +735,31 @@ export default function AchatsPage() {
                     value={scanInput}
                     onChange={(e) => setScanInput(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleScanProduct(); } }}
-                    placeholder="Scanner ou saisir code-barres / SKU…"
+                    placeholder={t.achats.scanPlaceholder}
                     className="flex-1 border border-blue-300 rounded-lg px-3 py-1.5 text-sm text-[var(--text-primary)] outline-none focus:border-blue-500 bg-white"
                   />
                   <Button size="sm" onClick={handleScanProduct} disabled={!scanInput.trim()}>
-                    {t.common.add || "Ajouter"}
+                    {t.achats.scanAdd}
                   </Button>
                 </div>
                 <p className="text-[11px] text-blue-600 mt-1.5">
-                  Scannez un produit existant → ajout automatique. Produit inconnu → création automatique avec le barcode pré-rempli.
+                  {t.achats.scanHint}
                 </p>
               </div>
 
               {/* Items table */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide">Products *</label>
+                  <label className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide">{t.achats.productsLabel}</label>
                   <button onClick={addDeliveryLine} className="flex items-center gap-1 text-xs font-medium text-[var(--brand)] hover:text-blue-700 transition-colors">
-                    <Plus className="w-3.5 h-3.5" /> Add line
+                    <Plus className="w-3.5 h-3.5" /> {t.achats.addLineBtn}
                   </button>
                 </div>
 
                 {/* Header */}
                 <div className="grid grid-cols-[1fr_60px_80px_80px_80px_90px_30px] gap-1.5 mb-1">
-                  {["Produit", "Qté", "P. Achat", "P. Vente", "Total", "Expire", ""].map((h) => (
-                    <span key={h} className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wide px-1">{h}</span>
+                  {[t.achats.colProduct, t.achats.colQty, t.achats.colBuyPrice, t.achats.colSellPrice, t.achats.colTotal, t.achats.colExpiry, ""].map((h, idx) => (
+                    <span key={idx} className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wide px-1">{h}</span>
                   ))}
                 </div>
 
@@ -789,7 +789,7 @@ export default function AchatsPage() {
                             </select>
                             <button
                               onClick={() => updateDeliveryLine(i, "isNewProduct", true)}
-                              title="Créer un nouveau produit"
+                              title={t.achats.newProductHint}
                               className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-blue-50 text-blue-500 transition-colors"
                             >
                               <Plus className="w-3.5 h-3.5" />
@@ -798,19 +798,19 @@ export default function AchatsPage() {
                         ) : (
                           <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 space-y-1.5">
                             <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-bold text-amber-700 uppercase">Nouveau produit</span>
+                              <span className="text-[10px] font-bold text-amber-700 uppercase">{t.achats.newProduct}</span>
                               <button
                                 onClick={() => updateDeliveryLine(i, "isNewProduct", false)}
                                 className="text-[10px] text-amber-600 hover:underline"
                               >
-                                ← Produit existant
+                                {t.achats.useExisting}
                               </button>
                             </div>
                             <input
                               type="text"
                               value={line.newProductName}
                               onChange={(e) => updateDeliveryLine(i, "newProductName", e.target.value)}
-                              placeholder="Nom du produit *"
+                              placeholder={t.achats.newProductNamePh}
                               className="w-full border border-amber-300 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-amber-500 bg-white"
                             />
                             <div className="grid grid-cols-2 gap-1.5">
@@ -818,7 +818,7 @@ export default function AchatsPage() {
                                 type="text"
                                 value={line.newProductBarcode}
                                 onChange={(e) => updateDeliveryLine(i, "newProductBarcode", e.target.value)}
-                                placeholder="Code-barres"
+                                placeholder={t.achats.newProductBarcodePh}
                                 className="border border-amber-300 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-amber-500 bg-white"
                               />
                               <select
@@ -826,20 +826,20 @@ export default function AchatsPage() {
                                 onChange={(e) => updateDeliveryLine(i, "newProductCategory", e.target.value)}
                                 className="border border-amber-300 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-amber-500 bg-white"
                               >
-                                <option value="Grocery">Épicerie</option>
-                                <option value="Beverages">Boissons</option>
-                                <option value="Dairy">Produits laitiers</option>
-                                <option value="Hygiene">Hygiène</option>
-                                <option value="Butchery">Boucherie</option>
-                                <option value="Bakery">Boulangerie</option>
-                                <option value="Frozen">Surgelés</option>
+                                <option value="Grocery">{t.common.catGrocery}</option>
+                                <option value="Beverages">{t.common.catDrinks}</option>
+                                <option value="Dairy">{t.common.catDairy}</option>
+                                <option value="Hygiene">{t.common.catHygiene}</option>
+                                <option value="Butchery">{t.common.catButcher}</option>
+                                <option value="Bakery">{t.common.catBakery}</option>
+                                <option value="Frozen">{t.common.catFrozen}</option>
                               </select>
                             </div>
                             <input
                               type="text"
                               value={line.newProductUnit}
                               onChange={(e) => updateDeliveryLine(i, "newProductUnit", e.target.value)}
-                              placeholder="Unité (pc, kg, L, sac...)"
+                              placeholder={t.achats.newProductUnitPh}
                               className="w-full border border-amber-300 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-amber-500 bg-white"
                             />
                           </div>
@@ -851,19 +851,21 @@ export default function AchatsPage() {
                             type="number" min="1" value={line.qty}
                             onChange={(e) => updateDeliveryLine(i, "qty", Math.max(1, parseInt(e.target.value) || 1))}
                             className="border border-[var(--border)] rounded-lg px-2 py-1.5 text-xs text-center outline-none focus:border-[var(--brand)] tabular-nums"
-                            placeholder="Qté"
+                            placeholder={t.achats.colQty}
                           />
                           <input
                             type="number" min="0" value={line.unitPrice}
                             onChange={(e) => updateDeliveryLine(i, "unitPrice", parseFloat(e.target.value) || 0)}
                             className="border border-[var(--border)] rounded-lg px-2 py-1.5 text-xs text-right outline-none focus:border-[var(--brand)] tabular-nums"
-                            placeholder="P. Achat"
+                            placeholder={t.achats.buyPricePh}
+                            title={t.achats.colBuyPrice}
                           />
                           <input
                             type="number" min="0" value={line.sellPrice}
                             onChange={(e) => updateDeliveryLine(i, "sellPrice", parseFloat(e.target.value) || 0)}
                             className="border border-[var(--border)] rounded-lg px-2 py-1.5 text-xs text-right outline-none focus:border-[var(--brand)] tabular-nums"
-                            placeholder="P. Vente"
+                            placeholder={t.achats.sellPricePh}
+                            title={t.achats.colSellPrice}
                           />
                           <div className="text-xs font-semibold text-[var(--text-primary)] text-right tabular-nums px-1">
                             {lineTotal > 0 ? formatCurrency(lineTotal) : "—"}
@@ -889,14 +891,17 @@ export default function AchatsPage() {
 
                 {/* Grand total */}
                 <div className="flex items-center justify-between mt-4 pt-3 border-t border-[var(--border)]">
-                  <span className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide">TOTAL GENERAL HT</span>
+                  <span className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide">{t.achats.totalGeneralHT}</span>
                   <span className="text-lg font-bold text-[var(--text-primary)] tabular-nums">{formatCurrency(deliveryGrandTotal)}</span>
                 </div>
               </div>
 
-              <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3">
+              <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3 space-y-1">
                 <p className="text-xs text-emerald-700 font-medium">
-                  Mise à jour auto du stock: la sauvegarde de ce bordereau ajoutera les quantités au stock de chaque produit et créera des mouvements de stock. Les nouveaux produits seront créés automatiquement dans le stock.
+                  {t.achats.deliveryStockNoteFull}
+                </p>
+                <p className="text-[11px] text-emerald-600">
+                  {t.achats.deliveryReprintHint}
                 </p>
               </div>
             </div>
@@ -904,10 +909,10 @@ export default function AchatsPage() {
             {/* Footer */}
             <div className="px-5 py-4 border-t border-[var(--border)] flex gap-3">
               <Button variant="secondary" className="flex-1" onClick={() => { setShowDeliveryForm(false); resetDeliveryForm(); }}>
-                Cancel
+                {t.common.cancel}
               </Button>
               <Button className="flex-1" onClick={handleSaveDelivery} disabled={savingDelivery}>
-                {savingDelivery ? "Saving…" : t.achats.saveDelivery}
+                {savingDelivery ? "..." : t.achats.saveDelivery}
               </Button>
             </div>
           </div>
