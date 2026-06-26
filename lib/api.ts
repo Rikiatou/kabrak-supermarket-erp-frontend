@@ -631,6 +631,7 @@ export interface ApiSchedule {
   id: string;
   employeeId: string;
   registerId: string;
+  registerName?: string;
   dayOfWeek: number; // 0=dimanche, 1=lundi, ..., 6=samedi
   startTime: string; // "08:00"
   endTime: string; // "17:00"
@@ -646,6 +647,7 @@ export interface ApiSchedule {
 
 export const schedulesApi = {
   list: () => fetchAPI<{ all: ApiSchedule[]; byDay: Record<number, ApiSchedule[]>; total: number }>(`/schedules`),
+  registers: () => fetchAPI<Array<{ id: string; name: string; code: string; isActive: boolean }>>(`/schedules/registers`),
   today: () => fetchAPI<{ dayOfWeek: number; currentTime: string; active: ApiSchedule[] }>(`/schedules/today`),
   byEmployee: (employeeId: string) => fetchAPI<ApiSchedule[]>(`/schedules/employee/${employeeId}`),
   byRegister: (registerId: string) => fetchAPI<ApiSchedule[]>(`/schedules/register/${registerId}`),

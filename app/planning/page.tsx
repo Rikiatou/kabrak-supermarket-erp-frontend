@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Calendar,
   Plus,
@@ -25,6 +25,7 @@ import {
   useCreateSchedule,
   useDeleteSchedule,
 } from "@/lib/hooks/useApi";
+import { schedulesApi } from "@/lib/api";
 import type { ApiSchedule, ApiEmployee } from "@/lib/api";
 
 const REGISTER_COLORS: Record<string, string> = {
@@ -54,12 +55,24 @@ export default function PlanningPage() {
     { num: 0, label: t.common.sunday },
   ];
 
-  const REGISTERS = [
+  const REGISTERS_FALLBACK = [
     { id: "reg1", name: t.common.register1 },
     { id: "reg2", name: t.common.register2 },
     { id: "reg3", name: t.common.register3 },
     { id: "reg4", name: t.common.register4 },
   ];
+
+  // Charger les vraies caisses depuis le backend
+  const [apiRegisters, setApiRegisters] = useState<Array<{ id: string; name: string; code: string }>>([]);
+  useEffect(() => {
+    schedulesApi.registers()
+      .then((regs) => setApiRegisters(regs))
+      .catch(() => setApiRegisters([]));
+  }, []);
+
+  const REGISTERS = apiRegisters.length > 0
+    ? apiRegisters.map((r) => ({ id: r.id, name: r.name }))
+    : REGISTERS_FALLBACK;
 
   const { employees } = useEmployees();
   const { data: scheduleData, loading, reload } = useSchedules();
@@ -70,7 +83,7 @@ export default function PlanningPage() {
   const [addEmployee, setAddEmployee] = useState<ApiEmployee | null>(null);
   const [addDay, setAddDay] = useState<number>(1);
   const [form, setForm] = useState({
-    registerId: "reg1",
+    registerId: "",
     startTime: "08:00",
     endTime: "17:00",
     breakStart: "",
@@ -104,7 +117,7 @@ export default function PlanningPage() {
     setAddEmployee(employee);
     setAddDay(day);
     setForm({
-      registerId: "reg1",
+      registerId: REGISTERS[0]?.id || "",
       startTime: "08:00",
       endTime: "17:00",
       breakStart: "",
@@ -261,7 +274,7 @@ export default function PlanningPage() {
                                   >
                                     <div className="flex items-center gap-1 font-semibold">
                                       <Store className="w-3 h-3 shrink-0" />
-                                      <span className="truncate">{reg?.name || slot.registerId}</span>
+                                      <span className="truncate">{slot.registerName || reg?.name || t.common.register1}</span>
                                     </div>
                                     <div className="flex items-center gap-1 text-[10px] mt-0.5 opacity-80">
                                       <Clock className="w-2.5 h-2.5 shrink-0" />
