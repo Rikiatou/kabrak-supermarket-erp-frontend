@@ -17,6 +17,7 @@ const UNITS = ["bottle", "can", "pack", "sack", "kg", "liter", "box", "bar", "ja
 interface NewProductModalProps {
   onClose: () => void;
   onSave: (product: Omit<Product, "id">) => void;
+  prefillBarcode?: string;
 }
 
 type FormData = {
@@ -38,9 +39,12 @@ const empty: FormData = {
   costPrice: "", stock: "", minStock: "", unit: "unit", supplier: "", expiryDate: "",
 };
 
-export function NewProductModal({ onClose, onSave }: NewProductModalProps) {
+export function NewProductModal({ onClose, onSave, prefillBarcode }: NewProductModalProps) {
   const { t } = useI18n();
-  const [form, setForm] = useState<FormData>(empty);
+  const [form, setForm] = useState<FormData>({
+    ...empty,
+    barcode: prefillBarcode || "",
+  });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState(false);
 

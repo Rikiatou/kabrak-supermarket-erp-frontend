@@ -26,6 +26,7 @@ import { useI18n } from "@/lib/i18n/context";
 import { useToast } from "@/components/ui/Toast";
 import { NewSupplierModal } from "@/components/forms/NewSupplierModal";
 import { NewOrderModal } from "@/components/forms/NewOrderModal";
+import { NewProductModal } from "@/components/forms/NewProductModal";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -34,6 +35,7 @@ import { useSuppliers, usePurchaseOrders, useCreatePurchaseOrder, useProducts } 
 import { suppliersApi, purchaseOrdersApi, productsApi } from "@/lib/api";
 import { formatCurrency, cn } from "@/lib/utils";
 import type { Supplier } from "@/lib/types";
+import type { Product } from "@/lib/types";
 
 type OrderStatus = "draft" | "sent" | "received" | "cancelled";
 
@@ -154,6 +156,8 @@ export default function AchatsPage() {
   const [scanInput, setScanInput] = useState("");
   const [scanMode, setScanMode] = useState(false);
   const scanInputRef = useRef<HTMLInputElement>(null);
+  const [showNewProductModal, setShowNewProductModal] = useState(false);
+  const [pendingBarcode, setPendingBarcode] = useState("");
 
   // Auto-focus le champ scan quand le formulaire de livraison s'ouvre
   useEffect(() => {
@@ -208,16 +212,44 @@ export default function AchatsPage() {
       toast(`${found.name} ${t.achats.scanProductAdded}`, "success");
       setTimeout(() => scanInputRef.current?.focus(), 50);
     } else {
-      // Produit non trouvé → créer une ligne "nouveau produit" avec le barcode pré-rempli
-      setDeliveryLines((l) => [...l, {
-        productId: "", qty: 1, unitPrice: 0, sellPrice: 0, expiryDate: "",
-        isNewProduct: true, newProductName: "", newProductBarcode: code, newProductCategory: "Grocery", newProductUnit: "pc",
-      }]);
+      // Produit non trouvé → ouvrir le modal de création de produit avec le barcode pré-rempli
+      setPendingBarcode(code);
+      setShowNewProductModal(true);
       setScanInput("");
-      toast(`${t.achats.scanProductNotFound} ${code})`, "info");
-      setTimeout(() => scanInputRef.current?.focus(), 50);
     }
   }, [scanInput, allProducts, deliveryLines, toast]);
+
+  // Handler quand un produit est créé depuis le modal
+  const handleProductCreated = useCallback(async (data: Omit<Product, "id">) => {
+    try {
+      const created = await productsApi.create({
+        sku: data.sku || undefined,
+        barcode: data.barcode || undefined,
+        name: data.name,
+        category: data.category,
+        price: data.price,
+        costPrice: data.costPrice,
+        stock: data.stock,
+        minStock: data.minStock,
+        unit: data.unit,
+        expiryDate: data.expiryDate || undefined,
+      });
+      // Ajouter le produit créé à la liste du bordereau
+      setDeliveryLines((l) => [...l, {
+        productId: created.id, qty: 1,
+        unitPrice: created.costPrice || 0,
+        sellPrice: created.price || 0,
+        expiryDate: created.expiryDate ? created.expiryDate.split("T")[0] : "",
+        isNewProduct: false, newProductName: "", newProductBarcode: "", newProductCategory: "Grocery", newProductUnit: "pc",
+      }]);
+      toast(`${created.name} ${t.achats.scanProductAdded}`, "success");
+      setShowNewProductModal(false);
+      setPendingBarcode("");
+      setTimeout(() => scanInputRef.current?.focus(), 100);
+    } catch (e: unknown) {
+      toast(e instanceof Error ? e.message : t.stocks.errorAdd, "warning");
+    }
+  }, [t, toast]);
 
   const deliveryGrandTotal = deliveryLines.reduce((s, l) => s + l.qty * l.unitPrice, 0);
 
@@ -240,11 +272,8 @@ export default function AchatsPage() {
       }
     }
     if (!supplierId) { toast(t.achats.selectSupplier, "warning"); return; }
-    // Valider les lignes: soit produit existant, soit nouveau produit avec nom
-    const validLines = deliveryLines.filter((l) =>
-      (l.productId && l.qty > 0 && l.unitPrice > 0) ||
-      (l.isNewProduct && l.newProductName.trim() && l.qty > 0 && l.unitPrice > 0)
-    );
+    // Valider les lignes: produit existant avec qty et prix d'achat
+    const validLines = deliveryLines.filter((l) => l.productId && l.qty > 0 && l.unitPrice > 0);
     if (validLines.length === 0) { toast(t.achats.deliveryNeedQty, "warning"); return; }
     setSavingDelivery(true);
     try {
@@ -254,14 +283,9 @@ export default function AchatsPage() {
         invoiceNumber: deliveryRef || undefined,
         notes: deliveryRef ? `Bordereau ref: ${deliveryRef}` : undefined,
         items: validLines.map((l) => ({
-          productId: l.productId || "NEW",
+          productId: l.productId,
           quantity: l.qty,
           unitCost: l.unitPrice,
-          isNewProduct: l.isNewProduct,
-          newProductName: l.isNewProduct ? l.newProductName.trim() : undefined,
-          newProductBarcode: l.isNewProduct ? l.newProductBarcode.trim() : undefined,
-          newProductCategory: l.isNewProduct ? l.newProductCategory : undefined,
-          newProductUnit: l.isNewProduct ? l.newProductUnit : undefined,
           sellPrice: l.sellPrice > 0 ? l.sellPrice : undefined,
           expiryDate: l.expiryDate || undefined,
         })),
@@ -781,9 +805,8 @@ export default function AchatsPage() {
                     const lineTotal = line.qty * line.unitPrice;
                     return (
                       <div key={i} className="border border-[var(--border)] rounded-lg p-2 space-y-1.5">
-                        {/* Ligne 1: Produit select ou nouveau produit fields */}
-                        {!line.isNewProduct ? (
-                          <div className="grid grid-cols-[1fr_30px] gap-1.5 items-center">
+                        {/* Ligne 1: Produit select + bouton nouveau produit */}
+                        <div className="grid grid-cols-[1fr_30px] gap-1.5 items-center">
                             <select
                               value={line.productId}
                               onChange={(e) => {
@@ -801,62 +824,13 @@ export default function AchatsPage() {
                               {allProducts.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.sku}) — Stock: {p.stock} {p.unit}</option>)}
                             </select>
                             <button
-                              onClick={() => updateDeliveryLine(i, "isNewProduct", true)}
+                              onClick={() => { setPendingBarcode(""); setShowNewProductModal(true); }}
                               title={t.achats.newProductHint}
                               className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-blue-50 text-blue-500 transition-colors"
                             >
                               <Plus className="w-3.5 h-3.5" />
                             </button>
-                          </div>
-                        ) : (
-                          <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 space-y-1.5">
-                            <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-bold text-amber-700 uppercase">{t.achats.newProduct}</span>
-                              <button
-                                onClick={() => updateDeliveryLine(i, "isNewProduct", false)}
-                                className="text-[10px] text-amber-600 hover:underline"
-                              >
-                                {t.achats.useExisting}
-                              </button>
-                            </div>
-                            <input
-                              type="text"
-                              value={line.newProductName}
-                              onChange={(e) => updateDeliveryLine(i, "newProductName", e.target.value)}
-                              placeholder={t.achats.newProductNamePh}
-                              className="w-full border border-amber-300 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-amber-500 bg-white"
-                            />
-                            <div className="grid grid-cols-2 gap-1.5">
-                              <input
-                                type="text"
-                                value={line.newProductBarcode}
-                                onChange={(e) => updateDeliveryLine(i, "newProductBarcode", e.target.value)}
-                                placeholder={t.achats.newProductBarcodePh}
-                                className="border border-amber-300 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-amber-500 bg-white"
-                              />
-                              <select
-                                value={line.newProductCategory}
-                                onChange={(e) => updateDeliveryLine(i, "newProductCategory", e.target.value)}
-                                className="border border-amber-300 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-amber-500 bg-white"
-                              >
-                                <option value="Grocery">{t.common.catGrocery}</option>
-                                <option value="Beverages">{t.common.catDrinks}</option>
-                                <option value="Dairy">{t.common.catDairy}</option>
-                                <option value="Hygiene">{t.common.catHygiene}</option>
-                                <option value="Butchery">{t.common.catButcher}</option>
-                                <option value="Bakery">{t.common.catBakery}</option>
-                                <option value="Frozen">{t.common.catFrozen}</option>
-                              </select>
-                            </div>
-                            <input
-                              type="text"
-                              value={line.newProductUnit}
-                              onChange={(e) => updateDeliveryLine(i, "newProductUnit", e.target.value)}
-                              placeholder={t.achats.newProductUnitPh}
-                              className="w-full border border-amber-300 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-amber-500 bg-white"
-                            />
-                          </div>
-                        )}
+                        </div>
 
                         {/* Ligne 2: Qté, P. Achat, P. Vente, Total, Expiration, Delete */}
                         <div className="grid grid-cols-[60px_80px_80px_80px_90px_30px] gap-1.5 items-center">
@@ -1099,6 +1073,15 @@ export default function AchatsPage() {
           }}
           defaultSupplier={orderSupplier}
           allowDirectReceive={true}
+        />
+      )}
+
+      {/* New product modal — ouvert quand le scanner trouve un produit inexistant */}
+      {showNewProductModal && (
+        <NewProductModal
+          prefillBarcode={pendingBarcode}
+          onClose={() => { setShowNewProductModal(false); setPendingBarcode(""); setTimeout(() => scanInputRef.current?.focus(), 100); }}
+          onSave={handleProductCreated}
         />
       )}
     </AppShell>
