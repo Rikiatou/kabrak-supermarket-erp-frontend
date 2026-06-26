@@ -641,6 +641,8 @@ export const translations = {
       supplierSaved: "Fournisseur enregistré avec succès",
       newOrder: "Nouvelle commande",
       orderSaved: "Commande enregistrée avec succès",
+      supplierNamePh: "Nom du fournisseur",
+      phonePhForm: "Téléphone (optionnel)",
     },
     // Login
     login: {
@@ -1766,6 +1768,8 @@ export const translations = {
       supplierSaved: "Supplier saved successfully",
       newOrder: "New order",
       orderSaved: "Order saved successfully",
+      supplierNamePh: "Supplier name",
+      phonePhForm: "Phone (optional)",
     },
     login: {
       appName: "KABRAK Retail",

@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import { X, ShoppingCart, CheckCircle2, Plus, Trash2, ChevronDown, Search, ScanLine } from "lucide-react";
+import { createPortal } from "react-dom";
+import { X, ShoppingCart, CheckCircle2, Plus, Trash2, ChevronDown, Search, ScanLine, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useI18n } from "@/lib/i18n/context";
 import { cn, formatCurrency } from "@/lib/utils";
-import { suppliers as mockSuppliers } from "@/lib/mock-data";
 import { useSuppliers, useProducts } from "@/lib/hooks/useApi";
+import { suppliersApi } from "@/lib/api";
 import type { Supplier, Product } from "@/lib/types";
 
 type OrderLine = {
@@ -56,7 +57,7 @@ interface NewOrderModalProps {
   allowDirectReceive?: boolean;
 }
 
-// Composant autocomplete pour la sélection de produit
+// Composant autocomplete pour la sélection de produit — utilise un portal pour éviter le clipping par overflow
 function ProductAutocomplete({
   value,
   products,
@@ -73,6 +74,8 @@ function ProductAutocomplete({
   const [open, setOpen] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
 
   const filtered = useMemo(() => {
     if (!value.trim()) return products.slice(0, 20);
@@ -86,6 +89,19 @@ function ProductAutocomplete({
       )
       .slice(0, 20);
   }, [value, products]);
+
+  // Calculer la position du dropdown par rapport au viewport (pour le portal)
+  const updateDropdownPosition = () => {
+    if (!inputRef.current) return;
+    const rect = inputRef.current.getBoundingClientRect();
+    setDropdownStyle({
+      position: "fixed",
+      top: rect.bottom + 4,
+      left: rect.left,
+      width: rect.width,
+      zIndex: 9999,
+    });
+  };
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -101,9 +117,53 @@ function ProductAutocomplete({
     setHighlightIndex(0);
   }, [value]);
 
+  useEffect(() => {
+    if (open) {
+      updateDropdownPosition();
+    }
+  }, [open]);
+
+  const dropdown =
+    open && (filtered.length > 0 || (value.trim() && products.length === 0)) ? (
+      <div style={dropdownStyle} className="max-h-56 overflow-y-auto bg-white border border-[var(--border)] rounded-lg shadow-xl">
+        {filtered.length > 0 ? (
+          filtered.map((p, i) => (
+            <button
+              key={p.id}
+              type="button"
+              onMouseEnter={() => setHighlightIndex(i)}
+              onClick={() => {
+                onSelect(p);
+                setOpen(false);
+              }}
+              className={cn(
+                "w-full flex items-center justify-between px-3 py-2 text-left text-sm transition-colors",
+                i === highlightIndex ? "bg-[var(--brand-light)]" : "hover:bg-slate-50",
+              )}
+            >
+              <div className="flex flex-col min-w-0">
+                <span className="truncate text-[var(--text-primary)] font-medium">{p.name}</span>
+                <span className="text-xs text-[var(--text-muted)]">
+                  {p.sku} · {p.category}
+                </span>
+              </div>
+              <span className="text-xs text-[var(--text-muted)] tabular-nums shrink-0 ml-2">
+                {formatCurrency(p.costPrice)}
+              </span>
+            </button>
+          ))
+        ) : (
+          <div className="px-3 py-2 text-sm text-[var(--text-muted)]">
+            {products.length === 0 ? "Loading products…" : "No product found"}
+          </div>
+        )}
+      </div>
+    ) : null;
+
   return (
     <div ref={containerRef} className="relative w-full">
       <input
+        ref={inputRef}
         type="text"
         value={value}
         onChange={(e) => {
@@ -130,64 +190,56 @@ function ProductAutocomplete({
         placeholder={placeholder}
         className="text-sm border-0 outline-none bg-transparent text-[var(--text-primary)] placeholder:text-[var(--text-muted)] w-full"
       />
-      {open && filtered.length > 0 && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-56 overflow-y-auto bg-white border border-[var(--border)] rounded-lg shadow-lg">
-          {filtered.map((p, i) => (
-            <button
-              key={p.id}
-              type="button"
-              onMouseEnter={() => setHighlightIndex(i)}
-              onClick={() => {
-                onSelect(p);
-                setOpen(false);
-              }}
-              className={cn(
-                "w-full flex items-center justify-between px-3 py-2 text-left text-sm transition-colors",
-                i === highlightIndex ? "bg-[var(--brand-light)]" : "hover:bg-slate-50",
-              )}
-            >
-              <div className="flex flex-col min-w-0">
-                <span className="truncate text-[var(--text-primary)] font-medium">{p.name}</span>
-                <span className="text-xs text-[var(--text-muted)]">
-                  {p.sku} · {p.category}
-                </span>
-              </div>
-              <span className="text-xs text-[var(--text-muted)] tabular-nums shrink-0 ml-2">
-                {formatCurrency(p.costPrice)}
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
-      {open && filtered.length === 0 && value.trim() && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-[var(--border)] rounded-lg shadow-lg px-3 py-2 text-sm text-[var(--text-muted)]">
-          No product found
-        </div>
-      )}
+      {dropdown && typeof document !== "undefined" && createPortal(dropdown, document.body)}
     </div>
   );
 }
 
 export function NewOrderModal({ onClose, onSave, defaultSupplier, allowDirectReceive = true }: NewOrderModalProps) {
   const { t } = useI18n();
-  const { suppliers: apiSuppliers } = useSuppliers();
+  const { suppliers: apiSuppliers, reload: reloadSuppliers } = useSuppliers();
   const { products } = useProducts();
 
-  // Convertir les suppliers API au format frontend, fallback sur mock
-  const suppliers: Supplier[] = apiSuppliers.length > 0
-    ? apiSuppliers.map((s) => ({
-        id: s.id,
-        name: s.name,
-        contact: s.contact,
-        phone: s.phone,
-        email: s.email || "",
-        address: s.address || "",
-        paymentTerms: s.paymentTerms,
-        rating: s.rating,
-        totalOrders: s._count?.purchaseOrders || 0,
-        pendingOrders: 0,
-      }))
-    : mockSuppliers;
+  // Convertir les suppliers API au format frontend
+  const suppliers: Supplier[] = apiSuppliers.map((s) => ({
+    id: s.id,
+    name: s.name,
+    contact: s.contact,
+    phone: s.phone,
+    email: s.email || "",
+    address: s.address || "",
+    paymentTerms: s.paymentTerms,
+    rating: s.rating,
+    totalOrders: s._count?.purchaseOrders || 0,
+    pendingOrders: 0,
+  }));
+
+  // État pour la création rapide de supplier
+  const [showQuickSupplier, setShowQuickSupplier] = useState(false);
+  const [quickSupplierName, setQuickSupplierName] = useState("");
+  const [quickSupplierPhone, setQuickSupplierPhone] = useState("");
+  const [creatingSupplier, setCreatingSupplier] = useState(false);
+
+  const handleQuickCreateSupplier = async () => {
+    if (!quickSupplierName.trim()) return;
+    setCreatingSupplier(true);
+    try {
+      const created = await suppliersApi.create({
+        name: quickSupplierName.trim(),
+        contact: "",
+        phone: quickSupplierPhone.trim(),
+      });
+      await reloadSuppliers();
+      setForm((prev) => ({ ...prev, supplierId: created.id }));
+      setShowQuickSupplier(false);
+      setQuickSupplierName("");
+      setQuickSupplierPhone("");
+    } catch (e: unknown) {
+      // erreur silencieuse, le toast est géré par le parent
+    } finally {
+      setCreatingSupplier(false);
+    }
+  };
 
   const [form, setForm] = useState<FormData>({
     ...emptyForm,
@@ -358,19 +410,65 @@ export function NewOrderModal({ onClose, onSave, defaultSupplier, allowDirectRec
                 {/* Supplier + date */}
                 <div className="grid grid-cols-2 gap-4">
                   <Field label={t.forms.supplier} error={errors.supplierId} required span={1}>
-                    <div className="relative">
-                      <select
-                        value={form.supplierId}
-                        onChange={set("supplierId")}
-                        className={cn(inputClass(!!errors.supplierId), "appearance-none pr-8")}
-                      >
-                        <option value="">— {t.forms.supplier} —</option>
-                        {suppliers.map((s) => (
-                          <option key={s.id} value={s.id}>{s.name}</option>
-                        ))}
-                      </select>
-                      <ChevronDown className="w-3.5 h-3.5 text-[var(--text-muted)] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
+                    {showQuickSupplier ? (
+                      <div className="space-y-2">
+                        <input
+                          type="text"
+                          value={quickSupplierName}
+                          onChange={(e) => setQuickSupplierName(e.target.value)}
+                          placeholder={t.forms?.supplierNamePh || "Supplier name"}
+                          className={inputClass(false)}
+                          autoFocus
+                        />
+                        <input
+                          type="text"
+                          value={quickSupplierPhone}
+                          onChange={(e) => setQuickSupplierPhone(e.target.value)}
+                          placeholder={t.forms?.phonePhForm || "Phone (optional)"}
+                          className={inputClass(false)}
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={handleQuickCreateSupplier}
+                            disabled={!quickSupplierName.trim() || creatingSupplier}
+                          >
+                            {creatingSupplier ? "…" : t.common.save}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => { setShowQuickSupplier(false); setQuickSupplierName(""); setQuickSupplierPhone(""); }}
+                          >
+                            {t.common.cancel}
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="relative">
+                        <select
+                          value={form.supplierId}
+                          onChange={(e) => {
+                            if (e.target.value === "__new__") {
+                              setShowQuickSupplier(true);
+                              setForm((prev) => ({ ...prev, supplierId: "" }));
+                            } else {
+                              set("supplierId")(e);
+                            }
+                          }}
+                          className={cn(inputClass(!!errors.supplierId), "appearance-none pr-8")}
+                        >
+                          <option value="">— {t.forms.supplier} —</option>
+                          {suppliers.map((s) => (
+                            <option key={s.id} value={s.id}>{s.name}</option>
+                          ))}
+                          <option value="__new__">+ {t.forms?.newSupplier || "New supplier"} +</option>
+                        </select>
+                        <ChevronDown className="w-3.5 h-3.5 text-[var(--text-muted)] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      </div>
+                    )}
                   </Field>
 
                   <Field label={t.achats.expectedDelivery} error={errors.expectedDate} required span={1}>
