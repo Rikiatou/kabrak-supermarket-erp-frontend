@@ -1,14 +1,36 @@
 // Client API pour connecter le frontend Next.js au backend NestJS
-// Backend: http://localhost:3000/api
+// Architecture hybride: serveur local (primaire) + cloud (fallback)
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+// URL primaire (serveur local du magasin ou cloud selon déploiement)
+const PRIMARY_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
 
-// Helper pour les requêtes
+// URL de fallback (cloud) — utilisée si le serveur local ne répond pas
+const FALLBACK_API_URL = "https://kabrak-api.onrender.com/api";
+
+// Suivre quel serveur est actif
+let activeApiUrl = PRIMARY_API_URL;
+let lastFailoverTime = 0;
+const FAILOVER_COOLDOWN_MS = 30000; // 30s avant de retester le primaire
+
+// Helper pour les requêtes avec bascule automatique
 async function fetchAPI<T>(
   endpoint: string,
   options?: RequestInit
 ): Promise<T> {
-  const url = `${API_URL}${endpoint}`;
+  // Vérifier si on doit retester le serveur primaire
+  if (activeApiUrl !== PRIMARY_API_URL && Date.now() - lastFailoverTime > FAILOVER_COOLDOWN_MS) {
+    // Retester le primaire en arrière-plan
+    testPrimaryServer();
+  }
+
+  // Permettre override via localStorage (pour config caisses)
+  let baseUrl = activeApiUrl;
+  if (typeof window !== "undefined") {
+    const localOverride = localStorage.getItem("kabrak_api_url");
+    if (localOverride) baseUrl = localOverride;
+  }
+
+  const url = `${baseUrl}${endpoint}`;
 
   // Récupérer le token d'auth depuis localStorage
   let token: string | null = null;
@@ -26,10 +48,30 @@ async function fetchAPI<T>(
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const res = await fetch(url, {
-    ...options,
-    headers,
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      ...options,
+      headers,
+      signal: AbortSignal.timeout(5000), // 5s timeout
+    });
+  } catch (err) {
+    // Le serveur primaire ne répond pas — basculer vers le cloud
+    if (baseUrl === PRIMARY_API_URL || baseUrl === localStorage.getItem("kabrak_api_url")) {
+      console.warn("Serveur local injoignable, bascule vers le cloud…");
+      activeApiUrl = FALLBACK_API_URL;
+      lastFailoverTime = Date.now();
+      // Réessayer avec le cloud
+      const cloudUrl = `${FALLBACK_API_URL}${endpoint}`;
+      res = await fetch(cloudUrl, {
+        ...options,
+        headers,
+        signal: AbortSignal.timeout(10000),
+      });
+    } else {
+      throw err;
+    }
+  }
 
   if (res.status === 401 && typeof window !== "undefined") {
     // Token invalide ou expiré — nettoyer et rediriger vers login
@@ -47,6 +89,34 @@ async function fetchAPI<T>(
   }
 
   return res.json();
+}
+
+// Tester si le serveur local est revenu (en arrière-plan, non-bloquant)
+async function testPrimaryServer() {
+  try {
+    const testUrl = typeof window !== "undefined"
+      ? (localStorage.getItem("kabrak_api_url") || PRIMARY_API_URL)
+      : PRIMARY_API_URL;
+    const res = await fetch(`${testUrl}`, {
+      signal: AbortSignal.timeout(3000),
+    });
+    if (res.ok) {
+      console.log("Serveur local de nouveau disponible — bascule retour");
+      activeApiUrl = PRIMARY_API_URL;
+    }
+  } catch {
+    // Toujours down — rester sur le cloud
+  }
+}
+
+// Exporter l'état de la connexion pour le UI
+export function getServerStatus(): { isLocal: boolean; url: string } {
+  const override = typeof window !== "undefined" ? localStorage.getItem("kabrak_api_url") : null;
+  const url = override || activeApiUrl;
+  return {
+    isLocal: url !== FALLBACK_API_URL,
+    url,
+  };
 }
 
 // ========================================
@@ -234,17 +304,21 @@ export const productsApi = {
       `/products?page=${page}&limit=${limit}`
     ),
 
-  // Recherche
+  // Recherche server-side (pour POS avec 3000+ produits)
   search: (params: { q?: string; category?: string; page?: number; limit?: number }) => {
     const query = new URLSearchParams();
     if (params.q) query.set("q", params.q);
     if (params.category) query.set("category", params.category);
     query.set("page", String(params.page || 1));
-    query.set("limit", String(params.limit || 100));
+    query.set("limit", String(params.limit || 80));
     return fetchAPI<PaginatedResponse<ApiProduct>>(`/products/search?${query}`);
   },
 
-  // Scan code-barres (caisse)
+  // Top ventes — pour cache local au démarrage du POS
+  bestsellers: (limit = 200) =>
+    fetchAPI<{ data: ApiProduct[]; total: number }>(`/products/bestsellers?limit=${limit}`),
+
+  // Scan code-barres (caisse) — exact match, instantané
   findByBarcode: (barcode: string) =>
     fetchAPI<ApiProduct>(`/products/barcode/${barcode}`),
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   productsApi,
   transactionsApi,
@@ -67,31 +67,95 @@ export function useProducts() {
 }
 
 // ========================================
-// HOOK: useProductSearch
-// Recherche de produits (pour la caisse)
+// HOOK: useServerProductSearch
+// Recherche server-side avec debounce + cache local
+// Pour POS avec 3000+ produits
 // ========================================
-export function useProductSearch() {
+export function useServerProductSearch() {
   const [results, setResults] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
+  const [bestsellers, setBestsellers] = useState<Product[]>([]);
+  const [bestsellersLoaded, setBestsellersLoaded] = useState(false);
+  const cacheRef = useRef<Map<string, Product[]>>(new Map());
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const search = useCallback(async (query: string, category?: string) => {
-    if (!query || query.length < 1) {
-      setResults([]);
-      return;
-    }
+  // Charger les bestsellers au démarrage (cache local)
+  const loadBestsellers = useCallback(async () => {
     try {
-      setLoading(true);
-      const response = await productsApi.search({ q: query, category, limit: 50 });
-      setResults(response.data.map(apiProductToFrontend));
-    } catch (e) {
-      console.warn("Erreur recherche:", e);
-      setResults([]);
+      const res = await productsApi.bestsellers(200);
+      const products = res.data.map(apiProductToFrontend);
+      setBestsellers(products);
+      // Mettre en cache
+      cacheRef.current.set("", products);
+    } catch {
+      setBestsellers([]);
     } finally {
-      setLoading(false);
+      setBestsellersLoaded(true);
     }
   }, []);
 
-  return { results, loading, search };
+  useEffect(() => {
+    loadBestsellers();
+  }, [loadBestsellers]);
+
+  // Recherche avec debounce (300ms)
+  const search = useCallback((query: string, category?: string) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    // Si query vide → afficher bestsellers du cache
+    if (!query.trim()) {
+      const cacheKey = category ? `cat:${category}` : "";
+      if (cacheRef.current.has(cacheKey)) {
+        setResults(cacheRef.current.get(cacheKey)!);
+        return;
+      }
+      setResults(bestsellers);
+      return;
+    }
+
+    // Vérifier le cache
+    const cacheKey = `${query.trim()}:${category || ""}`;
+    if (cacheRef.current.has(cacheKey)) {
+      setResults(cacheRef.current.get(cacheKey)!);
+      return;
+    }
+
+    setLoading(true);
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await productsApi.search({
+          q: query.trim(),
+          category: category && category !== "Tous" ? category : undefined,
+          page: 1,
+          limit: 80,
+        });
+        const products = res.data.map(apiProductToFrontend);
+        // Mettre en cache (max 100 entrées)
+        if (cacheRef.current.size > 100) {
+          const firstKey = cacheRef.current.keys().next().value;
+          if (firstKey) cacheRef.current.delete(firstKey);
+        }
+        cacheRef.current.set(cacheKey, products);
+        setResults(products);
+      } catch {
+        setResults([]);
+      } finally {
+        setLoading(false);
+      }
+    }, 300);
+  }, [bestsellers]);
+
+  // Scan barcode — exact match, pas de debounce
+  const scanBarcode = useCallback(async (barcode: string): Promise<Product | null> => {
+    try {
+      const product = await productsApi.findByBarcode(barcode);
+      return apiProductToFrontend(product);
+    } catch {
+      return null;
+    }
+  }, []);
+
+  return { results, loading, search, scanBarcode, bestsellers, bestsellersLoaded, loadBestsellers };
 }
 
 // ========================================

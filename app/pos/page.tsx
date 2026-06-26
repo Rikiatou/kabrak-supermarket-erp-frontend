@@ -31,7 +31,7 @@ import { Badge } from "@/components/ui/Badge";
 import { products as mockProducts } from "@/lib/mock-data";
 import { formatCurrency, cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/context";
-import { useProducts, useCreateTransaction, useCustomers, useCreateCustomer, useRecentTransactions, useActiveShifts } from "@/lib/hooks/useApi";
+import { useProducts, useCreateTransaction, useCustomers, useCreateCustomer, useRecentTransactions, useActiveShifts, useServerProductSearch } from "@/lib/hooks/useApi";
 import type { ApiCustomer, ApiTransaction } from "@/lib/api";
 import { useAuth } from "@/lib/auth/context";
 import { getEffectivePrice, hasActiveMarkdown, daysToExpiry } from "@/lib/api";
@@ -70,6 +70,8 @@ interface ReceiptData {
 export default function POSPage() {
   const { t } = useI18n();
   const { products: apiProducts, loading } = useProducts();
+  // Recherche server-side pour 3000+ produits
+  const { results: searchResults, loading: searchLoading, search: serverSearch, scanBarcode, bestsellers, bestsellersLoaded } = useServerProductSearch();
   const { data: apiCustomers } = useCustomers();
   const { transactions: recentTransactions, reload: reloadRecentTransactions } = useRecentTransactions(10);
   const { create: createTransaction, creating } = useCreateTransaction();
@@ -177,19 +179,32 @@ export default function POSPage() {
   // des erreurs de foreign key lors de la création de transactions
   const products = apiProducts;
 
-  // Afficher une erreur si les produits ne chargent pas
-  const productsError = !loading && apiProducts.length === 0;
+  // Détection du mode: server-side si beaucoup de produits, client-side sinon
+  const useServerSearch = products.length > 800 || (loading && bestsellersLoaded);
 
-  const filtered = products.filter((p) => {
+  // Afficher une erreur si les produits ne chargent pas
+  const productsError = !loading && apiProducts.length === 0 && !bestsellersLoaded;
+
+  // Déclencher la recherche server-side quand search ou catégorie change
+  useEffect(() => {
+    if (!useServerSearch) return;
     const activeCategory = CATEGORY_KEYS[activeCategoryIdx];
-    const matchCat = activeCategoryIdx === 0 || p.category === activeCategory;
-    const matchSearch =
-      !search ||
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.sku.toLowerCase().includes(search.toLowerCase()) ||
-      p.barcode.includes(search);
-    return matchCat && matchSearch;
-  });
+    serverSearch(search, activeCategory);
+  }, [search, activeCategoryIdx, useServerSearch, serverSearch]);
+
+  // Filtrage client-side (pour < 800 produits) ou server-side (pour 3000+)
+  const filtered = useServerSearch
+    ? searchResults
+    : products.filter((p) => {
+        const activeCategory = CATEGORY_KEYS[activeCategoryIdx];
+        const matchCat = activeCategoryIdx === 0 || p.category === activeCategory;
+        const matchSearch =
+          !search ||
+          p.name.toLowerCase().includes(search.toLowerCase()) ||
+          p.sku.toLowerCase().includes(search.toLowerCase()) ||
+          p.barcode.includes(search);
+        return matchCat && matchSearch;
+      });
 
   const addToCart = useCallback((product: Product) => {
     if (product.stock <= 0) return; // Bloquer si stock épuisé
@@ -232,10 +247,18 @@ export default function POSPage() {
 
   // Scan via caméra (ZXing)
   const handleBarcodeScan = useCallback(
-    (code: string) => {
-      const found = products.find(
+    async (code: string) => {
+      // D'abord chercher dans les produits déjà chargés (cache local)
+      let found = products.find(
         (p) => p.barcode === code.trim() || p.sku.toLowerCase() === code.trim().toLowerCase()
       );
+
+      // Si pas trouvé en local et mode server-side, chercher sur le serveur
+      if (!found && useServerSearch) {
+        const serverProduct = await scanBarcode(code.trim());
+        if (serverProduct) found = serverProduct;
+      }
+
       if (found && found.stock > 0) {
         addToCart(found);
         if (beepRef.current) {
@@ -254,7 +277,7 @@ export default function POSPage() {
         setScanResult({ code, status: "not_found" });
       }
     },
-    [products, addToCart]
+    [products, addToCart, useServerSearch, scanBarcode]
   );
 
   const updateQty = (productId: string, delta: number) => {
@@ -766,6 +789,17 @@ export default function POSPage() {
           {/* Product grid */}
           <div className="flex-1 overflow-y-auto">
             {productsError ? (
+              <div className="flex flex-col items-center justify-center h-40 text-red-600">
+                <AlertCircle className="w-8 h-8 mb-2" />
+                <p className="text-sm font-medium">Impossible de charger les produits</p>
+                <p className="text-xs text-[var(--text-muted)] mt-1">Vérifiez votre connexion</p>
+              </div>
+            ) : (useServerSearch && searchLoading) ? (
+              <div className="flex flex-col items-center justify-center h-40 text-[var(--text-muted)]">
+                <div className="w-6 h-6 border-2 border-[var(--brand)] border-t-transparent rounded-full animate-spin mb-2" />
+                <p className="text-sm">Recherche…</p>
+              </div>
+            ) : filtered.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-40 text-red-600">
                 <AlertCircle className="w-8 h-8 mb-2" />
                 <p className="text-sm font-medium">Impossible de charger les produits</p>
