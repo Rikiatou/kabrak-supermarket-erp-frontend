@@ -35,6 +35,24 @@ const REGISTER_COLORS: Record<string, string> = {
   reg4: "bg-amber-100 text-amber-700 border-amber-200",
 };
 
+// Palette de couleurs pour les caisses UUID
+const REGISTER_COLOR_PALETTE = [
+  "bg-blue-100 text-blue-700 border-blue-200",
+  "bg-emerald-100 text-emerald-700 border-emerald-200",
+  "bg-purple-100 text-purple-700 border-purple-200",
+  "bg-amber-100 text-amber-700 border-amber-200",
+  "bg-rose-100 text-rose-700 border-rose-200",
+  "bg-cyan-100 text-cyan-700 border-cyan-200",
+];
+
+function registerColor(id: string): string {
+  if (REGISTER_COLORS[id]) return REGISTER_COLORS[id];
+  // Hash simple pour assigner une couleur stable basée sur l'UUID
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash + id.charCodeAt(i)) % REGISTER_COLOR_PALETTE.length;
+  return REGISTER_COLOR_PALETTE[hash];
+}
+
 const TIME_SLOTS = [
   "08:00", "09:00", "10:00", "11:00", "12:00",
   "13:00", "14:00", "15:00", "16:00", "17:00",
@@ -64,10 +82,16 @@ export default function PlanningPage() {
 
   // Charger les vraies caisses depuis le backend
   const [apiRegisters, setApiRegisters] = useState<Array<{ id: string; name: string; code: string }>>([]);
+  const [registersLoading, setRegistersLoading] = useState(true);
   useEffect(() => {
+    setRegistersLoading(true);
     schedulesApi.registers()
       .then((regs) => setApiRegisters(regs))
-      .catch(() => setApiRegisters([]));
+      .catch(() => {
+        setApiRegisters([]);
+        console.warn("Impossible de charger les caisses depuis le backend");
+      })
+      .finally(() => setRegistersLoading(false));
   }, []);
 
   const REGISTERS = apiRegisters.length > 0
@@ -93,7 +117,7 @@ export default function PlanningPage() {
 
   // Filtrer les employés assignables (tous les employés actifs)
   const cashiers = useMemo(
-    () => employees.filter((e) => e.status !== "inactive"),
+    () => employees.filter((e) => e.status !== "inactive" && (e.role === "cashier" || e.role === "manager" || e.role === "boss")),
     [employees],
   );
 
@@ -197,7 +221,7 @@ export default function PlanningPage() {
               key={reg.id}
               className={cn(
                 "inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium border",
-                REGISTER_COLORS[reg.id] || "bg-slate-100 text-slate-700 border-slate-200",
+                registerColor(reg.id),
               )}
             >
               <Store className="w-3 h-3" />
@@ -269,7 +293,7 @@ export default function PlanningPage() {
                                     key={slot.id}
                                     className={cn(
                                       "group relative rounded-lg border px-2 py-1.5 text-xs",
-                                      REGISTER_COLORS[slot.registerId] || "bg-slate-100 text-slate-700 border-slate-200",
+                                      registerColor(slot.registerId),
                                     )}
                                   >
                                     <div className="flex items-center gap-1 font-semibold">

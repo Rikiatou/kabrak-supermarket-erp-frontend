@@ -52,8 +52,7 @@ const mockExpenseBreakdown = [
   { category: "salaries", amount: 4_800_000, percentage: 21 },
   { category: "rent", amount: 1_900_000, percentage: 8 },
   { category: "utilities", amount: 850_000, percentage: 4 },
-  { category: "other", amount: 420_000, percentage: 2 },
-  { category: "other", amount: 730_000, percentage: 3 },
+  { category: "other", amount: 1_150_000, percentage: 5 },
 ];
 
 const mockExpenses: ApiExpense[] = [
@@ -258,10 +257,10 @@ export default function ComptabilitePage() {
   const [modalOpen, setModalOpen] = useState(false);
 
   // Data hooks
-  const { data: profitLossData, loading: plLoading } = useProfitLoss(startDate, endDate);
+  const { data: profitLossData, loading: plLoading, reload: reloadPL } = useProfitLoss(startDate, endDate);
   const { data: monthlyDataRaw, loading: monthlyLoading } = useMonthlySummary(currentYear);
-  const { data: breakdownData, loading: breakdownLoading } = useExpenseBreakdown(startDate, endDate);
-  const { data: expensesData, loading: expensesLoading } = useExpenses(startDate, endDate);
+  const { data: breakdownData, loading: breakdownLoading, reload: reloadBreakdown } = useExpenseBreakdown(startDate, endDate);
+  const { data: expensesData, loading: expensesLoading, reload: reloadExpenses } = useExpenses(startDate, endDate);
   const { create: createExpense, creating: expenseCreating } = useCreateExpense();
 
   // Label resolvers (i18n)
@@ -324,10 +323,10 @@ export default function ComptabilitePage() {
       await createExpense(data);
       toast(t.comptabilite.expenseSaved, "success");
       setModalOpen(false);
-      // Reload by toggling dates (hooks will refetch on dependency change)
-      // Force a refetch by re-setting the same dates
-      setStartDate((s) => s);
-      setEndDate((e) => e);
+      // Forcer le refetch des données
+      reloadExpenses();
+      reloadPL();
+      reloadBreakdown();
     } catch (e: any) {
       toast(e?.message ?? t.comptabilite.expenseError, "warning");
     }

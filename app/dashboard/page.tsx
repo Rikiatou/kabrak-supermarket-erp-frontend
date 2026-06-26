@@ -41,6 +41,7 @@ import {
   useMonthlyTopProducts,
   useAverageBasket,
   useUnpaidInvoices,
+  useActiveShifts,
 } from "@/lib/hooks/useApi";
 
 export default function DashboardPage() {
@@ -52,6 +53,8 @@ export default function DashboardPage() {
   const { alerts: stockAlertsData } = useStockAlerts();
   const { value: stockValue } = useStockValue();
   const { employees } = useEmployees();
+  const { data: activeShifts } = useActiveShifts();
+  const openCashiersCount = Array.isArray(activeShifts) ? activeShifts.filter((s: { status: string }) => s.status === "open").length : 0;
   const { data: monthlyGoal } = useMonthlyGoal();
   const { data: topProducts } = useMonthlyTopProducts(5);
   const { data: averageBasket } = useAverageBasket();
@@ -134,7 +137,7 @@ export default function DashboardPage() {
       <div className="flex items-center gap-3 mb-6 flex-wrap">
         <div className="flex items-center gap-2 bg-[var(--success-light)] text-emerald-700 text-xs font-medium px-3 py-1.5 rounded-full">
           <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-          {t.dashboard.cashierOpen} — 3 {t.dashboard.activeCashiers}
+          {t.dashboard.cashierOpen} — {openCashiersCount} {t.dashboard.activeCashiers}
         </div>
         {criticalAlerts > 0 && (
           <div className="flex items-center gap-2 bg-[var(--danger-light)] text-red-700 text-xs font-medium px-3 py-1.5 rounded-full">

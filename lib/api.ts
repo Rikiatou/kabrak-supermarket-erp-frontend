@@ -351,7 +351,7 @@ export const productsApi = {
 
   // Import CSV
   importCsv: (csv: string) =>
-    fetchAPI<{ total: number; success: number; errors: number; duration: number }>(
+    fetchAPI<{ total: number; success: number; errors: number; duration: number; errorDetails?: Array<{ row: number; sku?: string; error: string }> }>(
       `/import/products`,
       { method: "POST", body: JSON.stringify({ csv }) }
     ),

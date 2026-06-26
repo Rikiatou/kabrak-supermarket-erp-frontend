@@ -215,8 +215,8 @@ export default function StocksPage() {
       const matchSearch =
         !search ||
         p.name.toLowerCase().includes(search.toLowerCase()) ||
-        p.sku.toLowerCase().includes(search.toLowerCase()) ||
-        p.barcode.includes(search);
+        (p.sku && p.sku.toLowerCase().includes(search.toLowerCase())) ||
+        (p.barcode && p.barcode.includes(search));
       const activeCategory = CATEGORY_KEYS[activeCategoryIdx];
       const matchCat = activeCategoryIdx === 0 || p.category === activeCategory;
       const status = stockStatus(p);

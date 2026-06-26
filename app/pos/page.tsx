@@ -127,6 +127,7 @@ export default function POSPage() {
   });
   const [isOnline, setIsOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
   const [pendingTxCount, setPendingTxCount] = useState(0);
+  const [syncMsg, setSyncMsg] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const beepRef = useRef<HTMLAudioElement>(null);
 
@@ -169,7 +170,11 @@ export default function POSPage() {
       localStorage.setItem("kabrak_pending_tx", JSON.stringify(remaining));
       refreshPendingCount();
       if (remaining.length === 0 && pending.length > 0) {
-        // toast de succès silencieux
+        setSyncMsg(`${pending.length} vente(s) synchronisée(s) avec succès`);
+        setTimeout(() => setSyncMsg(null), 4000);
+      } else if (remaining.length > 0) {
+        setSyncMsg(`${remaining.length} vente(s) en attente — échec de sync`);
+        setTimeout(() => setSyncMsg(null), 6000);
       }
     } catch {}
   };
@@ -475,6 +480,8 @@ export default function POSPage() {
         pending.push({ ...txPayload, _createdAt: Date.now() });
         localStorage.setItem("kabrak_pending_tx", JSON.stringify(pending));
         refreshPendingCount();
+        setSyncMsg("Vente stockée hors ligne — synchronisation au retour de la connexion");
+        setTimeout(() => setSyncMsg(null), 5000);
       }
     } else {
       // Mode offline — stocker en local
@@ -721,6 +728,12 @@ export default function POSPage() {
         <div className="mb-2 bg-blue-50 border border-blue-200 text-blue-700 text-sm px-4 py-2 rounded-lg flex items-center gap-2">
           <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
           {(t.pos?.pendingSync || "{n} vente(s) en attente de synchronisation.").replace("{n}", String(pendingTxCount))}
+        </div>
+      )}
+      {syncMsg && (
+        <div className="mb-2 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm px-4 py-2 rounded-lg flex items-center gap-2">
+          <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
+          {syncMsg}
         </div>
       )}
 
@@ -1492,6 +1505,7 @@ function CustomerCreateModal({
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const { create: createCustomer } = useCreateCustomer();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1513,6 +1527,8 @@ function CustomerCreateModal({
       setPhone("");
     } catch (err) {
       console.error("Failed to create customer:", err);
+      const msg = err instanceof Error ? err.message : "Erreur lors de la création du client";
+      setFormError(msg);
     } finally {
       setLoading(false);
     }
@@ -1568,6 +1584,9 @@ function CustomerCreateModal({
               required
             />
           </div>
+          {formError && (
+            <p className="text-xs text-red-600 mt-2">{formError}</p>
+          )}
           <div className="flex gap-3 pt-2">
             <Button variant="secondary" className="flex-1" onClick={onClose}>
               {t.common.cancel}

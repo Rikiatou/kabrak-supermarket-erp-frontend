@@ -148,9 +148,8 @@ export default function EmployesPage() {
   const handleNewEmployee = async (data: Omit<Employee, "id" | "status" | "hoursThisWeek">) => {
     setSaving(true);
     try {
-      // Générer un numéro d'employé et PIN aléatoire
-      const empCount = employees.length + 1;
-      const employeeNumber = `EMP${String(empCount).padStart(3, "0")}`;
+      // Générer un numéro d'employé unique basé sur un timestamp + PIN aléatoire
+      const employeeNumber = `EMP${Date.now().toString().slice(-6)}`;
       const generatedPin = String(Math.floor(1000 + Math.random() * 9000)); // PIN 4 chiffres aléatoire
       const created = await employeesApi.create({
         employeeNumber,

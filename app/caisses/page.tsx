@@ -552,7 +552,7 @@ export default function CaissesPage() {
           toast(`${report.customerCount} ventes — caisse attendue: ${formatCurrency(report.totalExpected || report.cashDrawerTotal)}`, "info");
         }
       } catch {
-        toast("Caisse attendue = fonds d'ouverture (récupération des ventes impossible)", "warning");
+        toast(t.caisses.expectedCashFallback || "Caisse attendue = fonds d'ouverture (récupération des ventes impossible)", "warning");
       }
     } finally {
       setLoadingCloseSummary(false);

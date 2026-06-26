@@ -40,6 +40,14 @@ export default function ImportPage() {
       toast(t.import.selectCsv, "warning");
       return;
     }
+    if (file.size === 0) {
+      toast("Le fichier est vide", "warning");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast("Fichier trop volumineux (max 10 MB)", "warning");
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -47,7 +55,7 @@ export default function ImportPage() {
       setCsvText(text);
       toast(`${t.import.fileLoadedToast} ${file.name} (${(file.size / 1024).toFixed(1)} KB)`, "success");
     };
-    reader.readAsText(file);
+    reader.readAsText(file, "UTF-8");
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -73,7 +81,7 @@ export default function ImportPage() {
         success: res.success,
         errors: res.errors,
         duration: res.duration,
-        errorDetails: [],
+        errorDetails: res.errorDetails || [],
       });
 
       if (res.errors === 0) {

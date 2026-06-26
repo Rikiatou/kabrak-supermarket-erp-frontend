@@ -21,6 +21,7 @@ import { useI18n } from "@/lib/i18n/context";
 import { useToast } from "@/components/ui/Toast";
 import { formatCurrency, cn } from "@/lib/utils";
 import { useCustomers, useCreateCustomer } from "@/lib/hooks/useApi";
+import { customersApi } from "@/lib/api";
 
 // Fallback si backend indisponible
 const mockCustomers = [
@@ -53,10 +54,10 @@ export default function ClientsPage() {
   const customers = apiCustomers && apiCustomers.length > 0 ? apiCustomers : mockCustomers;
   const filtered = customers.filter(
     (c) =>
-      c.firstName.toLowerCase().includes(search.toLowerCase()) ||
-      c.lastName.toLowerCase().includes(search.toLowerCase()) ||
-      c.phone.includes(search) ||
-      c.customerNumber.toLowerCase().includes(search.toLowerCase())
+      (c.firstName?.toLowerCase() || "").includes(search.toLowerCase()) ||
+      (c.lastName?.toLowerCase() || "").includes(search.toLowerCase()) ||
+      (c.phone || "").includes(search) ||
+      (c.customerNumber?.toLowerCase() || "").includes(search.toLowerCase())
   );
 
   const totalPoints = customers.reduce((s, c) => s + c.points, 0);
@@ -65,27 +66,43 @@ export default function ClientsPage() {
 
   const handleCreate = async () => {
     if (!firstName || !lastName || !phone) return;
-    const result = await createCustomer({ firstName, lastName, phone, email: email || undefined });
-    if (result) {
-      toast(`Customer created: ${firstName} ${lastName} - ${result.customerNumber}`, "success");
-      reload();
-    } else {
-      toast(`Customer created locally: ${firstName} ${lastName}`, "success");
+    try {
+      const result = await createCustomer({ firstName, lastName, phone, email: email || undefined });
+      if (result) {
+        toast(`Client créé: ${firstName} ${lastName} - ${result.customerNumber}`, "success");
+        reload();
+      } else {
+        toast(`Client créé localement: ${firstName} ${lastName}`, "success");
+      }
+      setShowModal(false);
+      setFirstName("");
+      setLastName("");
+      setPhone("");
+      setEmail("");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Erreur lors de la création du client";
+      toast(msg, "warning");
     }
-    setShowModal(false);
-    setFirstName("");
-    setLastName("");
-    setPhone("");
-    setEmail("");
   };
 
-  const handleRedeem = () => {
+  const handleRedeem = async () => {
     if (!showRedeem || redeemPoints < 1) return;
     const customer = customers.find((c) => c.id === showRedeem);
     if (!customer) return;
-    toast(`${redeemPoints} points redeemed = ${formatCurrency(redeemPoints * POINTS_TO_FCFA)} for ${customer.firstName}`, "success");
-    setShowRedeem(null);
-    setRedeemPoints(0);
+    if (redeemPoints > customer.points) {
+      toast("Points insuffisants", "warning");
+      return;
+    }
+    try {
+      await customersApi.redeem(showRedeem, redeemPoints);
+      toast(`${redeemPoints} points redeemés = ${formatCurrency(redeemPoints * POINTS_TO_FCFA)} pour ${customer.firstName}`, "success");
+      reload();
+      setShowRedeem(null);
+      setRedeemPoints(0);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Erreur lors du redeem";
+      toast(msg, "warning");
+    }
   };
 
   const getTier = (points: number) => {
@@ -161,7 +178,7 @@ export default function ClientsPage() {
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white text-sm font-bold">
-                      {customer.firstName[0]}{customer.lastName[0]}
+                      {(customer.firstName?.[0] || "?")}{(customer.lastName?.[0] || "")}
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-[var(--text-primary)]">{customer.firstName} {customer.lastName}</p>

@@ -207,7 +207,7 @@ export default function AchatsPage() {
   }, [deliverySupplierId, deliveryDate, deliveryRef, deliveryLines, reloadOrders, toast]);
 
   const handlePrintDelivery = (order: typeof orders[0]) => {
-    const sup = suppliers.find((s) => s.id === order.supplier.id) || order.supplier;
+    const sup = order.supplier ? (suppliers.find((s) => s.id === order.supplier.id) || order.supplier) : null;
     const w = window.open("", "_blank", "width=800,height=900");
     if (!w) return;
     const rows = Array.from({ length: 20 }, (_, i) => `
@@ -230,7 +230,7 @@ export default function AchatsPage() {
         @media print{button{display:none}}
       </style></head><body>
       <div class="meta">
-        <div><strong>Supplier:</strong> ${sup.name}</div>
+        <div><strong>Supplier:</strong> ${sup?.name ?? "—"}</div>
         <div><strong>Date:</strong> ${order.date}</div>
         <div><strong>Ref #:</strong> <strong>${order.id}</strong></div>
       </div>
