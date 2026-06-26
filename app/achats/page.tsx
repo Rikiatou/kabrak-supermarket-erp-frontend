@@ -381,10 +381,12 @@ export default function AchatsPage() {
   // Convertir les orders API au format frontend, fallback sur mock
   const orders = apiOrders && apiOrders.length > 0
     ? apiOrders.map((o) => {
-        const supplier = suppliers.find((s) => s.id === o.supplierId);
+        const supplier = suppliers.find((s) => s.id === o.supplierId)
+          || (o.supplier ? { id: o.supplier.id, name: o.supplier.name, contact: o.supplier.contact || "", phone: o.supplier.phone || "", email: o.supplier.email || "", address: o.supplier.address || "", paymentTerms: "", rating: 0, totalOrders: 0, pendingOrders: 0 } : null)
+          || { id: o.supplierId, name: "—", contact: "", phone: "", email: "", address: "", paymentTerms: "", rating: 0, totalOrders: 0, pendingOrders: 0 };
         return {
           id: o.orderNumber,
-          supplier: supplier || { id: o.supplierId, name: t.achats.suppliers, contact: "", phone: "", email: "", address: "", paymentTerms: "", rating: 0, totalOrders: 0, pendingOrders: 0 },
+          supplier,
           date: new Date(o.date).toISOString().split("T")[0],
           expectedDate: new Date(o.expectedDate).toISOString().split("T")[0],
           total: o.total,

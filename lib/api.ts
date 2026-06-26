@@ -617,8 +617,10 @@ export interface ApiPurchaseOrder {
 }
 
 export const purchaseOrdersApi = {
-  list: (status?: string) =>
-    fetchAPI<ApiPurchaseOrder[]>(`/purchase-orders${status ? `?status=${status}` : ""}`),
+  list: async (status?: string) => {
+    const res = await fetchAPI<{ data: ApiPurchaseOrder[]; total: number; page: number; limit: number; totalPages: number }>(`/purchase-orders?limit=100${status ? `&status=${status}` : ""}`);
+    return res.data || res as unknown as ApiPurchaseOrder[];
+  },
   get: (id: string) => fetchAPI<ApiPurchaseOrder>(`/purchase-orders/${id}`),
   create: (data: { supplierId: string; expectedDate: string; notes?: string; items: Array<{ productId: string; quantity: number; unitCost: number }> }) =>
     fetchAPI<ApiPurchaseOrder>(`/purchase-orders`, { method: "POST", body: JSON.stringify(data) }),
