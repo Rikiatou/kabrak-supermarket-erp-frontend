@@ -34,8 +34,14 @@ async function fetchAPI<T>(
 
   // Récupérer le token d'auth depuis localStorage
   let token: string | null = null;
+  let licenseKey: string | null = null;
   if (typeof window !== "undefined") {
     token = localStorage.getItem("kabrak_auth_token");
+    // Recuperer la cle de licence pour verification backend
+    try {
+      const licData = localStorage.getItem("kabrak_license_data");
+      if (licData) { licenseKey = JSON.parse(licData)?.licenseKey || null; }
+    } catch {}
   }
 
   const headers: Record<string, string> = {
@@ -46,6 +52,11 @@ async function fetchAPI<T>(
   // Ajouter le token d'auth si disponible
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  // Ajouter la cle de licence pour verification backend
+  if (licenseKey) {
+    headers["x-license-key"] = licenseKey;
   }
 
   let res: Response;
@@ -81,6 +92,15 @@ async function fetchAPI<T>(
       window.location.href = "/login";
     }
     throw new Error("Session expirée");
+  }
+
+  if (res.status === 402 && typeof window !== "undefined") {
+    // Licence expiree cote backend — rediriger vers activation
+    const error = await res.json().catch(() => ({ message: "Licence expirée" }));
+    if (!window.location.pathname.startsWith("/activate")) {
+      window.location.href = "/activate?expired=1";
+    }
+    throw new Error(error.message || "Licence expirée");
   }
 
   if (!res.ok) {
