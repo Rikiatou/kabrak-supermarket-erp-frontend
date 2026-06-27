@@ -188,7 +188,9 @@ export default function POSPage() {
   const useServerSearch = products.length > 800 || (loading && bestsellersLoaded);
 
   // Afficher une erreur si les produits ne chargent pas
-  const productsError = !loading && apiProducts.length === 0 && !bestsellersLoaded;
+  // Ne pas afficher l'erreur tant que les bestsellers sont en cours de chargement
+  const productsLoading = loading || (!bestsellersLoaded && apiProducts.length === 0);
+  const productsError = !loading && apiProducts.length === 0 && bestsellersLoaded;
 
   // Déclencher la recherche server-side quand search ou catégorie change
   useEffect(() => {
@@ -801,7 +803,12 @@ export default function POSPage() {
 
           {/* Product grid */}
           <div className="flex-1 overflow-y-auto">
-            {productsError ? (
+            {productsLoading ? (
+              <div className="flex flex-col items-center justify-center h-40 text-[var(--text-muted)]">
+                <div className="w-6 h-6 border-2 border-[var(--brand)] border-t-transparent rounded-full animate-spin mb-2" />
+                <p className="text-sm">Chargement…</p>
+              </div>
+            ) : productsError ? (
               <div className="flex flex-col items-center justify-center h-40 text-red-600">
                 <AlertCircle className="w-8 h-8 mb-2" />
                 <p className="text-sm font-medium">Impossible de charger les produits</p>
@@ -811,12 +818,6 @@ export default function POSPage() {
               <div className="flex flex-col items-center justify-center h-40 text-[var(--text-muted)]">
                 <div className="w-6 h-6 border-2 border-[var(--brand)] border-t-transparent rounded-full animate-spin mb-2" />
                 <p className="text-sm">Recherche…</p>
-              </div>
-            ) : filtered.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-40 text-red-600">
-                <AlertCircle className="w-8 h-8 mb-2" />
-                <p className="text-sm font-medium">Impossible de charger les produits</p>
-                <p className="text-xs text-[var(--text-muted)] mt-1">Vérifiez votre connexion</p>
               </div>
             ) : filtered.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-40 text-[var(--text-muted)]">
