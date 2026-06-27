@@ -27,12 +27,14 @@ import {
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/Button";
 import { BarcodeScanner } from "@/components/pos/BarcodeScanner";
+import { NewProductModal } from "@/components/forms/NewProductModal";
 import { Badge } from "@/components/ui/Badge";
 import { products as mockProducts } from "@/lib/mock-data";
 import { formatCurrency, cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/context";
 import { useProducts, useCreateTransaction, useCustomers, useCreateCustomer, useRecentTransactions, useActiveShifts, useServerProductSearch } from "@/lib/hooks/useApi";
 import type { ApiCustomer, ApiTransaction } from "@/lib/api";
+import { productsApi, apiProductToFrontend } from "@/lib/api";
 import { useAuth } from "@/lib/auth/context";
 import { getEffectivePrice, hasActiveMarkdown, daysToExpiry } from "@/lib/api";
 import type { Product, CartItem } from "@/lib/types";
@@ -69,7 +71,7 @@ interface ReceiptData {
 
 export default function POSPage() {
   const { t } = useI18n();
-  const { products: apiProducts, loading } = useProducts();
+  const { products: apiProducts, loading, reload } = useProducts();
   // Recherche server-side pour 3000+ produits
   const { results: searchResults, loading: searchLoading, search: serverSearch, scanBarcode, bestsellers, bestsellersLoaded } = useServerProductSearch();
   const { data: apiCustomers } = useCustomers();
@@ -99,6 +101,8 @@ export default function POSPage() {
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
   const [showScanner, setShowScanner] = useState(false);
   const [scanResult, setScanResult] = useState<{ code: string; status: "success" | "not_found" | "out_of_stock" } | null>(null);
+  const [showNewProductModal, setShowNewProductModal] = useState(false);
+  const [pendingBarcode, setPendingBarcode] = useState("");
   const [cashierDiscountAmount, setCashierDiscountAmount] = useState(0);
   const [cashierDiscountReason, setCashierDiscountReason] = useState("");
   const [splitPayment, setSplitPayment] = useState<SplitPayment>({ cash: 0, mobile: 0, card: 0 });
@@ -281,11 +285,48 @@ export default function POSPage() {
           beepRef.current.play().catch(() => {});
         }
       } else {
+        // Produit non trouvé → ouvrir le modal de création avec le barcode pré-rempli
+        setPendingBarcode(code);
+        setShowScanner(false);
+        setShowNewProductModal(true);
         setScanResult({ code, status: "not_found" });
       }
     },
     [products, addToCart, useServerSearch, scanBarcode]
   );
+
+  // Handler quand un produit est créé depuis le modal (scan checkout)
+  const handleProductCreatedInCheckout = useCallback(async (data: Omit<Product, "id">) => {
+    try {
+      const created = await productsApi.create({
+        sku: data.sku || undefined,
+        barcode: data.barcode || undefined,
+        name: data.name,
+        category: data.category,
+        price: data.price,
+        costPrice: data.costPrice,
+        stock: data.stock,
+        minStock: data.minStock,
+        unit: data.unit,
+        expiryDate: data.expiryDate || undefined,
+      });
+      // Ajouter le produit créé au panier
+      const frontendProduct = apiProductToFrontend(created);
+      addToCart(frontendProduct);
+      if (beepRef.current) {
+        beepRef.current.currentTime = 0;
+        beepRef.current.play().catch(() => {});
+      }
+      setScanResult({ code: created.barcode || "", status: "success" });
+      setShowNewProductModal(false);
+      setPendingBarcode("");
+      // Recharger les produits pour inclure le nouveau
+      reload();
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Erreur";
+      alert(`Erreur création produit: ${msg}`);
+    }
+  }, [addToCart, reload]);
 
   const updateQty = (productId: string, delta: number) => {
     setCart((prev) =>
@@ -1284,6 +1325,13 @@ export default function POSPage() {
             setScanResult(null);
           }}
           result={scanResult}
+        />
+      )}
+      {showNewProductModal && (
+        <NewProductModal
+          prefillBarcode={pendingBarcode}
+          onClose={() => { setShowNewProductModal(false); setPendingBarcode(""); }}
+          onSave={handleProductCreatedInCheckout}
         />
       )}
       {showCustomerSearch && (
