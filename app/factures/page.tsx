@@ -227,7 +227,7 @@ export default function FacturesPage() {
       setScanSearch("");
       toast(`${found.name} — ${formatCurrency(found.price)}`, "success");
     } else {
-      toast(`Barcode ${code} not found`, "warning");
+      toast(t.factures.barcodeNotFound.replace("{code}", code), "warning");
       setScanSearch("");
     }
   };
@@ -293,9 +293,9 @@ export default function FacturesPage() {
             method: advanceMethod,
             note: "Acompte initial",
           });
-          toast(`${t.factures.invoiceCreated}: ${result.number} — ${t.factures.advance || "Acompte"}: ${formatCurrency(advance)}`, "success");
+          toast(`${t.factures.invoiceCreated}: ${result.number} — ${t.factures.advance}: ${formatCurrency(advance)}`, "success");
         } catch {
-          toast(`${t.factures.invoiceCreated}: ${result.number} (${t.factures.advance || "Acompte"} non enregistré)`, "warning");
+          toast(`${t.factures.invoiceCreated}: ${result.number} (${t.factures.advance} non enregistré)`, "warning");
         }
       } else {
         toast(`${t.factures.invoiceCreated}: ${result.number}`, "success");
@@ -624,7 +624,7 @@ export default function FacturesPage() {
     setPrintMenuInvoice(null);
     const win = window.open("", "_blank", format === "ticket" ? "width=380,height=600" : "width=800,height=600");
     if (!win) {
-      toast("Please allow popups to print", "warning");
+      toast(t.factures.allowPopups, "warning");
       return;
     }
     const itemsHtml = invoice.items.map((item) => `
@@ -788,7 +788,7 @@ export default function FacturesPage() {
     const subject = `Invoice ${invoice.number} - ${supermarketName}`;
     const body = `Hello ${invoice.clientName},\n\nPlease find attached your invoice ${invoice.number}.\n\nTotal amount: ${formatCurrency(invoice.total)}\nDate: ${new Date(invoice.date).toLocaleDateString()}\n\nGoods sold are non refundable.\nThanks for patronizing us.\n\n${supermarketName}`;
     window.location.href = `mailto:${invoice.clientEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    toast(`Email prepared for ${invoice.clientEmail}`, "info");
+    toast(t.factures.emailPrepared.replace("{email}", invoice.clientEmail), "info");
   };
 
   return (
@@ -814,7 +814,7 @@ export default function FacturesPage() {
             icon={<Download className="w-4 h-4" />}
             onClick={() => {
               if (invoices.length === 0) {
-                toast("No invoices to export", "warning");
+                toast(t.factures.noInvoicesToExport, "warning");
                 return;
               }
               exportToCSV(
@@ -840,7 +840,7 @@ export default function FacturesPage() {
                   { key: "Statut", label: "Status" },
                 ],
               );
-              toast("CSV export downloaded", "success");
+              toast(t.factures.csvExportDownloaded, "success");
             }}
           >
             Export CSV
@@ -884,7 +884,7 @@ export default function FacturesPage() {
                         {invoice.balance > 0 && (
                           <button onClick={() => openPaymentModal(invoice)} className="px-2 py-1 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors flex items-center gap-1">
                             <Wallet className="w-3.5 h-3.5" />
-                            {t.factures.addPayment || "Add payment"}
+                            {t.factures.addPayment}
                           </button>
                         )}
                         <button onClick={() => openPaymentModal(invoice)} title={t.factures.paymentTracking} className="p-1.5 hover:bg-amber-50 rounded-lg transition-colors">
@@ -893,7 +893,7 @@ export default function FacturesPage() {
                         <div className="relative">
                           <button
                             onClick={() => setPrintMenuInvoice(printMenuInvoice?.id === invoice.id ? null : invoice)}
-                            title="Print"
+                            title={t.factures.print || "Print"}
                             className="p-1.5 hover:bg-blue-50 rounded-lg transition-colors"
                           >
                             <Printer className="w-4 h-4 text-blue-500" />
@@ -907,14 +907,14 @@ export default function FacturesPage() {
                                   className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2"
                                 >
                                   <FileText className="w-3.5 h-3.5 text-blue-500" />
-                                  A4 (Letter)
+                                  {t.factures.printA4}
                                 </button>
                                 <button
                                   onClick={() => printInvoice(invoice, "ticket")}
                                   className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2"
                                 >
                                   <Printer className="w-3.5 h-3.5 text-emerald-500" />
-                                  Ticket (58mm)
+                                  {t.factures.printTicket}
                                 </button>
                               </div>
                             </>
@@ -1038,7 +1038,7 @@ export default function FacturesPage() {
                           className="w-full text-left px-3 py-2.5 text-sm hover:bg-slate-50 flex items-center justify-between border-b border-[var(--border)] last:border-0"
                         >
                           <span className="font-medium">{p.name}</span>
-                          <span className="text-xs text-[var(--text-muted)]">{formatCurrency(p.price)} · Stock: {p.stock}</span>
+                          <span className="text-xs text-[var(--text-muted)]">{formatCurrency(p.price)} · {t.stocks.stock}: {p.stock}</span>
                         </button>
                       ))}
                   </div>
@@ -1068,7 +1068,7 @@ export default function FacturesPage() {
                         {products
                           .map((p) => (
                             <option key={p.id} value={p.id} disabled={p.stock <= 0}>
-                              {p.name} ({p.sku}) — {formatCurrency(p.price)} · Stock: {p.stock} {p.unit}
+                              {p.name} ({p.sku}) — {formatCurrency(p.price)} · {t.stocks.stock}: {p.stock} {p.unit}
                             </option>
                           ))}
                       </select>
@@ -1109,7 +1109,7 @@ export default function FacturesPage() {
                       if (item.quantity > p.stock) {
                         return <p className="text-xs text-red-500">⚠ {t.stocks.noHistory}: stock = {p.stock} {p.unit}</p>;
                       }
-                      return <p className="text-xs text-[var(--text-muted)]">Stock: {p.stock} {p.unit} → {p.stock - item.quantity} {t.common.after}</p>;
+                      return <p className="text-xs text-[var(--text-muted)]">{t.stocks.stock}: {p.stock} {p.unit} → {p.stock - item.quantity} {t.common.after}</p>;
                     })()}
                   </div>
                 ))}
@@ -1129,7 +1129,7 @@ export default function FacturesPage() {
               <div className="flex items-center gap-2">
                 <Wallet className="w-4 h-4 text-[var(--brand)]" />
                 <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">
-                  {t.factures.advance || "Acompte (avance)"}
+                  {t.factures.advance}
                 </label>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -1146,15 +1146,15 @@ export default function FacturesPage() {
                   onChange={(e) => setAdvanceMethod(e.target.value)}
                   className="px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)] bg-white"
                 >
-                  <option value="cash">{t.factures.cash || "Espèces"}</option>
+                  <option value="cash">{t.factures.cash}</option>
                   <option value="mobile">Mobile Money</option>
-                  <option value="card">{t.factures.card || "Carte"}</option>
-                  <option value="transfer">{t.factures.transfer || "Virement"}</option>
+                  <option value="card">{t.factures.card}</option>
+                  <option value="transfer">{t.factures.transfer}</option>
                 </select>
               </div>
               {advancePayment && parseFloat(advancePayment) > 0 && (
                 <div className="flex justify-between text-xs bg-amber-50 rounded-lg px-3 py-2">
-                  <span className="text-amber-700">{t.factures.remainingBalance || "Reste à payer"}:</span>
+                  <span className="text-amber-700">{t.factures.remainingBalance}:</span>
                   <span className="font-bold text-amber-700 tabular-nums">{formatCurrency(total - (parseFloat(advancePayment) || 0))}</span>
                 </div>
               )}

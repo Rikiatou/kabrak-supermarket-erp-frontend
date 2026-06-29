@@ -238,7 +238,7 @@ export default function HistoriquePage() {
   // CSV Export
   const handleExportCSV = () => {
     if (!movementsWithBalance.length || !selectedProduct) return;
-    const header = ["Date", "Time", "Type", "Quantity", "Balance", "Unit Value", "Total Value", "Reason", "Reference", "Done By", "Note"];
+    const header = [t.stocks.csvDate, t.stocks.csvTime, t.stocks.csvType, t.stocks.csvQuantity, t.stocks.csvBalance, t.stocks.csvUnitValue, t.stocks.csvTotalValue, t.stocks.csvReason, t.stocks.csvReference, t.stocks.csvDoneBy, t.stocks.csvNote];
     const rows = movementsWithBalance.map((m) => {
       const absQ = Math.abs(m.quantity);
       const uv = m.type === "in" ? (selectedProduct.costPrice ?? 0) : (selectedProduct.price ?? 0);
@@ -528,7 +528,7 @@ export default function HistoriquePage() {
                       <button
                         onClick={handleExportCSV}
                         disabled={!filteredMovements.length}
-                        title="Export CSV"
+                        title={t.stocks.exportCSV}
                         className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors disabled:opacity-30 px-2 py-1 rounded-lg hover:bg-slate-100"
                       >
                         <Download className="w-3.5 h-3.5" /> CSV
@@ -611,7 +611,7 @@ export default function HistoriquePage() {
                             { label: t.common.date,        align: "left" },
                             { label: t.common.type,        align: "left" },
                             { label: t.common.quantity,    align: "right" },
-                            { label: "Balance",            align: "right" },
+                            { label: t.stocks.balance,            align: "right" },
                             { label: t.stocks.unitValue,   align: "right" },
                             { label: t.stocks.totalValue,  align: "right" },
                             { label: t.common.reason,      align: "left" },

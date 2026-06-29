@@ -321,7 +321,7 @@ export default function AchatsPage() {
         <td style="border:1px solid #ccc;padding:4px 6px;text-align:right;font-size:11px;">&nbsp;</td>
         <td style="border:1px solid #ccc;padding:4px 6px;text-align:right;font-size:11px;">&nbsp;</td>
       </tr>`).join("");
-    w.document.write(`<!DOCTYPE html><html><head><title>Delivery Note ${order.id}</title>
+    w.document.write(`<!DOCTYPE html><html><head><title>${t.achats.deliveryNoteTitle} ${order.id}</title>
       <style>
         body{font-family:Arial,sans-serif;width:780px;margin:20px auto;color:#000}
         h2{text-align:center;font-size:16px;border:2px solid #000;padding:6px;margin:8px 0}
@@ -334,25 +334,25 @@ export default function AchatsPage() {
         @media print{button{display:none}}
       </style></head><body>
       <div class="meta">
-        <div><strong>Supplier:</strong> ${sup?.name ?? "—"}</div>
-        <div><strong>Date:</strong> ${order.date}</div>
-        <div><strong>Ref #:</strong> <strong>${order.id}</strong></div>
+        <div><strong>${t.achats.supplierLabel}</strong> ${sup?.name ?? "—"}</div>
+        <div><strong>${t.achats.dateLabelPrint}</strong> ${order.date}</div>
+        <div><strong>${t.achats.refLabel}</strong> <strong>${order.id}</strong></div>
       </div>
-      <h2>DELIVERY NOTE — BORDEREAU DE LIVRAISON</h2>
+      <h2>${t.achats.deliveryNoteHeader}</h2>
       <table>
         <thead><tr>
-          <th style="width:50%">DESIGNATION</th>
-          <th style="width:12%;text-align:center">QTE</th>
-          <th style="width:19%;text-align:right">P.U. (FCFA)</th>
-          <th style="width:19%;text-align:right">P. TOTAL (FCFA)</th>
+          <th style="width:50%">${t.achats.designationPrint}</th>
+          <th style="width:12%;text-align:center">${t.achats.qty}</th>
+          <th style="width:19%;text-align:right">${t.achats.unitPrice}</th>
+          <th style="width:19%;text-align:right">${t.achats.totalPrice}</th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>
-      <div class="totals">TOTAL HT: _____________________ FCFA</div>
+      <div class="totals">${t.achats.totalHT} _____________________ FCFA</div>
       <div class="sig">
-        <div>CLIENT</div><div>LIVREUR</div>
+        <div>${t.achats.client}</div><div>${t.achats.deliverer}</div>
       </div>
-      <br/><button onclick="window.print()" style="margin-top:16px;padding:8px 20px;font-size:13px;cursor:pointer">Print PDF</button>
+      <br/><button onclick="window.print()" style="margin-top:16px;padding:8px 20px;font-size:13px;cursor:pointer">${t.achats.printPdf}</button>
     </body></html>`);
     w.document.close();
   };
@@ -786,7 +786,7 @@ export default function AchatsPage() {
                     value={scanInput}
                     onChange={(e) => setScanInput(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleScanProduct(); } }}
-                    placeholder={t.achats.scanPlaceholder || "Manual barcode..."}
+                    placeholder={t.achats.scanPlaceholder}
                     className="w-40 border border-[#86efac] rounded-lg px-2 py-1 text-sm outline-none focus:border-[#16a34a] bg-white"
                   />
                 </div>
@@ -828,7 +828,7 @@ export default function AchatsPage() {
                               }}
                               className="border border-[var(--border)] rounded-lg px-2 py-1.5 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--brand)] bg-white truncate"
                             >
-                              <option value="">— select —</option>
+                              <option value="">{t.achats.selectOption}</option>
                               {allProducts.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.sku}) — Stock: {p.stock} {p.unit}</option>)}
                             </select>
                             <button
@@ -907,7 +907,7 @@ export default function AchatsPage() {
                 {t.common.cancel}
               </Button>
               <Button className="flex-1" onClick={handleSaveDelivery} disabled={savingDelivery}>
-                {savingDelivery ? "..." : t.achats.saveDelivery}
+                {savingDelivery ? (t.common.loading || "...") : t.achats.saveDelivery}
               </Button>
             </div>
           </div>
@@ -1076,7 +1076,7 @@ export default function AchatsPage() {
 
               reloadOrders();
             } catch (error) {
-              toast("Erreur: " + (error instanceof Error ? error.message : "Erreur inconnue"), "warning");
+              toast("Erreur: " + (error instanceof Error ? error.message : t.achats.unknownError), "warning");
             }
           }}
           defaultSupplier={orderSupplier}

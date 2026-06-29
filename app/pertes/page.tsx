@@ -67,7 +67,7 @@ export default function PertesPage() {
 
     // Validation: quantité ne peut pas dépasser le stock
     if (quantity > product.stock) {
-      toast(`Stock insuffisant: seulement ${product.stock} en stock`, "warning");
+      toast(t.pertes.insufficientStock.replace("{stock}", String(product.stock)), "warning");
       return;
     }
 
@@ -76,7 +76,7 @@ export default function PertesPage() {
       await adjust(product.id, Math.max(0, product.stock - quantity), `${lossType}: ${reason || t.pertes.lossTypes.loss}`);
       reloadProducts();
     } catch (e) {
-      toast("Erreur lors de l'ajustement du stock", "warning");
+      toast(t.pertes.stockAdjustmentError, "warning");
       return;
     }
 
@@ -225,7 +225,7 @@ export default function PertesPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-[var(--text-primary)]">Report a loss</h3>
+              <h3 className="text-sm font-bold text-[var(--text-primary)]">{t.pertes.reportLoss}</h3>
               <button onClick={() => setShowModal(false)} className="p-1 hover:bg-slate-100 rounded-lg">
                 <X className="w-4 h-4 text-[var(--text-muted)]" />
               </button>
@@ -233,14 +233,14 @@ export default function PertesPage() {
 
             {/* Product search */}
             <div>
-              <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Produit</label>
+              <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">{t.pertes.product}</label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
                 <input
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search a product..."
+                  placeholder={t.pertes.searchProduct}
                   className="w-full pl-9 pr-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]"
                 />
               </div>
@@ -265,7 +265,7 @@ export default function PertesPage() {
 
             {/* Quantity */}
             <div>
-              <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Quantity lost</label>
+              <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">{t.pertes.quantityLost}</label>
               <input
                 type="number"
                 min={1}
@@ -277,7 +277,7 @@ export default function PertesPage() {
 
             {/* Loss type */}
             <div>
-              <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Type de perte</label>
+              <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">{t.pertes.lossType}</label>
               <div className="grid grid-cols-3 gap-2">
                 {lossTypes.map((lt) => (
                   <button
@@ -298,22 +298,22 @@ export default function PertesPage() {
 
             {/* Reason */}
             <div>
-              <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Raison (optionnel)</label>
+              <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">{t.pertes.reasonOptional}</label>
               <input
                 type="text"
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                placeholder="Ex: Broken bottle during transport"
+                placeholder={t.pertes.reasonPlaceholder}
                 className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]"
               />
             </div>
 
             <div className="flex gap-2 pt-2">
               <Button variant="secondary" className="flex-1" onClick={() => setShowModal(false)}>
-                Cancel
+                {t.common.cancel}
               </Button>
               <Button className="flex-1" onClick={handleAddLoss} disabled={!selectedProduct || adjusting}>
-                {adjusting ? "Traitement..." : "Confirmer"}
+                {adjusting ? t.common.processing : t.common.confirm}
               </Button>
             </div>
           </div>

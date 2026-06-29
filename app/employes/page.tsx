@@ -176,7 +176,7 @@ export default function EmployesPage() {
         hoursThisWeek: 0,
       };
       setEmployees((prev) => [newEmp, ...prev]);
-      toast(`${data.firstName} ${data.lastName} added — temporary PIN: ${generatedPin}`, "success");
+      toast(t.employes.employeeAdded.replace("{name}", `${data.firstName} ${data.lastName}`).replace("{pin}", generatedPin), "success");
       reloadEmployees();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : t.employes.errorAdd;
@@ -511,7 +511,7 @@ function EmployeeDetailPanel({
           {canManagePin && (
             <div className="space-y-2">
               <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">
-                {t.employes.loginPin || "Login PIN"}
+                {t.employes.loginPin}
               </p>
               <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-xl">
                 <span className="flex-1 font-mono text-sm tracking-widest text-[var(--text-primary)]">
@@ -522,7 +522,7 @@ function EmployeeDetailPanel({
                 <button
                   onClick={() => setShowPin((v) => !v)}
                   className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
-                  title={showPin ? (t.employes.hide || "Hide") : (t.employes.show || "Show")}
+                  title={showPin ? t.employes.hide : t.employes.show}
                 >
                   {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -533,7 +533,7 @@ function EmployeeDetailPanel({
                   title={t.employes.resetPin || "Generate new PIN"}
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${resetting ? "animate-spin" : ""}`} />
-                  {t.employes.reset || "Reset"}
+                  {t.employes.reset}
                 </button>
               </div>
               <p className="text-[11px] text-[var(--text-muted)]">

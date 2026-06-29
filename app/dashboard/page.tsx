@@ -64,36 +64,36 @@ export default function DashboardPage() {
 
   const roleShortcuts: Record<string, { label: string; href: string; icon: React.ElementType; color: string }[]> = {
     boss: [
-      { label: "New Sale", href: "/pos", icon: ShoppingCart, color: "bg-blue-50 text-blue-700 border-blue-100" },
-      { label: "Receive Delivery", href: "/achats", icon: Truck, color: "bg-emerald-50 text-emerald-700 border-emerald-100" },
-      { label: "Reports", href: "/rapports", icon: BarChart3, color: "bg-violet-50 text-violet-700 border-violet-100" },
-      { label: "AI Insights", href: "/ia", icon: Cpu, color: "bg-amber-50 text-amber-700 border-amber-100" },
-      { label: "Product History", href: "/historique", icon: History, color: "bg-slate-50 text-slate-700 border-slate-200" },
-      { label: "Invoices", href: "/factures", icon: FileText, color: "bg-rose-50 text-rose-700 border-rose-100" },
+      { label: t.dashboard.shortcutNewSale, href: "/pos", icon: ShoppingCart, color: "bg-blue-50 text-blue-700 border-blue-100" },
+      { label: t.dashboard.shortcutReceiveDelivery, href: "/achats", icon: Truck, color: "bg-emerald-50 text-emerald-700 border-emerald-100" },
+      { label: t.dashboard.shortcutReports, href: "/rapports", icon: BarChart3, color: "bg-violet-50 text-violet-700 border-violet-100" },
+      { label: t.dashboard.shortcutAiInsights, href: "/ia", icon: Cpu, color: "bg-amber-50 text-amber-700 border-amber-100" },
+      { label: t.dashboard.shortcutProductHistory, href: "/historique", icon: History, color: "bg-slate-50 text-slate-700 border-slate-200" },
+      { label: t.dashboard.shortcutInvoices, href: "/factures", icon: FileText, color: "bg-rose-50 text-rose-700 border-rose-100" },
     ],
     manager: [
-      { label: "New Sale", href: "/pos", icon: ShoppingCart, color: "bg-blue-50 text-blue-700 border-blue-100" },
-      { label: "Receive Delivery", href: "/achats", icon: Truck, color: "bg-emerald-50 text-emerald-700 border-emerald-100" },
-      { label: "Reports", href: "/rapports", icon: BarChart3, color: "bg-violet-50 text-violet-700 border-violet-100" },
-      { label: "AI Insights", href: "/ia", icon: Cpu, color: "bg-amber-50 text-amber-700 border-amber-100" },
-      { label: "Product History", href: "/historique", icon: History, color: "bg-slate-50 text-slate-700 border-slate-200" },
-      { label: "Invoices", href: "/factures", icon: FileText, color: "bg-rose-50 text-rose-700 border-rose-100" },
+      { label: t.dashboard.shortcutNewSale, href: "/pos", icon: ShoppingCart, color: "bg-blue-50 text-blue-700 border-blue-100" },
+      { label: t.dashboard.shortcutReceiveDelivery, href: "/achats", icon: Truck, color: "bg-emerald-50 text-emerald-700 border-emerald-100" },
+      { label: t.dashboard.shortcutReports, href: "/rapports", icon: BarChart3, color: "bg-violet-50 text-violet-700 border-violet-100" },
+      { label: t.dashboard.shortcutAiInsights, href: "/ia", icon: Cpu, color: "bg-amber-50 text-amber-700 border-amber-100" },
+      { label: t.dashboard.shortcutProductHistory, href: "/historique", icon: History, color: "bg-slate-50 text-slate-700 border-slate-200" },
+      { label: t.dashboard.shortcutInvoices, href: "/factures", icon: FileText, color: "bg-rose-50 text-rose-700 border-rose-100" },
     ],
     cashier: [
-      { label: "New Sale", href: "/pos", icon: ShoppingCart, color: "bg-blue-50 text-blue-700 border-blue-100" },
-      { label: "Clients", href: "/clients", icon: Users, color: "bg-emerald-50 text-emerald-700 border-emerald-100" },
-      { label: "Register", href: "/caisses", icon: Zap, color: "bg-amber-50 text-amber-700 border-amber-100" },
+      { label: t.dashboard.shortcutNewSale, href: "/pos", icon: ShoppingCart, color: "bg-blue-50 text-blue-700 border-blue-100" },
+      { label: t.dashboard.shortcutClients, href: "/clients", icon: Users, color: "bg-emerald-50 text-emerald-700 border-emerald-100" },
+      { label: t.dashboard.shortcutRegister, href: "/caisses", icon: Zap, color: "bg-amber-50 text-amber-700 border-amber-100" },
     ],
     accountant: [
-      { label: "Invoices", href: "/factures", icon: FileText, color: "bg-blue-50 text-blue-700 border-blue-100" },
-      { label: "Accounting", href: "/comptabilite", icon: BarChart3, color: "bg-violet-50 text-violet-700 border-violet-100" },
-      { label: "Reports", href: "/rapports", icon: BarChart3, color: "bg-emerald-50 text-emerald-700 border-emerald-100" },
+      { label: t.dashboard.shortcutInvoices, href: "/factures", icon: FileText, color: "bg-blue-50 text-blue-700 border-blue-100" },
+      { label: t.dashboard.shortcutAccounting, href: "/comptabilite", icon: BarChart3, color: "bg-violet-50 text-violet-700 border-violet-100" },
+      { label: t.dashboard.shortcutReports, href: "/rapports", icon: BarChart3, color: "bg-emerald-50 text-emerald-700 border-emerald-100" },
     ],
     stockist: [
-      { label: "Receive Delivery", href: "/achats", icon: Truck, color: "bg-emerald-50 text-emerald-700 border-emerald-100" },
-      { label: "Stocks", href: "/stocks", icon: PackagePlus, color: "bg-blue-50 text-blue-700 border-blue-100" },
-      { label: "Losses", href: "/pertes", icon: AlertTriangle, color: "bg-red-50 text-red-700 border-red-100" },
-      { label: "Scanner", href: "/scanner", icon: Package, color: "bg-amber-50 text-amber-700 border-amber-100" },
+      { label: t.dashboard.shortcutReceiveDelivery, href: "/achats", icon: Truck, color: "bg-emerald-50 text-emerald-700 border-emerald-100" },
+      { label: t.dashboard.shortcutStocks, href: "/stocks", icon: PackagePlus, color: "bg-blue-50 text-blue-700 border-blue-100" },
+      { label: t.dashboard.shortcutLosses, href: "/pertes", icon: AlertTriangle, color: "bg-red-50 text-red-700 border-red-100" },
+      { label: t.dashboard.shortcutScanner, href: "/scanner", icon: Package, color: "bg-amber-50 text-amber-700 border-amber-100" },
     ],
   };
   const shortcuts = roleShortcuts[user?.role ?? ""] ?? [];
@@ -137,7 +137,7 @@ export default function DashboardPage() {
       {/* Hero greeting */}
       <div className="mb-6">
         <h2 className="text-[22px] font-bold text-[var(--text-primary)] tracking-tight">
-          Bonjour, {user?.firstName || "Boss"}
+          {t.dashboard.greeting}, {user?.firstName || t.dashboard.defaultName}
         </h2>
         <p className="text-[13px] text-[var(--text-muted)] mt-0.5">
           {t.dashboard.subtitle}
@@ -267,7 +267,7 @@ export default function DashboardPage() {
                             : "bg-slate-100"
                       }`}
                       style={{ height: `${Math.max(heightPct, 2)}%` }}
-                      title={`${day.label}: ${(day.revenue ?? 0).toLocaleString()} FCFA (${day.transactions ?? 0} txns)`}
+                      title={`${day.label}: ${(day.revenue ?? 0).toLocaleString()} ${t.common.currency} (${day.transactions ?? 0} ${t.common.txnsAbbr})`}
                     />
                   </div>
                   <span className={`text-[10px] ${isToday ? "font-bold text-[var(--brand)]" : "text-[var(--text-muted)]"}`}>
@@ -433,12 +433,12 @@ export default function DashboardPage() {
                   stockist: "from-amber-400 to-orange-600",
                 };
                 const roleLabels: Record<string, string> = {
-                  boss: t.dashboard.roleBoss || "Boss",
+                  boss: t.dashboard.roleBoss,
                   manager: t.dashboard.roleManager,
                   supervisor: t.dashboard.roleSupervisor,
                   cashier: t.dashboard.roleCashier,
                   stockist: t.dashboard.roleStockist,
-                  accountant: t.dashboard.roleAccountant || "Accountant",
+                  accountant: t.dashboard.roleAccountant,
                 };
                 return (
                   <div key={emp.id} className="flex items-center gap-2">

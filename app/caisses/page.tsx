@@ -262,7 +262,7 @@ function CloseShiftModal({
               />
             </div>
             <p className="text-[10px] text-[var(--text-muted)] mt-1">
-              {t.caisses.openingCash}: {formatCurrency(shift.openingCash)} + {t.caisses.zReport?.cash || "Espèces"}
+              {t.caisses.openingCash}: {formatCurrency(shift.openingCash)} + {t.caisses.cash}
             </p>
           </div>
 
@@ -569,7 +569,7 @@ export default function CaissesPage() {
       setCloseExpectedCash(expected);
 
       if (shiftTx.length > 0) {
-        toast(`${shiftTx.length} ventes — caisse attendue: ${formatCurrency(expected)}`, "info");
+        toast(t.caisses.salesCountExpected.replace("{n}", String(shiftTx.length)).replace("{amount}", formatCurrency(expected)), "info");
       }
     } catch (e: any) {
       console.error("Failed to calculate expected cash:", e?.message);
@@ -578,10 +578,10 @@ export default function CaissesPage() {
         const report = await shiftsApi.zReport(shift.id);
         setCloseExpectedCash(report.totalExpected || report.cashDrawerTotal);
         if (report.customerCount > 0) {
-          toast(`${report.customerCount} ventes — caisse attendue: ${formatCurrency(report.totalExpected || report.cashDrawerTotal)}`, "info");
+          toast(t.caisses.salesCountExpected.replace("{n}", String(report.customerCount)).replace("{amount}", formatCurrency(report.totalExpected || report.cashDrawerTotal)), "info");
         }
       } catch {
-        toast(t.caisses.expectedCashFallback || "Caisse attendue = fonds d'ouverture (récupération des ventes impossible)", "warning");
+        toast(t.caisses.expectedCashFallback, "warning");
       }
     } finally {
       setLoadingCloseSummary(false);

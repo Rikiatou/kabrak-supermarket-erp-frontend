@@ -69,10 +69,10 @@ export default function ClientsPage() {
     try {
       const result = await createCustomer({ firstName, lastName, phone, email: email || undefined });
       if (result) {
-        toast(`Client créé: ${firstName} ${lastName} - ${result.customerNumber}`, "success");
+        toast(t.clients.createdSuccess.replace("{name}", `${firstName} ${lastName} - ${result.customerNumber}`), "success");
         reload();
       } else {
-        toast(`Client créé localement: ${firstName} ${lastName}`, "success");
+        toast(t.clients.createdLocal.replace("{name}", `${firstName} ${lastName}`), "success");
       }
       setShowModal(false);
       setFirstName("");
@@ -80,7 +80,7 @@ export default function ClientsPage() {
       setPhone("");
       setEmail("");
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Erreur lors de la création du client";
+      const msg = e instanceof Error ? e.message : t.clients.createError;
       toast(msg, "warning");
     }
   };
@@ -90,25 +90,25 @@ export default function ClientsPage() {
     const customer = customers.find((c) => c.id === showRedeem);
     if (!customer) return;
     if (redeemPoints > customer.points) {
-      toast("Points insuffisants", "warning");
+      toast(t.clients.insufficientPoints, "warning");
       return;
     }
     try {
       await customersApi.redeem(showRedeem, redeemPoints);
-      toast(`${redeemPoints} points redeemés = ${formatCurrency(redeemPoints * POINTS_TO_FCFA)} pour ${customer.firstName}`, "success");
+      toast(t.clients.pointsRedeemed.replace("{n}", String(redeemPoints)).replace("{amount}", formatCurrency(redeemPoints * POINTS_TO_FCFA)).replace("{name}", customer.firstName), "success");
       reload();
       setShowRedeem(null);
       setRedeemPoints(0);
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Erreur lors du redeem";
+      const msg = e instanceof Error ? e.message : t.clients.redeemError;
       toast(msg, "warning");
     }
   };
 
   const getTier = (points: number) => {
-    if (points >= 2000) return { label: "Gold", color: "bg-amber-100 text-amber-700", icon: Star };
-    if (points >= 1000) return { label: "Silver", color: "bg-slate-100 text-slate-700", icon: Award };
-    return { label: "Bronze", color: "bg-orange-100 text-orange-700", icon: Award };
+    if (points >= 2000) return { label: t.clients.tierGold, color: "bg-amber-100 text-amber-700", icon: Star };
+    if (points >= 1000) return { label: t.clients.tierSilver, color: "bg-slate-100 text-slate-700", icon: Award };
+    return { label: t.clients.tierBronze, color: "bg-orange-100 text-orange-700", icon: Award };
   };
 
   return (
@@ -266,8 +266,8 @@ export default function ClientsPage() {
               <input value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]" />
             </div>
             <div className="flex gap-2 pt-2">
-              <Button variant="secondary" className="flex-1" onClick={() => setShowModal(false)}>Cancel</Button>
-              <Button className="flex-1" onClick={handleCreate} disabled={!firstName || !lastName || !phone}>Create</Button>
+              <Button variant="secondary" className="flex-1" onClick={() => setShowModal(false)}>{t.common.cancel}</Button>
+              <Button className="flex-1" onClick={handleCreate} disabled={!firstName || !lastName || !phone}>{t.common.create}</Button>
             </div>
           </div>
         </div>
@@ -278,7 +278,7 @@ export default function ClientsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowRedeem(null)}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-[var(--text-primary)]">Redeem points</h3>
+              <h3 className="text-sm font-bold text-[var(--text-primary)]">{t.clients.redeemPoints}</h3>
               <button onClick={() => setShowRedeem(null)} className="p-1 hover:bg-slate-100 rounded-lg">
                 <X className="w-4 h-4 text-[var(--text-muted)]" />
               </button>
@@ -289,11 +289,11 @@ export default function ClientsPage() {
               return (
                 <>
                   <div className="bg-amber-50 rounded-xl p-3 text-center">
-                    <p className="text-xs text-amber-600">Points disponibles</p>
+                    <p className="text-xs text-amber-600">{t.clients.availablePoints}</p>
                     <p className="text-2xl font-bold text-amber-700 tabular-nums">{customer.points}</p>
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Points to redeem</label>
+                    <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">{t.clients.pointsToRedeem}</label>
                     <input
                       type="number"
                       min={1}
@@ -304,12 +304,12 @@ export default function ClientsPage() {
                     />
                   </div>
                   <div className="bg-emerald-50 rounded-xl p-3 text-center">
-                    <p className="text-xs text-emerald-600">Discount value</p>
+                    <p className="text-xs text-emerald-600">{t.clients.discountValue}</p>
                     <p className="text-xl font-bold text-emerald-700 tabular-nums">{formatCurrency(redeemPoints * POINTS_TO_FCFA)}</p>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="secondary" className="flex-1" onClick={() => setShowRedeem(null)}>Cancel</Button>
-                    <Button className="flex-1" onClick={handleRedeem}>Confirmer</Button>
+                    <Button variant="secondary" className="flex-1" onClick={() => setShowRedeem(null)}>{t.common.cancel}</Button>
+                    <Button className="flex-1" onClick={handleRedeem}>{t.common.confirm}</Button>
                   </div>
                 </>
               );
