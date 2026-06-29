@@ -357,7 +357,7 @@ function RegisterCard({
   shift: ApiShift | undefined;
   employees: ApiEmployee[];
   onOpen: () => void;
-  onClose: (shift: ApiShift) => void;
+  onClose?: (shift: ApiShift) => void;
 }) {
   const { t } = useI18n();
   const isOpen = !!shift;
@@ -422,14 +422,20 @@ function RegisterCard({
               </span>
             </div>
           </div>
-          <Button
-            variant="danger"
-            className="w-full mt-auto"
-            icon={<Lock className="w-4 h-4" />}
-            onClick={() => onClose(shift)}
-          >
-            {t.caisses.close}
-          </Button>
+          {onClose ? (
+            <Button
+              variant="danger"
+              className="w-full mt-auto"
+              icon={<Lock className="w-4 h-4" />}
+              onClick={() => onClose(shift)}
+            >
+              {t.caisses.close}
+            </Button>
+          ) : (
+            <div className="mt-auto pt-2 text-center text-[11px] text-[var(--text-muted)] bg-slate-50 rounded-lg py-2">
+              En cours — autre caissier
+            </div>
+          )}
         </div>
       ) : (
         <div className="flex-1 flex flex-col items-center justify-center py-6">
@@ -468,6 +474,9 @@ export default function CaissesPage() {
   // Build REGISTERS with translated names
   const REGISTERS = REGISTER_KEYS.map(rk => ({ id: rk.id, name: t.common[rk.nameKey] }));
 
+  // Roles qui voient TOUT (boss, manager, supervisor, accountant)
+  const isManager = ["boss", "manager", "supervisor", "accountant"].includes(user?.role ?? "");
+
   // Filtrer les employés qui peuvent ouvrir une caisse
   const cashiers = employees.filter((e) =>
     ["cashier", "supervisor", "manager"].includes(e.role) && e.status === "active"
@@ -490,6 +499,24 @@ export default function CaissesPage() {
     }
     return map;
   }, [shifts]);
+
+  // Shift propre au caissier connecté (si role cashier)
+  const myShift = useMemo(() =>
+    shifts?.find((s) => s.employeeId === user?.id && s.status === "open") ?? null,
+  [shifts, user]);
+
+  // Registres visibles selon le rôle:
+  // — manager/boss: tous les registres
+  // — cashier: seulement le registre où son shift est ouvert (ou tous si pas encore ouvert)
+  const visibleRegisters = useMemo(() => {
+    if (isManager) return REGISTERS;
+    if (myShift) {
+      // Le caissier voit seulement son registre
+      return REGISTERS.filter((r) => r.id === myShift.registerId);
+    }
+    // Pas encore de shift: le caissier voit tous les registres fermés pour pouvoir en ouvrir un
+    return REGISTERS.filter((r) => !shiftByRegister.has(r.id));
+  }, [isManager, myShift, shiftByRegister, REGISTERS]);
 
   const openCount = shiftByRegister.size;
   const totalRevenue = useMemo(() => {
@@ -662,18 +689,34 @@ export default function CaissesPage() {
         ))}
       </div>
 
+      {/* Message caissier sans shift ouvert */}
+      {!isManager && !myShift && (
+        <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-3">
+          <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-amber-800">Aucune caisse ouverte à votre nom</p>
+            <p className="text-xs text-amber-600 mt-0.5">Ouvrez une caisse ci-dessous avant de commencer les ventes.</p>
+          </div>
+        </div>
+      )}
+
       {/* Registers Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {REGISTERS.map((register) => (
-          <RegisterCard
-            key={register.id}
-            register={register}
-            shift={shiftByRegister.get(register.id)}
-            employees={employees}
-            onOpen={() => setOpenRegister(register.id)}
-            onClose={(s) => handleCloseClick(s)}
-          />
-        ))}
+        {visibleRegisters.map((register) => {
+          const shift = shiftByRegister.get(register.id);
+          // Un caissier ne peut fermer QUE son propre shift
+          const canClose = isManager || (shift?.employeeId === user?.id);
+          return (
+            <RegisterCard
+              key={register.id}
+              register={register}
+              shift={shift}
+              employees={employees}
+              onOpen={() => setOpenRegister(register.id)}
+              onClose={canClose ? (s) => handleCloseClick(s) : undefined}
+            />
+          );
+        })}
       </div>
 
       {/* Loading overlay hint */}

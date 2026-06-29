@@ -461,8 +461,8 @@ export default function POSPage() {
     const defaultCashierId = user.id;
 
     // Trouver la caisse ouverte par cet utilisateur (ou n'importe quelle caisse ouverte)
-    const myShift = activeShifts?.find((s) => s.employeeId === user.id && s.status === "open")
-      || activeShifts?.find((s) => s.status === "open");
+    // Shift STRICTEMENT lié à cet employé — pas de fallback vers une autre caisse
+    const myShift = activeShifts?.find((s) => s.employeeId === user.id && s.status === "open") ?? null;
     const registerId = myShift?.registerId;
 
     // Déterminer le montant payé et la monnaie selon le mode
@@ -795,6 +795,17 @@ export default function POSPage() {
           </button>
         </div>
       </div>
+
+      {/* Alerte: pas de shift ouvert pour ce caissier */}
+      {activeShifts !== null && !activeShifts?.find((s) => s.employeeId === user?.id && s.status === "open") && (
+        <div className="bg-amber-50 border-b border-amber-200 px-5 py-2.5 flex items-center gap-3 shrink-0">
+          <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+          <p className="text-[13px] font-medium text-amber-800">
+            Aucune caisse ouverte à votre nom — vos ventes ne seront pas liées à un registre.{" "}
+            <a href="/caisses" className="underline font-bold hover:text-amber-900">Ouvrir ma caisse →</a>
+          </p>
+        </div>
+      )}
 
       {/* Main POS — plein ecran */}
       <div className="flex flex-1 overflow-hidden">
