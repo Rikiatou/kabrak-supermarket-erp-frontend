@@ -506,17 +506,19 @@ export default function CaissesPage() {
   [shifts, user]);
 
   // Registres visibles selon le rôle:
-  // — manager/boss: tous les registres
-  // — cashier: seulement le registre où son shift est ouvert (ou tous si pas encore ouvert)
+  // — manager/boss/accountant: tous les registres
+  // — cashier avec shift ouvert: seulement son registre
+  // — cashier sans shift: aucun register affiché (UI dédiée à la place)
   const visibleRegisters = useMemo(() => {
     if (isManager) return REGISTERS;
-    if (myShift) {
-      // Le caissier voit seulement son registre
-      return REGISTERS.filter((r) => r.id === myShift.registerId);
-    }
-    // Pas encore de shift: le caissier voit tous les registres fermés pour pouvoir en ouvrir un
-    return REGISTERS.filter((r) => !shiftByRegister.has(r.id));
-  }, [isManager, myShift, shiftByRegister, REGISTERS]);
+    if (myShift) return REGISTERS.filter((r) => r.id === myShift.registerId);
+    return []; // cashier sans shift: UI dédiée (pas de grille de 4 cartes)
+  }, [isManager, myShift, REGISTERS]);
+
+  // Registres disponibles (libres) pour le cashier qui ouvre son shift
+  const freeRegisters = useMemo(() =>
+    REGISTERS.filter((r) => !shiftByRegister.has(r.id)),
+  [shiftByRegister, REGISTERS]);
 
   const openCount = shiftByRegister.size;
   const totalRevenue = useMemo(() => {
@@ -663,61 +665,79 @@ export default function CaissesPage() {
       title={t.caisses.title}
       subtitle={t.caisses.subtitle}
     >
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
-        {kpis.map((kpi) => (
-          <Card key={kpi.label} padding="md">
-            <div className="flex items-center gap-3">
-              <div
-                className={cn(
-                  "w-11 h-11 rounded-xl flex items-center justify-center shrink-0",
-                  kpi.tone,
-                )}
-              >
-                {kpi.icon}
+      {/* KPI Cards — managers/boss seulement */}
+      {isManager && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+          {kpis.map((kpi) => (
+            <Card key={kpi.label} padding="md">
+              <div className="flex items-center gap-3">
+                <div className={cn("w-11 h-11 rounded-xl flex items-center justify-center shrink-0", kpi.tone)}>
+                  {kpi.icon}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xl font-bold text-[var(--text-primary)] tabular-nums leading-none truncate">{kpi.value}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">{kpi.label}</p>
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="text-xl font-bold text-[var(--text-primary)] tabular-nums leading-none truncate">
-                  {kpi.value}
-                </p>
-                <p className="text-xs text-[var(--text-muted)] mt-1">
-                  {kpi.label}
-                </p>
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      {/* Message caissier sans shift ouvert */}
-      {!isManager && !myShift && (
-        <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-3">
-          <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
-          <div>
-            <p className="text-sm font-semibold text-amber-800">{t.caisses.noShiftForMe}</p>
-            <p className="text-xs text-amber-600 mt-0.5">{t.caisses.noShiftHint}</p>
-          </div>
+            </Card>
+          ))}
         </div>
       )}
 
-      {/* Registers Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {visibleRegisters.map((register) => {
-          const shift = shiftByRegister.get(register.id);
-          // Un caissier ne peut fermer QUE son propre shift
-          const canClose = isManager || (shift?.employeeId === user?.id);
-          return (
-            <RegisterCard
-              key={register.id}
-              register={register}
-              shift={shift}
-              employees={employees}
-              onOpen={() => setOpenRegister(register.id)}
-              onClose={canClose ? (s) => handleCloseClick(s) : undefined}
-            />
-          );
-        })}
-      </div>
+      {/* ── Cashier: pas de shift ouvert → UI dédiée d'ouverture ── */}
+      {!isManager && !myShift && (
+        <div className="flex flex-col items-center justify-center py-16 gap-6">
+          <div className="w-20 h-20 rounded-2xl bg-amber-100 flex items-center justify-center">
+            <Wallet className="w-10 h-10 text-amber-500" />
+          </div>
+          <div className="text-center">
+            <h2 className="text-lg font-bold text-[var(--text-primary)]">{t.caisses.noShiftForMe}</h2>
+            <p className="text-sm text-[var(--text-muted)] mt-1 max-w-xs">{t.caisses.noShiftHint}</p>
+          </div>
+          {freeRegisters.length > 0 ? (
+            <div className="flex flex-col gap-3 w-full max-w-xs">
+              {freeRegisters.map((reg) => (
+                <button
+                  key={reg.id}
+                  onClick={() => setOpenRegister(reg.id)}
+                  className="w-full h-14 bg-[#16a34a] hover:bg-[#15803d] text-white text-[15px] font-bold rounded-xl transition-all shadow-[0_4px_14px_rgba(22,163,74,.3)] flex items-center justify-center gap-2 active:scale-[0.99]"
+                >
+                  <Unlock className="w-5 h-5" />
+                  {t.caisses.open} — {reg.name}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-[var(--text-muted)] bg-slate-50 border border-[var(--border)] rounded-xl px-6 py-3">
+              {t.caisses.noRegisterOpen}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* ── Cashier: shift ouvert → sa seule caisse ── */}
+      {/* ── Manager: grille de toutes les caisses ── */}
+      {(isManager || myShift) && (
+        <div className={cn(
+          "grid gap-4",
+          isManager ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4" : "grid-cols-1 max-w-sm"
+        )}>
+          {visibleRegisters.map((register) => {
+            const shift = shiftByRegister.get(register.id);
+            const canClose = isManager || (shift?.employeeId === user?.id);
+            return (
+              <RegisterCard
+                key={register.id}
+                register={register}
+                shift={shift}
+                employees={employees}
+                onOpen={() => setOpenRegister(register.id)}
+                onClose={canClose ? (s) => handleCloseClick(s) : undefined}
+              />
+            );
+          })}
+        </div>
+      )}
 
       {/* Loading overlay hint */}
       {loading && shifts === null && (
