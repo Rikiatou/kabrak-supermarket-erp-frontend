@@ -60,6 +60,7 @@ export default function DashboardPage() {
   const { data: averageBasket } = useAverageBasket();
   const { data: unpaidInvoices } = useUnpaidInvoices();
   const { user } = useAuth();
+  const dashCashierId = user?.role === "cashier" ? (user?.id ?? undefined) : undefined;
 
   const roleShortcuts: Record<string, { label: string; href: string; icon: React.ElementType; color: string }[]> = {
     boss: [
@@ -399,7 +400,7 @@ export default function DashboardPage() {
               </Link>
             }
           />
-          <RecentTransactions />
+          <RecentTransactions cashierId={dashCashierId} />
         </Card>
       </div>
 

@@ -13,9 +13,9 @@ const paymentIcons: Record<string, any> = {
   mobile: Smartphone,
 };
 
-export function RecentTransactions() {
+export function RecentTransactions({ cashierId }: { cashierId?: string } = {}) {
   const { t } = useI18n();
-  const { transactions } = useRecentTransactions(10);
+  const { transactions } = useRecentTransactions(10, cashierId);
 
   const paymentLabels: Record<string, string> = {
     cash: t.common.cash,

@@ -102,8 +102,10 @@ export default function HistoriquePage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<"stock" | "sales">("stock");
 
-  // Mes ventes (transactions récentes)
-  const { transactions: mySales, loading: loadingSales } = useRecentTransactions(50);
+  // Cashier voit seulement SES ventes; managers/boss voient tout
+  const isCashier = user?.role === "cashier";
+  const cashierIdFilter = isCashier ? (user?.id ?? undefined) : undefined;
+  const { transactions: mySales, loading: loadingSales } = useRecentTransactions(100, cashierIdFilter);
 
   // MOVEMENT_CONFIG inside component so it reads t live
   const MOVEMENT_CONFIG: Record<MovementType, { label: string; variant: "success" | "danger" | "warning"; icon: typeof ArrowDownToLine }> = {
