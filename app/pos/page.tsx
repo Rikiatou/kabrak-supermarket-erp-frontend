@@ -10,6 +10,7 @@ import {
   Banknote,
   Smartphone,
   ChevronRight,
+  ChevronLeft,
   X,
   RotateCcw,
   CheckCircle2,
@@ -30,6 +31,7 @@ import { BarcodeScanner } from "@/components/pos/BarcodeScanner";
 import { NewProductModal } from "@/components/forms/NewProductModal";
 import { Badge } from "@/components/ui/Badge";
 import { useToast } from "@/components/ui/Toast";
+import { useRouter } from "next/navigation";
 import { products as mockProducts } from "@/lib/mock-data";
 import { formatCurrency, cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/context";
@@ -81,6 +83,7 @@ export default function POSPage() {
   const { create: createCustomer } = useCreateCustomer();
   const { user } = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
   // Seuls boss/manager/supervisor/stockist peuvent créer des produits
   const canCreateProduct = ["boss", "manager", "supervisor", "stockist"].includes(user?.role ?? "");
   const { data: activeShifts } = useActiveShifts();
@@ -799,6 +802,13 @@ export default function POSPage() {
 
       {/* POS Topbar — plein ecran, pas de sidebar */}
       <div className="h-11 bg-white border-b border-[#e5e7eb] flex items-center px-5 gap-4 shrink-0 shadow-sm">
+        <button
+          onClick={() => router.push("/dashboard")}
+          className="w-7 h-7 flex items-center justify-center rounded-lg text-[#6b7280] hover:bg-[#f3f4f6] hover:text-[#111827] transition-colors"
+          title={t.nav.dashboard || "Dashboard"}
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-lg bg-[#16a34a] flex items-center justify-center">
             <span className="text-white text-[13px] font-black">K</span>
