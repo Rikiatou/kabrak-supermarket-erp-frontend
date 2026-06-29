@@ -13,6 +13,7 @@ import {
   Wallet,
   CheckCircle2,
   Clock,
+  ScanLine,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Card } from "@/components/ui/Card";
@@ -186,6 +187,50 @@ export default function FacturesPage() {
   const [advancePayment, setAdvancePayment] = useState("");
   const [advanceMethod, setAdvanceMethod] = useState("cash");
   const [items, setItems] = useState<InvoiceItem[]>([{ description: "", quantity: 1, unitPrice: 0, total: 0 }]);
+
+  // Scanner barcode dans invoice
+  const [scanSearch, setScanSearch] = useState("");
+  const scanRef = useRef<HTMLInputElement>(null);
+
+  const handleInvoiceScan = (e: React.KeyboardEvent) => {
+    if (e.key !== "Enter" || !scanSearch.trim()) return;
+    const code = scanSearch.trim();
+    const found = products.find(
+      (p) => p.barcode === code || p.sku?.toLowerCase() === code.toLowerCase()
+    );
+    if (found) {
+      // Vérifier si le produit est déjà dans la facture
+      const existingIdx = items.findIndex((i) => i.productId === found.id);
+      if (existingIdx >= 0) {
+        // Augmenter la quantité
+        const newItems = [...items];
+        newItems[existingIdx].quantity += 1;
+        newItems[existingIdx].total = newItems[existingIdx].quantity * newItems[existingIdx].unitPrice;
+        setItems(newItems);
+      } else {
+        // Ajouter une nouvelle ligne
+        const lastIdx = items.length - 1;
+        if (items[lastIdx].productId) {
+          // La dernière ligne est déjà remplie → ajouter une nouvelle
+          setItems([...items, {
+            productId: found.id,
+            description: found.name,
+            quantity: 1,
+            unitPrice: found.price,
+            total: found.price,
+          }]);
+        } else {
+          // Remplir la dernière ligne vide
+          selectProduct(lastIdx, found.id);
+        }
+      }
+      setScanSearch("");
+      toast(`${found.name} — ${formatCurrency(found.price)}`, "success");
+    } else {
+      toast(`Barcode ${code} not found`, "warning");
+      setScanSearch("");
+    }
+  };
 
   const filtered = invoices.filter(
     (i) =>
@@ -572,9 +617,12 @@ export default function FacturesPage() {
     toast(`${t.factures.pdfGenerated} ${invoice.number}.pdf`, "success");
   };
 
-  // ── Print invoice via browser ──
-  const printInvoice = (invoice: Invoice) => {
-    const win = window.open("", "_blank", "width=800,height=600");
+  // ── Print invoice via browser — A4 or ticket format ──
+  const [printMenuInvoice, setPrintMenuInvoice] = useState<Invoice | null>(null);
+
+  const printInvoice = (invoice: Invoice, format: "a4" | "ticket" = "a4") => {
+    setPrintMenuInvoice(null);
+    const win = window.open("", "_blank", format === "ticket" ? "width=380,height=600" : "width=800,height=600");
     if (!win) {
       toast("Please allow popups to print", "warning");
       return;
@@ -604,70 +652,127 @@ export default function FacturesPage() {
       </table>
     ` : "";
 
-    win.document.write(`
-      <html><head><title>Invoice ${invoice.number}</title>
-      <style>
-        * { font-family: Arial, sans-serif; margin: 0; padding: 0; }
-        body { padding: 20px; color: #333; }
-        .header { display: flex; justify-content: space-between; border-bottom: 3px solid #1e40af; padding-bottom: 15px; margin-bottom: 20px; }
-        .company { font-size: 18px; font-weight: bold; color: #1e40af; }
-        .company-info { font-size: 11px; color: #666; margin-top: 3px; }
-        .invoice-title { font-size: 24px; font-weight: bold; color: #1e40af; text-align: right; }
-        .invoice-info { font-size: 11px; color: #666; text-align: right; margin-top: 5px; }
-        .client-box { background: #f8fafc; border: 1px solid #ddd; border-radius: 5px; padding: 12px; margin-bottom: 20px; font-size: 12px; }
-        .client-box b { font-size: 13px; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
-        th { background: #1e40af; color: white; padding: 8px; font-size: 11px; text-align: left; }
-        td { padding: 8px; border-bottom: 1px solid #eee; font-size: 12px; }
-        .totals { margin-left: auto; width: 250px; font-size: 12px; }
-        .totals td { border: none; padding: 4px 8px; }
-        .total-row { background: #1e40af; color: white; font-weight: bold; font-size: 14px; }
-        .pay-table th { background: #f1f5f9; color: #333; font-size: 10px; }
-        .pay-table td { font-size: 11px; }
-        .status { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase; }
-        .status-paid { background: #d1fae5; color: #065f46; }
-        .status-partial { background: #fef3c7; color: #92400e; }
-        .footer { margin-top: 30px; text-align: center; font-size: 10px; color: #999; border-top: 1px solid #eee; padding-top: 10px; }
-        .signature { margin-top: 30px; border-top: 1px solid #ccc; width: 200px; padding-top: 5px; font-size: 10px; color: #999; }
-        @media print { body { padding: 10px; } }
-      </style></head><body>
-        <div class="header">
-          <div>
-            ${logoUrl ? `<img src="${logoUrl}" style="max-height:50px;margin-bottom:5px"/><br/>` : ""}
-            <div class="company">${supermarketName}</div>
-            <div class="company-info">${supermarketAddress}</div>
-            <div class="company-info">${supermarketPhone}</div>
-            ${rccmNumber ? `<div class="company-info">RC: ${rccmNumber}</div>` : ""}
-            ${taxNumber ? `<div class="company-info">Tax ID: ${taxNumber}</div>` : ""}
+    if (format === "ticket") {
+      // ── TICKET FORMAT (58mm thermal printer style) ──
+      win.document.write(`
+        <html><head><title>Invoice ${invoice.number}</title>
+        <style>
+          * { font-family: 'Courier New', monospace; margin: 0; padding: 0; }
+          body { width: 280px; padding: 8px; color: #000; font-size: 11px; }
+          .center { text-align: center; }
+          .bold { font-weight: bold; }
+          .dashed { border-top: 1px dashed #000; margin: 6px 0; }
+          .small { font-size: 10px; }
+          .right { text-align: right; }
+          table { width: 100%; border-collapse: collapse; }
+          td { padding: 2px 0; font-size: 10px; }
+          .item-name { font-weight: bold; }
+          .total-box { border: 2px solid #000; padding: 6px; margin: 6px 0; text-align: center; }
+          .total-amount { font-size: 18px; font-weight: bold; }
+          @media print { body { width: 58mm; padding: 2mm; } }
+        </style></head><body>
+          <div class="center bold" style="font-size:14px">${supermarketName}</div>
+          <div class="center small">${supermarketAddress}</div>
+          <div class="center small">${supermarketPhone}</div>
+          ${rccmNumber ? `<div class="center small">RC: ${rccmNumber}</div>` : ""}
+          <div class="dashed"></div>
+          <div class="center bold">INVOICE</div>
+          <div class="center small">N° ${invoice.number}</div>
+          <div class="center small">${new Date(invoice.date).toLocaleDateString("en-GB")}</div>
+          <div class="dashed"></div>
+          <div class="small"><b>Client:</b> ${invoice.clientName}</div>
+          ${invoice.clientPhone ? `<div class="small">${invoice.clientPhone}</div>` : ""}
+          <div class="dashed"></div>
+          <table>
+            ${invoice.items.map((item) => `
+              <tr>
+                <td colspan="2" class="item-name">${item.description}</td>
+              </tr>
+              <tr>
+                <td class="small">${item.quantity} x ${formatCurrency(item.unitPrice)}</td>
+                <td class="right bold">${formatCurrency(item.total)}</td>
+              </tr>
+            `).join("")}
+          </table>
+          <div class="dashed"></div>
+          <div class="total-box">
+            <div class="small">TOTAL</div>
+            <div class="total-amount">${formatCurrency(invoice.total)}</div>
           </div>
-          <div>
-            <div class="invoice-title">INVOICE</div>
-            <div class="invoice-info">N° ${invoice.number}</div>
-            <div class="invoice-info">Date: ${new Date(invoice.date).toLocaleDateString("en-GB")}</div>
-            ${invoice.dueDate ? `<div class="invoice-info">Due: ${new Date(invoice.dueDate).toLocaleDateString("en-GB")}</div>` : ""}
+          <div class="small">Paid: ${formatCurrency(invoice.paidAmount)}</div>
+          <div class="small">Balance: ${formatCurrency(invoice.balance)}</div>
+          <div class="dashed"></div>
+          <div class="center small">${invoiceFooter}</div>
+          <div class="center small">Goods sold are non refundable</div>
+        </body></html>
+      `);
+    } else {
+      // ── A4 FORMAT (existing professional invoice) ──
+      win.document.write(`
+        <html><head><title>Invoice ${invoice.number}</title>
+        <style>
+          * { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+          body { padding: 20px; color: #333; }
+          .header { display: flex; justify-content: space-between; border-bottom: 3px solid #1e40af; padding-bottom: 15px; margin-bottom: 20px; }
+          .company { font-size: 18px; font-weight: bold; color: #1e40af; }
+          .company-info { font-size: 11px; color: #666; margin-top: 3px; }
+          .invoice-title { font-size: 24px; font-weight: bold; color: #1e40af; text-align: right; }
+          .invoice-info { font-size: 11px; color: #666; text-align: right; margin-top: 5px; }
+          .client-box { background: #f8fafc; border: 1px solid #ddd; border-radius: 5px; padding: 12px; margin-bottom: 20px; font-size: 12px; }
+          .client-box b { font-size: 13px; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+          th { background: #1e40af; color: white; padding: 8px; font-size: 11px; text-align: left; }
+          td { padding: 8px; border-bottom: 1px solid #eee; font-size: 12px; }
+          .totals { margin-left: auto; width: 250px; font-size: 12px; }
+          .totals td { border: none; padding: 4px 8px; }
+          .total-row { background: #1e40af; color: white; font-weight: bold; font-size: 14px; }
+          .pay-table th { background: #f1f5f9; color: #333; font-size: 10px; }
+          .pay-table td { font-size: 11px; }
+          .status { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase; }
+          .status-paid { background: #d1fae5; color: #065f46; }
+          .status-partial { background: #fef3c7; color: #92400e; }
+          .footer { margin-top: 30px; text-align: center; font-size: 10px; color: #999; border-top: 1px solid #eee; padding-top: 10px; }
+          .signature { margin-top: 30px; border-top: 1px solid #ccc; width: 200px; padding-top: 5px; font-size: 10px; color: #999; }
+          @media print { body { padding: 10px; } @page { size: A4; margin: 15mm; } }
+        </style></head><body>
+          <div class="header">
+            <div>
+              ${logoUrl ? `<img src="${logoUrl}" style="max-height:50px;margin-bottom:5px"/><br/>` : ""}
+              <div class="company">${supermarketName}</div>
+              <div class="company-info">${supermarketAddress}</div>
+              <div class="company-info">${supermarketPhone}</div>
+              ${rccmNumber ? `<div class="company-info">RC: ${rccmNumber}</div>` : ""}
+              ${taxNumber ? `<div class="company-info">Tax ID: ${taxNumber}</div>` : ""}
+            </div>
+            <div>
+              <div class="invoice-title">INVOICE</div>
+              <div class="invoice-info">N° ${invoice.number}</div>
+              <div class="invoice-info">Date: ${new Date(invoice.date).toLocaleDateString("en-GB")}</div>
+              ${invoice.dueDate ? `<div class="invoice-info">Due: ${new Date(invoice.dueDate).toLocaleDateString("en-GB")}</div>` : ""}
+            </div>
           </div>
-        </div>
-        <div class="client-box">
-          <b>BILLED TO:</b><br/>
-          <b>${invoice.clientName}</b><br/>
-          ${invoice.clientPhone}<br/>
-          ${invoice.clientEmail || ""}
-        </div>
-        <table>
-          <thead><tr><th>Description</th><th style="text-align:center">Qty</th><th style="text-align:right">Unit Price</th><th style="text-align:right">Total</th></tr></thead>
-          <tbody>${itemsHtml}</tbody>
-        </table>
-        <table class="totals">
-          <tr class="total-row"><td>TOTAL</td><td style="text-align:right">${formatCurrency(invoice.total)}</td></tr>
-          <tr><td>Amount paid</td><td style="text-align:right;color:#16a34a;font-weight:bold">${formatCurrency(invoice.paidAmount)}</td></tr>
-          <tr><td>Balance due</td><td style="text-align:right;color:${invoice.balance > 0 ? '#dc2626' : '#16a34a'};font-weight:bold">${formatCurrency(invoice.balance)}</td></tr>
-          <tr><td colspan="2" style="text-align:right"><span class="status status-${invoice.status}">${invoice.status}</span></td></tr>
-        </table>
-        ${paymentsHtml}
-        <div class="signature">Signature & stamp</div>
-        <div class="footer">${invoiceFooter}</div>
-      </body></html>
-    `);
+          <div class="client-box">
+            <b>BILLED TO:</b><br/>
+            <b>${invoice.clientName}</b><br/>
+            ${invoice.clientPhone}<br/>
+            ${invoice.clientEmail || ""}
+          </div>
+          <table>
+            <thead><tr><th>Description</th><th style="text-align:center">Qty</th><th style="text-align:right">Unit Price</th><th style="text-align:right">Total</th></tr></thead>
+            <tbody>${itemsHtml}</tbody>
+          </table>
+          <table class="totals">
+            <tr class="total-row"><td>TOTAL</td><td style="text-align:right">${formatCurrency(invoice.total)}</td></tr>
+            <tr><td>Amount paid</td><td style="text-align:right;color:#16a34a;font-weight:bold">${formatCurrency(invoice.paidAmount)}</td></tr>
+            <tr><td>Balance due</td><td style="text-align:right;color:${invoice.balance > 0 ? '#dc2626' : '#16a34a'};font-weight:bold">${formatCurrency(invoice.balance)}</td></tr>
+            <tr><td colspan="2" style="text-align:right"><span class="status status-${invoice.status}">${invoice.status}</span></td></tr>
+          </table>
+          ${paymentsHtml}
+          <div class="signature">Signature & stamp</div>
+          <div class="footer">${invoiceFooter}</div>
+        </body></html>
+      `);
+    }
     win.document.close();
     win.focus();
     setTimeout(() => win.print(), 500);
@@ -785,9 +890,36 @@ export default function FacturesPage() {
                         <button onClick={() => openPaymentModal(invoice)} title={t.factures.paymentTracking} className="p-1.5 hover:bg-amber-50 rounded-lg transition-colors">
                           <Wallet className="w-4 h-4 text-amber-600" />
                         </button>
-                        <button onClick={() => printInvoice(invoice)} title="Print" className="p-1.5 hover:bg-blue-50 rounded-lg transition-colors">
-                          <Printer className="w-4 h-4 text-blue-500" />
-                        </button>
+                        <div className="relative">
+                          <button
+                            onClick={() => setPrintMenuInvoice(printMenuInvoice?.id === invoice.id ? null : invoice)}
+                            title="Print"
+                            className="p-1.5 hover:bg-blue-50 rounded-lg transition-colors"
+                          >
+                            <Printer className="w-4 h-4 text-blue-500" />
+                          </button>
+                          {printMenuInvoice?.id === invoice.id && (
+                            <>
+                              <div className="fixed inset-0 z-40" onClick={() => setPrintMenuInvoice(null)} />
+                              <div className="absolute right-0 top-8 z-50 bg-white border border-[var(--border)] rounded-xl shadow-lg py-1 min-w-[140px]">
+                                <button
+                                  onClick={() => printInvoice(invoice, "a4")}
+                                  className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2"
+                                >
+                                  <FileText className="w-3.5 h-3.5 text-blue-500" />
+                                  A4 (Letter)
+                                </button>
+                                <button
+                                  onClick={() => printInvoice(invoice, "ticket")}
+                                  className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center gap-2"
+                                >
+                                  <Printer className="w-3.5 h-3.5 text-emerald-500" />
+                                  Ticket (58mm)
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
                         <button onClick={() => generatePDF(invoice)} title="PDF" className="p-1.5 hover:bg-red-50 rounded-lg transition-colors">
                           <FileText className="w-4 h-4 text-red-500" />
                         </button>
@@ -842,6 +974,77 @@ export default function FacturesPage() {
                 <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">{t.common.product}s</label>
                 <button onClick={addItem} className="text-xs text-[var(--brand)] font-medium hover:underline">+ {t.factures.addItem}</button>
               </div>
+
+              {/* Scanner barcode — search bar style comme POS */}
+              <div className="mb-3">
+                <div className="flex items-center gap-2 bg-[#f0fdf4] border-2 border-[#86efac] rounded-xl px-4 py-2.5 focus-within:border-[#16a34a] transition-all">
+                  <ScanLine className="w-5 h-5 text-[#16a34a] shrink-0" />
+                  <input
+                    ref={scanRef}
+                    type="text"
+                    value={scanSearch}
+                    onChange={(e) => setScanSearch(e.target.value)}
+                    onKeyDown={handleInvoiceScan}
+                    placeholder={t.factures.scanProductPh || "Scan or search product to add..."}
+                    className="flex-1 bg-transparent text-[15px] text-[#111827] placeholder:text-[#9ca3af] outline-none"
+                  />
+                  {scanSearch && (
+                    <button onClick={() => setScanSearch("")}>
+                      <X className="w-4 h-4 text-[#9ca3af] hover:text-[#374151]" />
+                    </button>
+                  )}
+                </div>
+                {/* Dropdown résultats recherche */}
+                {scanSearch && products.filter((p) =>
+                  p.name.toLowerCase().includes(scanSearch.toLowerCase()) ||
+                  p.barcode?.includes(scanSearch) ||
+                  p.sku?.toLowerCase().includes(scanSearch.toLowerCase())
+                ).length > 0 && (
+                  <div className="mt-1 bg-white border border-[var(--border)] rounded-xl overflow-hidden shadow-md max-h-48 overflow-y-auto">
+                    {products
+                      .filter((p) =>
+                        p.name.toLowerCase().includes(scanSearch.toLowerCase()) ||
+                        p.barcode?.includes(scanSearch) ||
+                        p.sku?.toLowerCase().includes(scanSearch.toLowerCase())
+                      )
+                      .slice(0, 8)
+                      .map((p) => (
+                        <button
+                          key={p.id}
+                          onClick={() => {
+                            const existingIdx = items.findIndex((i) => i.productId === p.id);
+                            if (existingIdx >= 0) {
+                              const newItems = [...items];
+                              newItems[existingIdx].quantity += 1;
+                              newItems[existingIdx].total = newItems[existingIdx].quantity * newItems[existingIdx].unitPrice;
+                              setItems(newItems);
+                            } else {
+                              const lastIdx = items.length - 1;
+                              if (items[lastIdx].productId) {
+                                setItems([...items, {
+                                  productId: p.id,
+                                  description: p.name,
+                                  quantity: 1,
+                                  unitPrice: p.price,
+                                  total: p.price,
+                                }]);
+                              } else {
+                                selectProduct(lastIdx, p.id);
+                              }
+                            }
+                            setScanSearch("");
+                            toast(`${p.name} — ${formatCurrency(p.price)}`, "success");
+                          }}
+                          className="w-full text-left px-3 py-2.5 text-sm hover:bg-slate-50 flex items-center justify-between border-b border-[var(--border)] last:border-0"
+                        >
+                          <span className="font-medium">{p.name}</span>
+                          <span className="text-xs text-[var(--text-muted)]">{formatCurrency(p.price)} · Stock: {p.stock}</span>
+                        </button>
+                      ))}
+                  </div>
+                )}
+              </div>
+
               <div className="space-y-3">
                 {items.map((item, idx) => (
                   <div key={idx} className="border border-[var(--border)] rounded-xl p-3 space-y-2">
