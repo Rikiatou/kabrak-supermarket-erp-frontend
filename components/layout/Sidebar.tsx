@@ -20,6 +20,7 @@ import {
   Calendar,
   Settings,
   History,
+  Gift,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/context";
@@ -58,6 +59,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         { href: "/import", label: t.nav.import, icon: Upload, badge: null },
         { href: "/scanner", label: t.nav.scanner, icon: ScanLine, badge: null },
         { href: "/pertes", label: t.nav.pertes, icon: AlertTriangle, badge: null },
+        { href: "/cadeaux", label: t.nav.cadeaux || "Cadeaux", icon: Gift, badge: null },
       ],
     },
     {
