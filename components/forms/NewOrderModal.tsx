@@ -71,6 +71,7 @@ function ProductAutocomplete({
   onChange: (value: string) => void;
   placeholder: string;
 }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -154,7 +155,7 @@ function ProductAutocomplete({
           ))
         ) : (
           <div className="px-3 py-2 text-sm text-[var(--text-muted)]">
-            {products.length === 0 ? "Loading products…" : "No product found"}
+            {products.length === 0 ? t.forms.loadingProducts : t.stocks.noProductFound}
           </div>
         )}
       </div>
@@ -416,7 +417,7 @@ export function NewOrderModal({ onClose, onSave, defaultSupplier, allowDirectRec
                           type="text"
                           value={quickSupplierName}
                           onChange={(e) => setQuickSupplierName(e.target.value)}
-                          placeholder={t.forms?.supplierNamePh || "Supplier name"}
+                          placeholder={t.forms.supplierNamePh}
                           className={inputClass(false)}
                           autoFocus
                         />
@@ -424,7 +425,7 @@ export function NewOrderModal({ onClose, onSave, defaultSupplier, allowDirectRec
                           type="text"
                           value={quickSupplierPhone}
                           onChange={(e) => setQuickSupplierPhone(e.target.value)}
-                          placeholder={t.forms?.phonePhForm || "Phone (optional)"}
+                          placeholder={t.forms.phonePhForm}
                           className={inputClass(false)}
                         />
                         <div className="flex gap-2">
@@ -464,7 +465,7 @@ export function NewOrderModal({ onClose, onSave, defaultSupplier, allowDirectRec
                           {suppliers.map((s) => (
                             <option key={s.id} value={s.id}>{s.name}</option>
                           ))}
-                          <option value="__new__">+ {t.forms?.newSupplier || "New supplier"} +</option>
+                          <option value="__new__">+ {t.forms.newSupplier} +</option>
                         </select>
                         <ChevronDown className="w-3.5 h-3.5 text-[var(--text-muted)] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                       </div>
@@ -628,12 +629,12 @@ export function NewOrderModal({ onClose, onSave, defaultSupplier, allowDirectRec
                 </div>
 
                 {/* Notes */}
-                <Field label="Notes" span={2}>
+                <Field label={t.forms.notesLabel} span={2}>
                   <textarea
                     value={form.notes}
                     onChange={set("notes")}
                     rows={2}
-                    placeholder="Delivery instructions, references, special conditions..."
+                    placeholder={t.forms.orderNotesPh}
                     className={cn(inputClass(false), "resize-none")}
                   />
                 </Field>

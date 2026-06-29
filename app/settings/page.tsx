@@ -54,13 +54,13 @@ export default function SettingsPage() {
 
     // Vérifier le type de fichier
     if (!file.type.startsWith("image/")) {
-      alert("Please select an image file (JPG, PNG, GIF, etc.)");
+      alert(t.settings.alertImageType);
       return;
     }
 
     // Vérifier la taille (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      alert("L'image est trop grande (max 5MB)");
+      alert(t.settings.alertImageTooLarge);
       return;
     }
 
@@ -90,7 +90,7 @@ export default function SettingsPage() {
       await refreshConfig();
     } catch (error) {
       console.error("Upload error:", error);
-      alert("Erreur lors de l'upload du logo");
+      alert(t.settings.alertUploadError);
     } finally {
       setUploading(false);
       if (fileInputRef.current) {
@@ -112,7 +112,7 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <AppShell title={t.settings?.title || "Settings"} subtitle={t.settings?.subtitle || ""}>
+      <AppShell title={t.settings.title} subtitle={t.settings.subtitle}>
         <div className="flex items-center justify-center h-64">
           <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
         </div>
@@ -121,17 +121,17 @@ export default function SettingsPage() {
   }
 
   return (
-    <AppShell title={t.settings?.title || "Settings"} subtitle={t.settings?.subtitle || "Nom, logo, tickets, factures"}>
+    <AppShell title={t.settings.title} subtitle={t.settings.subtitle}>
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-[var(--text-primary)] flex items-center gap-2">
             <Store className="w-6 h-6" />
-            {t.settings?.title || "Settings"}
+            {t.settings.title}
           </h1>
           <p className="text-sm text-[var(--text-muted)] mt-1">
-            {t.settings?.subtitle || "Personnalisez votre ERP: nom, logo, tickets, factures"}
+            {t.settings.subtitleLong}
           </p>
         </div>
         {canEdit && (
@@ -139,17 +139,17 @@ export default function SettingsPage() {
             {saving ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                {t.settings?.saving || "Enregistrement..."}
+                {t.settings.saving}
               </>
             ) : saved ? (
               <>
                 <CheckCircle2 className="w-4 h-4 text-green-500" />
-                {t.settings?.saved || "Saved!"}
+                {t.settings.saved}
               </>
             ) : (
               <>
                 <Save className="w-4 h-4" />
-                {t.settings?.save || "Save"}
+                {t.settings.save}
               </>
             )}
           </Button>
@@ -162,19 +162,19 @@ export default function SettingsPage() {
           <div className="flex items-start gap-3">
             <Building2 className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
             <div className="flex-1">
-              <h3 className="font-semibold text-blue-900 text-sm">Active License</h3>
+              <h3 className="font-semibold text-blue-900 text-sm">{t.settings.activeLicense}</h3>
               <div className="grid grid-cols-2 gap-2 mt-2 text-xs text-blue-800">
                 <div>
-                  <span className="font-medium">Type:</span> {license.type === "STANDARD" ? "Standard" : "Multi-Store"}
+                  <span className="font-medium">{t.settings.typeLabel}</span> {license.type === "STANDARD" ? t.settings.standard : t.settings.multiStore}
                 </div>
                 <div>
-                  <span className="font-medium">Stores:</span> {stores.length} / {license.maxStores}
+                  <span className="font-medium">{t.settings.storesLabel}</span> {stores.length} / {license.maxStores}
                 </div>
                 <div>
-                  <span className="font-medium">Expires:</span> {new Date(license.expiresAt).toLocaleDateString()}
+                  <span className="font-medium">{t.settings.expiresLabel}</span> {new Date(license.expiresAt).toLocaleDateString()}
                 </div>
                 <div>
-                  <span className="font-medium">Days left:</span> {license.daysRemaining}
+                  <span className="font-medium">{t.settings.daysLeftLabel}</span> {license.daysRemaining}
                 </div>
               </div>
               <p className="text-xs text-blue-600 mt-2 font-mono">{license.licenseKey}</p>
@@ -187,12 +187,12 @@ export default function SettingsPage() {
       <div className="bg-white rounded-xl border border-slate-200 p-6">
         <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
           <Store className="w-5 h-5 text-blue-600" />
-          Store Identity
+          {t.settings.storeIdentity}
         </h2>
         <div className="grid md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
-              Store name *
+              {t.settings.storeName}
             </label>
             <input
               type="text"
@@ -200,14 +200,14 @@ export default function SettingsPage() {
               onChange={(e) => handleChange("supermarketName", e.target.value)}
               disabled={!canEdit}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50"
-              placeholder="Easy Shop"
+              placeholder={t.settings.storeNamePh}
             />
-            <p className="text-xs text-slate-400 mt-1">Shown on dashboard, receipts and invoices</p>
+            <p className="text-xs text-slate-400 mt-1">{t.settings.storeNameHelp}</p>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
-              Slogan
+              {t.settings.slogan}
             </label>
             <input
               type="text"
@@ -215,13 +215,13 @@ export default function SettingsPage() {
               onChange={(e) => handleChange("supermarketSlogan", e.target.value)}
               disabled={!canEdit}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50"
-              placeholder="Your neighborhood store"
+              placeholder={t.settings.sloganPh}
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
-              Store logo
+              {t.settings.storeLogo}
             </label>
             
             {/* Aperçu du logo */}
@@ -229,7 +229,7 @@ export default function SettingsPage() {
               <div className="mb-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
                 <img
                   src={form.logoUrl}
-                  alt="Logo"
+                  alt={t.settings.logo}
                   className="h-16 w-auto object-contain"
                 />
               </div>
@@ -255,12 +255,12 @@ export default function SettingsPage() {
                 {uploading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Uploading...
+                    {t.settings.uploading}
                   </>
                 ) : (
                   <>
                     <Upload className="w-4 h-4" />
-                    Upload logo
+                    {t.settings.uploadLogo}
                   </>
                 )}
               </Button>
@@ -273,7 +273,7 @@ export default function SettingsPage() {
                   disabled={!canEdit}
                   className="text-red-600 hover:text-red-700"
                 >
-                  Delete
+                  {t.common.delete}
                 </Button>
               )}
             </div>
@@ -281,7 +281,7 @@ export default function SettingsPage() {
             {/* Champ URL manuel (optionnel) */}
             <details className="mt-2">
               <summary className="text-xs text-slate-500 cursor-pointer hover:text-slate-700">
-              Or enter a URL manually
+              {t.settings.logoUrlManual}
               </summary>
               <input
                 type="text"
@@ -289,18 +289,18 @@ export default function SettingsPage() {
                 onChange={(e) => handleChange("logoUrl", e.target.value)}
                 disabled={!canEdit}
                 className="w-full mt-2 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50"
-                placeholder="https://... ou /uploads/logo.png"
+                placeholder={t.settings.logoUrlPh}
               />
             </details>
 
             <p className="text-xs text-slate-400 mt-1">
-              Logo shown in sidebar, receipts and invoices (max 5MB)
+              {t.settings.logoHelp}
             </p>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
-              Brand color
+              {t.settings.brandColor}
             </label>
             <div className="flex gap-2">
               <input
@@ -326,25 +326,25 @@ export default function SettingsPage() {
       <div className="bg-white rounded-xl border border-slate-200 p-6">
         <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
           <MapPin className="w-5 h-5 text-blue-600" />
-          Contact details
+          {t.settings.contactDetails}
         </h2>
         <div className="grid md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-slate-700 mb-1">Adresse</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">{t.settings.address}</label>
             <input
               type="text"
               value={form.address || ""}
               onChange={(e) => handleChange("address", e.target.value)}
               disabled={!canEdit}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50"
-              placeholder="123 Main St, City"
+              placeholder={t.settings.addressPh}
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
               <Phone className="w-3.5 h-3.5 inline mr-1" />
-              Phone
+              {t.settings.phone}
             </label>
             <input
               type="text"
@@ -357,7 +357,7 @@ export default function SettingsPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">{t.settings.email}</label>
             <input
               type="email"
               value={form.email || ""}
@@ -371,7 +371,7 @@ export default function SettingsPage() {
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
               <Globe className="w-3.5 h-3.5 inline mr-1" />
-              Site web
+              {t.settings.website}
             </label>
             <input
               type="text"
@@ -384,7 +384,7 @@ export default function SettingsPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Devise</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">{t.settings.currency}</label>
             <input
               type="text"
               value={form.currency || "FCFA"}
@@ -400,11 +400,11 @@ export default function SettingsPage() {
       <div className="bg-white rounded-xl border border-slate-200 p-6">
         <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
           <Receipt className="w-5 h-5 text-blue-600" />
-          Legal Information (on invoices)
+          {t.settings.legalInfo}
         </h2>
         <div className="grid md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">RCCM / RC Number</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">{t.settings.rccmNumber}</label>
             <input
               type="text"
               value={(form as any).rccmNumber || ""}
@@ -413,11 +413,11 @@ export default function SettingsPage() {
               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50"
               placeholder="CM/YDE/2024/B/123"
             />
-            <p className="text-xs text-slate-400 mt-1">Shown on invoice header</p>
+            <p className="text-xs text-slate-400 mt-1">{t.settings.rccmHelp}</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Tax ID / N° Contribuable</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">{t.settings.taxNumber}</label>
             <input
               type="text"
               value={(form as any).taxNumber || ""}
@@ -429,7 +429,7 @@ export default function SettingsPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Legal Form</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">{t.settings.legalForm}</label>
             <input
               type="text"
               value={(form as any).legalForm || ""}
@@ -441,7 +441,7 @@ export default function SettingsPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Capital</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">{t.settings.capital}</label>
             <input
               type="text"
               value={(form as any).capital || ""}
@@ -458,12 +458,12 @@ export default function SettingsPage() {
       <div className="bg-white rounded-xl border border-slate-200 p-6">
         <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
           <Receipt className="w-5 h-5 text-blue-600" />
-          Receipts
+          {t.settings.receipts}
         </h2>
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
-              Receipt header
+              {t.settings.receiptHeader}
             </label>
             <textarea
               value={form.receiptHeader || ""}
@@ -471,13 +471,13 @@ export default function SettingsPage() {
               disabled={!canEdit}
               rows={2}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50"
-              placeholder="Welcome to Easy Shop!"
+              placeholder={t.settings.receiptHeaderPh}
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
-              Receipt footer
+              {t.settings.receiptFooter}
             </label>
             <textarea
               value={form.receiptFooter || ""}
@@ -485,7 +485,7 @@ export default function SettingsPage() {
               disabled={!canEdit}
               rows={2}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50"
-              placeholder="Goods sold are non refundable. Thanks for patronizing us"
+              placeholder={t.settings.receiptFooterPh}
             />
           </div>
 
@@ -499,7 +499,7 @@ export default function SettingsPage() {
               className="w-4 h-4 accent-blue-600"
             />
             <label htmlFor="receiptShowLogo" className="text-sm text-slate-700">
-              Show logo on receipts
+              {t.settings.showLogoReceipts}
             </label>
           </div>
         </div>
@@ -509,11 +509,11 @@ export default function SettingsPage() {
       <div className="bg-white rounded-xl border border-slate-200 p-6">
         <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
           <Receipt className="w-5 h-5 text-blue-600" />
-          Invoices
+          {t.settings.invoices}
         </h2>
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">
-            Invoice footer
+            {t.settings.invoiceFooter}
           </label>
           <textarea
             value={form.invoiceFooter || ""}
@@ -521,7 +521,7 @@ export default function SettingsPage() {
             disabled={!canEdit}
             rows={3}
             className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50"
-            placeholder="Easy Shop Ltd · Reg: ... · Tax ID: ... · 123 Main St · Tel: +237 ..."
+            placeholder={t.settings.invoiceFooterPh}
           />
         </div>
       </div>
@@ -530,7 +530,7 @@ export default function SettingsPage() {
       <div className="bg-white rounded-xl border border-slate-200 p-6">
         <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
           <Palette className="w-5 h-5 text-blue-600" />
-          POS Settings
+          {t.settings.posSettings}
         </h2>
         <div className="space-y-3">
           <div className="flex items-center gap-2">
@@ -543,7 +543,7 @@ export default function SettingsPage() {
               className="w-4 h-4 accent-blue-600"
             />
             <label htmlFor="enableLoyalty" className="text-sm text-slate-700">
-              Enable loyalty program (customer points)
+              {t.settings.enableLoyalty}
             </label>
           </div>
 
@@ -557,7 +557,7 @@ export default function SettingsPage() {
               className="w-4 h-4 accent-blue-600"
             />
             <label htmlFor="enableAutoPrint" className="text-sm text-slate-700">
-              Auto-print receipts after payment
+              {t.settings.autoPrint}
             </label>
           </div>
         </div>
@@ -568,7 +568,7 @@ export default function SettingsPage() {
         <div className="bg-white rounded-xl border border-slate-200 p-6">
           <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
             <Building2 className="w-5 h-5 text-blue-600" />
-            Magasins ({stores.length} / {license.maxStores})
+            {t.settings.stores} ({stores.length} / {license.maxStores})
           </h2>
           <div className="space-y-2">
             {stores.map((store) => (
@@ -576,7 +576,7 @@ export default function SettingsPage() {
                 <div>
                   <p className="font-medium text-sm text-slate-900">{store.name}</p>
                   <p className="text-xs text-slate-500">
-                    {store.code} · {store.city || "—"} · {store.isActive ? "Actif" : "Inactif"}
+                    {store.code} · {store.city || "—"} · {store.isActive ? t.common.active : t.common.inactive}
                   </p>
                 </div>
               </div>
@@ -588,7 +588,7 @@ export default function SettingsPage() {
       {/* Read-only notice */}
       {!canEdit && (
         <div className="text-center text-sm text-slate-400">
-          {t.settings?.onlyBoss || "Only the manager (Boss) can edit these settings."}
+          {t.settings.onlyBoss}
         </div>
       )}
     </div>

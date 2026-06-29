@@ -41,11 +41,11 @@ export default function ImportPage() {
       return;
     }
     if (file.size === 0) {
-      toast("Le fichier est vide", "warning");
+      toast(t.import.emptyFile, "warning");
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
-      toast("Fichier trop volumineux (max 10 MB)", "warning");
+      toast(t.import.fileTooLarge, "warning");
       return;
     }
 
@@ -225,10 +225,10 @@ RIZ-25-002,0640055667788,Scented Rice 25kg,Grocery,Rice,Import Asia,22000,17500,
               <div className="flex flex-col items-center gap-2">
                 <Upload className="w-10 h-10 text-[var(--text-muted)]" />
                 <p className="text-sm font-medium text-[var(--text-primary)]">
-                  Cliquez ou glissez votre CSV ici
+                  {t.import.clickOrDrag}
                 </p>
                 <p className="text-xs text-[var(--text-muted)]">
-                  Format: .csv (up to 50,000 products)
+                  {t.import.formatHint}
                 </p>
               </div>
             )}
@@ -239,7 +239,7 @@ RIZ-25-002,0640055667788,Scented Rice 25kg,Grocery,Rice,Import Asia,22000,17500,
             <div className="mt-4 flex items-center justify-between">
               <div className="text-xs text-[var(--text-muted)] flex items-center gap-1.5">
                 <FileText className="w-3.5 h-3.5" />
-                Ready to import {csvText.split("\n").length - 1} products
+                {t.import.readyToImport} {csvText.split("\n").length - 1} {t.import.products}
               </div>
               <Button
                 onClick={handleImport}
@@ -252,7 +252,7 @@ RIZ-25-002,0640055667788,Scented Rice 25kg,Grocery,Rice,Import Asia,22000,17500,
                   )
                 }
               >
-                {importing ? "Import en cours..." : "Lancer l'import"}
+                {importing ? t.import.importing : t.import.launchImport}
               </Button>
             </div>
           )}
@@ -262,24 +262,24 @@ RIZ-25-002,0640055667788,Scented Rice 25kg,Grocery,Rice,Import Asia,22000,17500,
         {result && (
           <Card padding="md">
             <CardHeader
-              title="Import results"
-              subtitle={`Completed in ${(result.duration / 1000).toFixed(1)} seconds`}
+              title={t.import.importResults}
+              subtitle={`${t.import.completedIn} ${(result.duration / 1000).toFixed(1)} ${t.import.seconds}`}
             />
             <div className="mt-4 grid grid-cols-3 gap-3">
               <div className="bg-emerald-50 rounded-xl p-4 text-center">
                 <CheckCircle2 className="w-6 h-6 text-emerald-500 mx-auto mb-1" />
                 <p className="text-2xl font-bold text-emerald-600">{result.success}</p>
-                <p className="text-xs text-emerald-700">Succeeded</p>
+                <p className="text-xs text-emerald-700">{t.import.success}</p>
               </div>
               <div className="bg-red-50 rounded-xl p-4 text-center">
                 <AlertCircle className="w-6 h-6 text-red-500 mx-auto mb-1" />
                 <p className="text-2xl font-bold text-red-600">{result.errors}</p>
-                <p className="text-xs text-red-700">Erreurs</p>
+                <p className="text-xs text-red-700">{t.import.errors}</p>
               </div>
               <div className="bg-blue-50 rounded-xl p-4 text-center">
                 <FileText className="w-6 h-6 text-blue-500 mx-auto mb-1" />
                 <p className="text-2xl font-bold text-blue-600">{result.total}</p>
-                <p className="text-xs text-blue-700">Total</p>
+                <p className="text-xs text-blue-700">{t.import.total}</p>
               </div>
             </div>
 
@@ -287,12 +287,12 @@ RIZ-25-002,0640055667788,Scented Rice 25kg,Grocery,Rice,Import Asia,22000,17500,
             {result.errorDetails.length > 0 && (
               <div className="mt-4">
                 <p className="text-xs font-semibold text-[var(--text-secondary)] mb-2">
-                  Error details ({result.errorDetails.length} shown):
+                  {t.import.errorDetails} ({result.errorDetails.length} {t.import.shown}):
                 </p>
                 <div className="max-h-48 overflow-y-auto bg-[var(--background)] rounded-xl p-3 space-y-1">
                   {result.errorDetails.map((err, i) => (
                     <div key={i} className="text-xs flex items-start gap-2">
-                      <Badge variant="danger" size="sm">Ligne {err.row}</Badge>
+                      <Badge variant="danger" size="sm">{t.import.row} {err.row}</Badge>
                       <span className="text-[var(--text-secondary)]">{err.error}</span>
                     </div>
                   ))}
@@ -304,7 +304,7 @@ RIZ-25-002,0640055667788,Scented Rice 25kg,Grocery,Rice,Import Asia,22000,17500,
               <div className="mt-4 bg-emerald-50 rounded-xl p-4 flex items-center gap-3">
                 <CheckCircle2 className="w-5 h-5 text-emerald-500" />
                 <p className="text-sm text-emerald-700">
-                  All {result.success} products imported successfully!
+                  {t.import.allImported} {result.success} {t.import.productsImported}
                 </p>
               </div>
             )}

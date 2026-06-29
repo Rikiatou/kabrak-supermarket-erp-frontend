@@ -41,6 +41,30 @@ const empty: FormData = {
 
 export function NewProductModal({ onClose, onSave, prefillBarcode }: NewProductModalProps) {
   const { t } = useI18n();
+
+  const categoryLabels: Record<string, string> = {
+    Grocery: t.common.catGrocery,
+    Beverages: t.common.catDrinks,
+    Dairy: t.common.catDairy,
+    Hygiene: t.common.catHygiene,
+    Butchery: t.common.catButcher,
+    Bakery: t.common.catBakery,
+    Frozen: t.common.catFrozen,
+  };
+
+  const unitLabels: Record<string, string> = {
+    bottle: t.forms.unitBottle,
+    can: t.forms.unitCan,
+    pack: t.forms.unitPack,
+    sack: t.forms.unitSack,
+    kg: t.forms.unitKg,
+    liter: t.forms.unitLiter,
+    box: t.forms.unitBox,
+    bar: t.forms.unitBar,
+    jar: t.forms.unitJar,
+    unit: t.forms.unitUnit,
+  };
+
   const [form, setForm] = useState<FormData>({
     ...empty,
     barcode: prefillBarcode || "",
@@ -169,7 +193,7 @@ export function NewProductModal({ onClose, onSave, prefillBarcode }: NewProductM
                     <Field label={t.forms.category} error={errors.category} required span={2}>
                       <select value={form.category} onChange={set("category")} className={inputClass(!!errors.category)}>
                         <option value="">{t.forms.selectCategory}</option>
-                        {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+                        {CATEGORIES.map((c) => <option key={c} value={c}>{categoryLabels[c]}</option>)}
                       </select>
                     </Field>
                   </div>
@@ -228,7 +252,7 @@ export function NewProductModal({ onClose, onSave, prefillBarcode }: NewProductM
                     </Field>
                     <Field label={t.forms.unit}>
                       <select value={form.unit} onChange={set("unit")} className={inputClass(false)}>
-                        {UNITS.map((u) => <option key={u}>{u}</option>)}
+                        {UNITS.map((u) => <option key={u} value={u}>{unitLabels[u]}</option>)}
                       </select>
                     </Field>
                   </div>

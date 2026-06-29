@@ -17,10 +17,10 @@ type FormData = {
 };
 
 const empty: FormData = {
-  name: "", contact: "", phone: "", email: "", address: "", paymentTerms: "30 jours",
+  name: "", contact: "", phone: "", email: "", address: "", paymentTerms: "30_days",
 };
 
-const PAYMENT_TERMS = ["Comptant", "7 jours", "15 jours", "30 jours", "45 jours", "50% avance", "60 jours"];
+const PAYMENT_TERM_VALUES = ["comptant", "7_days", "15_days", "30_days", "45_days", "50_advance", "60_days"];
 
 interface NewSupplierModalProps {
   onClose: () => void;
@@ -32,6 +32,16 @@ export function NewSupplierModal({ onClose, onSave }: NewSupplierModalProps) {
   const [form, setForm] = useState<FormData>(empty);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState(false);
+
+  const paymentTermLabels: Record<string, string> = {
+    comptant: t.achats.ptComptant,
+    "7_days": t.achats.pt7Days,
+    "15_days": t.achats.pt15Days,
+    "30_days": t.achats.pt30Days,
+    "45_days": t.achats.pt45Days,
+    "50_advance": t.achats.pt50Advance,
+    "60_days": t.achats.pt60Days,
+  };
 
   const set = (field: keyof FormData) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -100,12 +110,12 @@ export function NewSupplierModal({ onClose, onSave }: NewSupplierModalProps) {
                 <div className="grid grid-cols-2 gap-4">
                   <Field label={t.achats.suppliers.slice(0, -1) || t.forms.newSupplier} error={errors.name} required span={2}>
                     <input type="text" value={form.name} onChange={set("name")}
-                      placeholder="Ex: SABC, Unilever CMR…"
+                      placeholder={t.forms.supplierPh}
                       className={inputClass(!!errors.name)} />
                   </Field>
                   <Field label={t.forms.contact} error={errors.contact} required span={2}>
                     <input type="text" value={form.contact} onChange={set("contact")}
-                      placeholder="Direction Commerciale"
+                      placeholder={t.forms.contactPersonPh}
                       className={inputClass(!!errors.contact)} />
                   </Field>
                   <Field label={t.forms.phone} error={errors.phone} required>
@@ -120,12 +130,12 @@ export function NewSupplierModal({ onClose, onSave }: NewSupplierModalProps) {
                   </Field>
                   <Field label={t.forms.address} error={errors.address} required span={2}>
                     <input type="text" value={form.address} onChange={set("address")}
-                      placeholder="Rue, Quartier, Ville"
+                      placeholder={t.forms.addressPh}
                       className={inputClass(!!errors.address)} />
                   </Field>
                   <Field label={t.forms.paymentTerms} span={2}>
                     <select value={form.paymentTerms} onChange={set("paymentTerms")} className={inputClass(false)}>
-                      {PAYMENT_TERMS.map((pt) => <option key={pt}>{pt}</option>)}
+                      {PAYMENT_TERM_VALUES.map((v) => <option key={v} value={v}>{paymentTermLabels[v]}</option>)}
                     </select>
                   </Field>
                 </div>

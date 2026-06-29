@@ -306,7 +306,7 @@ export default function PlanningPage() {
                                     </div>
                                     {slot.breakStart && slot.breakEnd && (
                                       <div className="text-[9px] opacity-60 mt-0.5">
-                                        Pause: {slot.breakStart}–{slot.breakEnd}
+                                        {t.planning.pause} {slot.breakStart}–{slot.breakEnd}
                                       </div>
                                     )}
                                     {slot.notes && (

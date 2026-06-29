@@ -45,7 +45,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       ],
     },
     {
-      label: "Ventes",
+      label: t.nav.groupSales,
       items: [
         { href: "/pos", label: t.nav.pos, icon: ShoppingCart, badge: null },
         { href: "/caisses", label: t.nav.caisses, icon: Store, badge: null },
@@ -53,23 +53,23 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       ],
     },
     {
-      label: "Stock",
+      label: t.nav.groupStock,
       items: [
         { href: "/stocks", label: t.nav.stocks, icon: Package, badge: 6 },
         { href: "/import", label: t.nav.import, icon: Upload, badge: null },
         { href: "/scanner", label: t.nav.scanner, icon: ScanLine, badge: null },
         { href: "/pertes", label: t.nav.pertes, icon: AlertTriangle, badge: null },
-        { href: "/cadeaux", label: t.nav.cadeaux || "Cadeaux", icon: Gift, badge: null },
+        { href: "/cadeaux", label: t.nav.cadeaux, icon: Gift, badge: null },
       ],
     },
     {
-      label: "Achats",
+      label: t.nav.groupPurchases,
       items: [
         { href: "/achats", label: t.nav.achats, icon: Truck, badge: null },
       ],
     },
     {
-      label: "Finance",
+      label: t.nav.groupFinance,
       items: [
         { href: "/factures", label: t.nav.factures, icon: FileText, badge: null },
         { href: "/comptabilite", label: t.nav.comptabilite, icon: BookOpen, badge: null },
@@ -77,14 +77,14 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       ],
     },
     {
-      label: "Analyses",
+      label: t.nav.groupAnalytics,
       items: [
-        { href: "/historique", label: t.nav.historique || "Historique", icon: History, badge: null },
+        { href: "/historique", label: t.nav.historique, icon: History, badge: null },
         { href: "/ia", label: t.nav.ia, icon: Cpu, badge: null },
       ],
     },
     {
-      label: "Equipe",
+      label: t.nav.groupTeam,
       items: [
         { href: "/employes", label: t.nav.employes, icon: Users, badge: null },
         { href: "/planning", label: t.nav.planning, icon: Calendar, badge: null },
@@ -93,7 +93,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     {
       label: "",
       items: [
-        { href: "/settings", label: t.nav.settings || "Parametres", icon: Settings, badge: null },
+        { href: "/settings", label: t.nav.settings, icon: Settings, badge: null },
       ],
     },
   ];
@@ -119,7 +119,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
               {config?.supermarketName || "KABRAK"}
             </span>
             <span className="block text-[10px] text-[var(--text-muted)] tracking-wider uppercase mt-1 font-medium">
-              {license?.type === "MULTI_STORE" ? "Multi-Store" : "Retail Suite"}
+              {license?.type === "MULTI_STORE" ? t.settings.multiStore : t.settings.retailSuite}
             </span>
           </div>
         </div>
@@ -196,7 +196,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           {user && (
             <button
               onClick={logout}
-              title="Sign out"
+              title={t.common.signOut}
               className="text-[var(--text-muted)] hover:text-[var(--danger)] transition-colors p-1"
             >
               <LogOut className="w-[16px] h-[16px]" />

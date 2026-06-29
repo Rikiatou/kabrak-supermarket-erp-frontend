@@ -116,7 +116,7 @@ export function NewEmployeeModal({ onClose, onSave }: NewEmployeeModalProps) {
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-[var(--text-primary)]">
-                      {form.firstName || "First name"} {form.lastName || "Last name"}
+                      {form.firstName || t.forms.firstNamePh} {form.lastName || t.forms.lastNamePh}
                     </p>
                     <p className="text-xs text-[var(--text-muted)] mt-0.5">
                       {form.role ? t.employes.roles[form.role] : t.forms.selectRole}
@@ -127,16 +127,16 @@ export function NewEmployeeModal({ onClose, onSave }: NewEmployeeModalProps) {
                 {/* Identity */}
                 <div>
                   <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-widest mb-3">
-                    Identity
+                    {t.forms.identity}
                   </p>
                   <div className="grid grid-cols-2 gap-4">
                     <Field label={t.forms.firstName} error={errors.firstName} required>
                       <input type="text" value={form.firstName} onChange={set("firstName")}
-                        placeholder="Amina" className={inputClass(!!errors.firstName)} />
+                        placeholder={t.forms.firstNameExample} className={inputClass(!!errors.firstName)} />
                     </Field>
                     <Field label={t.forms.lastName} error={errors.lastName} required>
                       <input type="text" value={form.lastName} onChange={set("lastName")}
-                        placeholder="Bello" className={inputClass(!!errors.lastName)} />
+                        placeholder={t.forms.lastNameExample} className={inputClass(!!errors.lastName)} />
                     </Field>
                     <Field label={t.forms.role} error={errors.role} required>
                       <select value={form.role} onChange={set("role")} className={inputClass(!!errors.role)}>
@@ -156,16 +156,16 @@ export function NewEmployeeModal({ onClose, onSave }: NewEmployeeModalProps) {
                 {/* Contact */}
                 <div>
                   <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-widest mb-3">
-                    Contact
+                    {t.forms.contact}
                   </p>
                   <div className="grid grid-cols-2 gap-4">
                     <Field label={t.forms.phone} error={errors.phone} required>
                       <input type="tel" value={form.phone} onChange={set("phone")}
-                        placeholder="+237 6 XX XX XX XX" className={inputClass(!!errors.phone)} />
+                        placeholder={t.forms.phonePh} className={inputClass(!!errors.phone)} />
                     </Field>
                     <Field label={t.forms.email} error={errors.email} required>
                       <input type="email" value={form.email} onChange={set("email")}
-                        placeholder="prenom.nom@kabrak.cm" className={inputClass(!!errors.email)} />
+                        placeholder={t.forms.emailPh} className={inputClass(!!errors.email)} />
                     </Field>
                     <Field label={t.forms.hireDate} error={errors.hireDate} required span={2}>
                       <input type="date" value={form.hireDate} onChange={set("hireDate")}
