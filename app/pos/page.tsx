@@ -66,8 +66,6 @@ import { useToast } from "@/components/ui/Toast";
 
 import { useRouter } from "next/navigation";
 
-import { products as mockProducts } from "@/lib/mock-data";
-
 import { formatCurrency, cn } from "@/lib/utils";
 
 import { useI18n } from "@/lib/i18n/context";

@@ -19,7 +19,6 @@ import { AppShell } from "@/components/layout/AppShell";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { employees as mockEmployees } from "@/lib/mock-data";
 import { useI18n } from "@/lib/i18n/context";
 import { useToast } from "@/components/ui/Toast";
 import { NewEmployeeModal } from "@/components/forms/NewEmployeeModal";
@@ -124,25 +123,21 @@ export default function EmployesPage() {
   const [showNewEmployee, setShowNewEmployee] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Convertir les employés API au format frontend, fallback sur mock
+  // Convertir les employés API au format frontend
   useEffect(() => {
-    if (apiEmployees.length > 0) {
-      const mapped: Employee[] = apiEmployees.map((e) => ({
-        id: e.id,
-        firstName: e.firstName,
-        lastName: e.lastName,
-        role: e.role as Employee["role"],
-        department: e.department,
-        phone: e.phone,
-        email: e.email || "",
-        hireDate: e.hireDate,
-        status: e.status as Employee["status"],
-        hoursThisWeek: 0,
-      }));
-      setEmployees(mapped);
-    } else if (employees.length === 0) {
-      setEmployees(mockEmployees);
-    }
+    const mapped: Employee[] = apiEmployees.map((e) => ({
+      id: e.id,
+      firstName: e.firstName,
+      lastName: e.lastName,
+      role: e.role as Employee["role"],
+      department: e.department,
+      phone: e.phone,
+      email: e.email || "",
+      hireDate: e.hireDate,
+      status: e.status as Employee["status"],
+      hoursThisWeek: 0,
+    }));
+    setEmployees(mapped);
   }, [apiEmployees]);
 
   const handleNewEmployee = async (data: Omit<Employee, "id" | "status" | "hoursThisWeek">) => {

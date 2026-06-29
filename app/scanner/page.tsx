@@ -19,7 +19,6 @@ import { Button } from "@/components/ui/Button";
 import { useI18n } from "@/lib/i18n/context";
 import { useToast } from "@/components/ui/Toast";
 import { useProducts } from "@/lib/hooks/useApi";
-import { products as mockProducts } from "@/lib/mock-data";
 import { formatCurrency, cn } from "@/lib/utils";
 
 interface ScannedItem {
@@ -36,7 +35,7 @@ export default function ScannerPage() {
   const { t } = useI18n();
   const { toast } = useToast();
   const { products: apiProducts } = useProducts();
-  const products = apiProducts.length > 0 ? apiProducts : mockProducts;
+  const products = apiProducts;
 
   const [scanning, setScanning] = useState(false);
   const [scanned, setScanned] = useState<ScannedItem[]>([]);

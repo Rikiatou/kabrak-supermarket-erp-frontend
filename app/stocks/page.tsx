@@ -19,7 +19,6 @@ import { AppShell } from "@/components/layout/AppShell";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { products as mockProducts } from "@/lib/mock-data";
 import { formatCurrency, formatDate, cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/context";
 import { useToast } from "@/components/ui/Toast";
@@ -92,13 +91,9 @@ export default function StocksPage() {
   const { setMarkdown, setting: settingMarkdown } = useSetMarkdown();
   const { removeMarkdown, removing: removingMarkdown } = useRemoveMarkdown();
 
-  // Utiliser les vrais produits du backend, fallback sur mock
+  // Utiliser les vrais produits du backend
   useEffect(() => {
-    if (apiProducts.length > 0) {
-      setProducts(apiProducts);
-    } else if (products.length === 0) {
-      setProducts(mockProducts);
-    }
+    setProducts(apiProducts);
   }, [apiProducts]);
 
   const [saving, setSaving] = useState(false);

@@ -17,7 +17,6 @@ import { Button } from "@/components/ui/Button";
 import { useI18n } from "@/lib/i18n/context";
 import { useToast } from "@/components/ui/Toast";
 import { useProducts, useStockAdjust } from "@/lib/hooks/useApi";
-import { products as mockProducts } from "@/lib/mock-data";
 import { formatCurrency, cn } from "@/lib/utils";
 
 interface LossEntry {
@@ -36,7 +35,7 @@ export default function PertesPage() {
   const { toast } = useToast();
   const { products: apiProducts, reload: reloadProducts } = useProducts();
   const { adjust, adjusting } = useStockAdjust();
-  const products = apiProducts.length > 0 ? apiProducts : mockProducts;
+  const products = apiProducts;
 
   const lossTypes = [
     { value: "damage", label: t.pertes.lossTypes.damage, color: "text-red-600 bg-red-50" },

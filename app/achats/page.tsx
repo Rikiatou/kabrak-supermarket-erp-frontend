@@ -30,7 +30,6 @@ import { NewProductModal } from "@/components/forms/NewProductModal";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { suppliers as mockSuppliers } from "@/lib/mock-data";
 import { useSuppliers, usePurchaseOrders, useCreatePurchaseOrder, useProducts } from "@/lib/hooks/useApi";
 import { useBarcodeScanner } from "@/lib/hooks/useBarcodeScanner";
 import { suppliersApi, purchaseOrdersApi, productsApi } from "@/lib/api";
@@ -39,63 +38,6 @@ import type { Supplier } from "@/lib/types";
 import type { Product } from "@/lib/types";
 
 type OrderStatus = "draft" | "sent" | "received" | "cancelled";
-
-const mockOrders = [
-  {
-    id: "BC-2026-0041",
-    supplier: mockSuppliers[0],
-    date: "2026-04-28",
-    expectedDate: "2026-04-30",
-    total: 340000,
-    status: "sent" as OrderStatus,
-    itemCount: 8,
-  },
-  {
-    id: "BC-2026-0040",
-    supplier: mockSuppliers[1],
-    date: "2026-04-26",
-    expectedDate: "2026-04-29",
-    total: 185000,
-    status: "received" as OrderStatus,
-    itemCount: 5,
-  },
-  {
-    id: "BC-2026-0039",
-    supplier: mockSuppliers[3],
-    date: "2026-04-24",
-    expectedDate: "2026-05-05",
-    total: 620000,
-    status: "sent" as OrderStatus,
-    itemCount: 12,
-  },
-  {
-    id: "BC-2026-0038",
-    supplier: mockSuppliers[2],
-    date: "2026-04-22",
-    expectedDate: "2026-04-24",
-    total: 98000,
-    status: "received" as OrderStatus,
-    itemCount: 3,
-  },
-  {
-    id: "BC-2026-0037",
-    supplier: mockSuppliers[0],
-    date: "2026-04-20",
-    expectedDate: "2026-04-22",
-    total: 510000,
-    status: "received" as OrderStatus,
-    itemCount: 10,
-  },
-  {
-    id: "BC-2026-0036",
-    supplier: mockSuppliers[1],
-    date: "2026-04-18",
-    expectedDate: "2026-04-20",
-    total: 75000,
-    status: "cancelled" as OrderStatus,
-    itemCount: 2,
-  },
-];
 
 function useOrderStatusConfig(t: ReturnType<typeof useI18n>["t"]) {
   return {
@@ -357,21 +299,19 @@ export default function AchatsPage() {
     w.document.close();
   };
 
-  // Convertir les suppliers API au format frontend, fallback sur mock
-  const suppliers: Supplier[] = apiSuppliers.length > 0
-    ? apiSuppliers.map((s) => ({
-        id: s.id,
-        name: s.name,
-        contact: s.contact,
-        phone: s.phone,
-        email: s.email || "",
-        address: s.address || "",
-        paymentTerms: s.paymentTerms,
-        rating: s.rating,
-        totalOrders: s._count?.purchaseOrders || 0,
-        pendingOrders: 0,
-      }))
-    : mockSuppliers;
+  // Convertir les suppliers API au format frontend
+  const suppliers: Supplier[] = apiSuppliers.map((s) => ({
+    id: s.id,
+    name: s.name,
+    contact: s.contact,
+    phone: s.phone,
+    email: s.email || "",
+    address: s.address || "",
+    paymentTerms: s.paymentTerms,
+    rating: s.rating,
+    totalOrders: s._count?.purchaseOrders || 0,
+    pendingOrders: 0,
+  }));
 
   const openNewOrder = (supplier?: Supplier) => {
     setOrderSupplier(supplier);
@@ -420,23 +360,21 @@ export default function AchatsPage() {
     }
   };
 
-  // Convertir les orders API au format frontend, fallback sur mock
-  const orders = apiOrders && apiOrders.length > 0
-    ? apiOrders.map((o) => {
-        const supplier = suppliers.find((s) => s.id === o.supplierId)
-          || (o.supplier ? { id: o.supplier.id, name: o.supplier.name, contact: o.supplier.contact || "", phone: o.supplier.phone || "", email: o.supplier.email || "", address: o.supplier.address || "", paymentTerms: "", rating: 0, totalOrders: 0, pendingOrders: 0 } : null)
-          || { id: o.supplierId, name: "—", contact: "", phone: "", email: "", address: "", paymentTerms: "", rating: 0, totalOrders: 0, pendingOrders: 0 };
-        return {
-          id: o.orderNumber,
-          supplier,
-          date: new Date(o.date).toISOString().split("T")[0],
-          expectedDate: new Date(o.expectedDate).toISOString().split("T")[0],
-          total: o.total,
-          status: o.status as OrderStatus,
-          itemCount: o.items?.length || 0,
-        };
-      })
-    : mockOrders;
+  // Convertir les orders API au format frontend
+  const orders = (apiOrders ?? []).map((o) => {
+    const supplier = suppliers.find((s) => s.id === o.supplierId)
+      || (o.supplier ? { id: o.supplier.id, name: o.supplier.name, contact: o.supplier.contact || "", phone: o.supplier.phone || "", email: o.supplier.email || "", address: o.supplier.address || "", paymentTerms: "", rating: 0, totalOrders: 0, pendingOrders: 0 } : null)
+      || { id: o.supplierId, name: "—", contact: "", phone: "", email: "", address: "", paymentTerms: "", rating: 0, totalOrders: 0, pendingOrders: 0 };
+    return {
+      id: o.orderNumber,
+      supplier,
+      date: new Date(o.date).toISOString().split("T")[0],
+      expectedDate: new Date(o.expectedDate).toISOString().split("T")[0],
+      total: o.total,
+      status: o.status as OrderStatus,
+      itemCount: o.items?.length || 0,
+    };
+  });
 
   const totalSpend = orders
     .filter((o) => o.status === "received")
