@@ -36,6 +36,7 @@ import { products as mockProducts } from "@/lib/mock-data";
 import { formatCurrency, cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/context";
 import { useProducts, useCreateTransaction, useCustomers, useCreateCustomer, useRecentTransactions, useActiveShifts, useServerProductSearch } from "@/lib/hooks/useApi";
+import { useBarcodeScanner } from "@/lib/hooks/useBarcodeScanner";
 import type { ApiCustomer, ApiTransaction } from "@/lib/api";
 import { productsApi, apiProductToFrontend } from "@/lib/api";
 import { useAuth } from "@/lib/auth/context";
@@ -334,6 +335,11 @@ export default function POSPage() {
     [products, addToCart, useServerSearch, scanBarcode, canCreateProduct, toast, t]
   );
 
+  // Global barcode scanner — actif sur tout le POS sans cliquer de bouton
+  // Désactivé si un modal est ouvert (checkout, new product, history, customer)
+  const posModalOpen = showNewProductModal || showScanner || showHistoryModal || showCustomerSearch || showCustomerCreateModal || checkoutStep !== "cart";
+  useBarcodeScanner(handleBarcodeScan, posModalOpen);
+
   // Handler quand un produit est créé depuis le modal (scan checkout)
   const handleProductCreatedInCheckout = useCallback(async (data: Omit<Product, "id">) => {
     try {
@@ -361,6 +367,8 @@ export default function POSPage() {
       setPendingBarcode("");
       // Recharger les produits pour inclure le nouveau
       reload();
+      // Refocus search bar pour permettre le scan suivant
+      setTimeout(() => searchRef.current?.focus(), 100);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Erreur";
       alert(`Error: ${msg}`);
@@ -1177,7 +1185,7 @@ export default function POSPage() {
       {showNewProductModal && (
         <NewProductModal
           prefillBarcode={pendingBarcode}
-          onClose={() => { setShowNewProductModal(false); setPendingBarcode(""); }}
+          onClose={() => { setShowNewProductModal(false); setPendingBarcode(""); setTimeout(() => searchRef.current?.focus(), 100); }}
           onSave={handleProductCreatedInCheckout}
         />
       )}

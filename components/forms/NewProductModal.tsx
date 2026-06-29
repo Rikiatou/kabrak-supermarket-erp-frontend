@@ -47,24 +47,13 @@ export function NewProductModal({ onClose, onSave, prefillBarcode }: NewProductM
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState(false);
-  const [showScanModal, setShowScanModal] = useState(false);
-  const [scanInput, setScanInput] = useState("");
-  const scanInputRef = useRef<HTMLInputElement>(null);
+  const barcodeRef = useRef<HTMLInputElement>(null);
 
   const set = (field: keyof FormData) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
     setErrors((prev) => ({ ...prev, [field]: "" }));
-  };
-
-  // Scanner barcode — keyboard wedge style (pas caméra)
-  const handleScanSubmit = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && scanInput.trim()) {
-      setForm((prev) => ({ ...prev, barcode: scanInput.trim() }));
-      setShowScanModal(false);
-      setScanInput("");
-    }
   };
 
   const validate = (): boolean => {
@@ -159,14 +148,19 @@ export function NewProductModal({ onClose, onSave, prefillBarcode }: NewProductM
                     </Field>
                     <Field label={t.forms.barcode}>
                       <div className="flex gap-2">
-                        <input type="text" value={form.barcode} onChange={set("barcode")}
+                        <input
+                          ref={barcodeRef}
+                          type="text"
+                          value={form.barcode}
+                          onChange={set("barcode")}
                           placeholder={t.forms.barcodePh}
-                          className={inputClass(false)} />
+                          className={inputClass(false)}
+                        />
                         <button
                           type="button"
-                          onClick={() => { setScanInput(""); setShowScanModal(true); }}
+                          onClick={() => { barcodeRef.current?.focus(); barcodeRef.current?.select(); }}
                           className="shrink-0 h-[42px] w-[42px] bg-[#f0fdf4] border border-[#86efac] rounded-lg flex items-center justify-center text-[#15803d] hover:bg-[#dcfce7] transition-colors"
-                          title={t.stocks?.scanBarcode || "Scan barcode"}
+                          title={t.stocks?.scanBarcode || "Click then scan with your scanner"}
                         >
                           <ScanLine className="w-5 h-5" />
                         </button>
@@ -273,43 +267,6 @@ export function NewProductModal({ onClose, onSave, prefillBarcode }: NewProductM
         </div>
       </div>
 
-      {/* Scanner barcode modal — keyboard wedge, pas caméra */}
-      {showScanModal && (
-        <>
-          <div className="fixed inset-0 bg-black/40 z-[60]" onClick={() => setShowScanModal(false)} />
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm pointer-events-auto">
-              <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--border)]">
-                <div className="flex items-center gap-2">
-                  <ScanLine className="w-5 h-5 text-[#16a34a]" />
-                  <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t.stocks?.scanBarcode || "Scan barcode"}</h3>
-                </div>
-                <button onClick={() => setShowScanModal(false)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100">
-                  <X className="w-4 h-4 text-[var(--text-secondary)]" />
-                </button>
-              </div>
-              <div className="px-5 py-6">
-                <p className="text-xs text-[var(--text-muted)] mb-3 text-center">
-                  {t.stocks?.scanHint || "Scan a barcode or type it + Enter"}
-                </p>
-                <div className="flex items-center gap-2 bg-[#f0fdf4] border-2 border-[#86efac] rounded-xl px-4 py-3 focus-within:border-[#16a34a]">
-                  <ScanLine className="w-5 h-5 text-[#16a34a] shrink-0" />
-                  <input
-                    ref={scanInputRef}
-                    type="text"
-                    value={scanInput}
-                    onChange={(e) => setScanInput(e.target.value)}
-                    onKeyDown={handleScanSubmit}
-                    placeholder={t.stocks?.scanPh || "Scan or type barcode..."}
-                    className="flex-1 bg-transparent text-[16px] text-[#111827] placeholder:text-[#9ca3af] outline-none"
-                    autoFocus
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
     </>
   );
 }

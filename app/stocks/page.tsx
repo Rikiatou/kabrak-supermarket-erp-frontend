@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Search,
   Plus,
@@ -25,6 +25,7 @@ import { useI18n } from "@/lib/i18n/context";
 import { useToast } from "@/components/ui/Toast";
 import { NewProductModal } from "@/components/forms/NewProductModal";
 import { useProducts, useStockAlerts, useSetMarkdown, useRemoveMarkdown } from "@/lib/hooks/useApi";
+import { useBarcodeScanner } from "@/lib/hooks/useBarcodeScanner";
 import { productsApi, stockApi, apiProductToFrontend } from "@/lib/api";
 import { getEffectivePrice, hasActiveMarkdown } from "@/lib/api";
 import type { Product } from "@/lib/types";
@@ -83,7 +84,6 @@ export default function StocksPage() {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showNewProduct, setShowNewProduct] = useState(false);
-  const [showStockScanner, setShowStockScanner] = useState(false);
   const [stockScanBarcode, setStockScanBarcode] = useState("");
   const [markdownProduct, setMarkdownProduct] = useState<Product | null>(null);
   const [markdownPrice, setMarkdownPrice] = useState("");
@@ -103,27 +103,24 @@ export default function StocksPage() {
 
   const [saving, setSaving] = useState(false);
 
-  // Scanner barcode dans stocks → pré-remplir modal New Product
-  const [scanInput, setScanInput] = useState("");
-  const scanInputRef = useRef<HTMLInputElement>(null);
-
-  const handleStockScanSubmit = (e: React.KeyboardEvent) => {
-    if (e.key !== "Enter" || !scanInput.trim()) return;
-    const code = scanInput.trim();
+  // Global barcode scanner — détecte automatiquement toute saisie de douchette
+  // (pas besoin de cliquer un bouton — scan direct sur la page)
+  const handleGlobalScan = useCallback((code: string) => {
+    // Ne pas interférer si un modal est déjà ouvert
+    if (showNewProduct) return;
     const existing = products.find(
-      (p) => p.barcode === code || p.sku.toLowerCase() === code.toLowerCase()
+      (p) => p.barcode === code || p.sku?.toLowerCase() === code.toLowerCase()
     );
-    setShowStockScanner(false);
-    setScanInput("");
     if (existing) {
       setSelectedProduct(existing);
       toast(`${existing.name} — ${t.stocks.barcode}: ${code}`, "info");
     } else {
-      // Produit inconnu → ouvrir modal avec barcode pré-rempli
       setStockScanBarcode(code);
       setShowNewProduct(true);
     }
-  };
+  }, [products, showNewProduct, toast, t.stocks.barcode]);
+
+  useBarcodeScanner(handleGlobalScan, showNewProduct);
 
   const handleNewProduct = async (data: Omit<Product, "id">) => {
     setSaving(true);
@@ -369,14 +366,13 @@ export default function StocksPage() {
             ))}
           </div>
 
-          <button
-            onClick={() => setShowStockScanner(true)}
-            className="h-9 px-3 flex items-center gap-1.5 text-sm font-medium text-[var(--text-secondary)] bg-white border border-[var(--border)] rounded-xl hover:bg-[var(--surface-hover)] transition-colors"
-            title={t.stocks.barcode}
+          <div
+            className="h-9 px-3 flex items-center gap-1.5 text-sm font-medium text-[#15803d] bg-[#f0fdf4] border border-[#86efac] rounded-xl"
+            title="Scanner prêt — scannez directement"
           >
             <ScanLine className="w-4 h-4" />
-            Scan
-          </button>
+            {t.stocks.scanBarcode || "Scanner prêt"}
+          </div>
           <Button
             variant="primary"
             size="md"
@@ -552,51 +548,11 @@ export default function StocksPage() {
         />
       )}
 
-      {/* Scanner barcode (stockiste) — search bar style, pas caméra */}
-      {showStockScanner && (
-        <>
-          <div className="fixed inset-0 bg-black/30 backdrop-blur-[2px] z-50" onClick={() => setShowStockScanner(false)} />
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md pointer-events-auto">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)]">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 bg-[var(--brand-light)] rounded-xl flex items-center justify-center">
-                    <ScanLine className="w-5 h-5 text-[var(--brand)]" />
-                  </div>
-                  <h2 className="text-base font-semibold text-[var(--text-primary)]">{t.stocks.scanBarcode || "Scan barcode"}</h2>
-                </div>
-                <button onClick={() => setShowStockScanner(false)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100">
-                  <X className="w-4 h-4 text-[var(--text-secondary)]" />
-                </button>
-              </div>
-              <div className="px-6 py-8">
-                <p className="text-sm text-[var(--text-muted)] mb-4 text-center">
-                  {t.stocks.scanHint || "Scan a barcode or type it + Enter to add a new product"}
-                </p>
-                <div className="flex items-center gap-2 bg-[#f0fdf4] border-2 border-[#86efac] rounded-xl px-4 py-3 focus-within:border-[#16a34a] transition-all">
-                  <ScanLine className="w-5 h-5 text-[#16a34a] shrink-0" />
-                  <input
-                    ref={scanInputRef}
-                    type="text"
-                    value={scanInput}
-                    onChange={(e) => setScanInput(e.target.value)}
-                    onKeyDown={handleStockScanSubmit}
-                    placeholder={t.stocks.scanPh || "Scan or type barcode..."}
-                    className="flex-1 bg-transparent text-[16px] text-[#111827] placeholder:text-[#9ca3af] outline-none"
-                    autoFocus
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-
       {/* New product modal */}
       {showNewProduct && (
         <NewProductModal
           prefillBarcode={stockScanBarcode}
-          onClose={() => { setShowNewProduct(false); setStockScanBarcode(""); }}
+          onClose={() => { setShowNewProduct(false); setStockScanBarcode(""); document.body.focus(); }}
           onSave={(data) => { handleNewProduct(data); }}
         />
       )}
