@@ -13,6 +13,7 @@ import {
   ChevronDown,
   Tag,
   Printer,
+  ScanLine,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Card } from "@/components/ui/Card";
@@ -23,6 +24,7 @@ import { formatCurrency, formatDate, cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/context";
 import { useToast } from "@/components/ui/Toast";
 import { NewProductModal } from "@/components/forms/NewProductModal";
+import { BarcodeScanner } from "@/components/pos/BarcodeScanner";
 import { useProducts, useStockAlerts, useSetMarkdown, useRemoveMarkdown } from "@/lib/hooks/useApi";
 import { productsApi, stockApi, apiProductToFrontend } from "@/lib/api";
 import { getEffectivePrice, hasActiveMarkdown } from "@/lib/api";
@@ -82,6 +84,8 @@ export default function StocksPage() {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showNewProduct, setShowNewProduct] = useState(false);
+  const [showStockScanner, setShowStockScanner] = useState(false);
+  const [stockScanBarcode, setStockScanBarcode] = useState("");
   const [markdownProduct, setMarkdownProduct] = useState<Product | null>(null);
   const [markdownPrice, setMarkdownPrice] = useState("");
   const [markdownReason, setMarkdownReason] = useState("near_expiry");
@@ -99,6 +103,23 @@ export default function StocksPage() {
   }, [apiProducts]);
 
   const [saving, setSaving] = useState(false);
+
+  // Scanner barcode dans stocks → pré-remplir modal New Product
+  const handleStockScan = (code: string) => {
+    const existing = products.find(
+      (p) => p.barcode === code.trim() || p.sku.toLowerCase() === code.trim().toLowerCase()
+    );
+    setShowStockScanner(false);
+    if (existing) {
+      // Produit déjà existant → sélectionner et montrer
+      setSelectedProduct(existing);
+      toast(`${existing.name} — ${t.stocks.barcode}: ${code}`, "info");
+    } else {
+      // Produit inconnu → ouvrir modal avec barcode pré-rempli
+      setStockScanBarcode(code);
+      setShowNewProduct(true);
+    }
+  };
 
   const handleNewProduct = async (data: Omit<Product, "id">) => {
     setSaving(true);
@@ -344,11 +365,19 @@ export default function StocksPage() {
             ))}
           </div>
 
+          <button
+            onClick={() => setShowStockScanner(true)}
+            className="h-9 px-3 flex items-center gap-1.5 text-sm font-medium text-[var(--text-secondary)] bg-white border border-[var(--border)] rounded-xl hover:bg-[var(--surface-hover)] transition-colors"
+            title={t.stocks.barcode}
+          >
+            <ScanLine className="w-4 h-4" />
+            Scan
+          </button>
           <Button
             variant="primary"
             size="md"
             icon={<Plus className="w-4 h-4" />}
-            onClick={() => setShowNewProduct(true)}
+            onClick={() => { setStockScanBarcode(""); setShowNewProduct(true); }}
           >
             {t.stocks.newProduct}
           </Button>
@@ -519,10 +548,20 @@ export default function StocksPage() {
         />
       )}
 
+      {/* Scanner barcode (stockiste) */}
+      {showStockScanner && (
+        <BarcodeScanner
+          onScan={handleStockScan}
+          onClose={() => setShowStockScanner(false)}
+          result={null}
+        />
+      )}
+
       {/* New product modal */}
       {showNewProduct && (
         <NewProductModal
-          onClose={() => setShowNewProduct(false)}
+          prefillBarcode={stockScanBarcode}
+          onClose={() => { setShowNewProduct(false); setStockScanBarcode(""); }}
           onSave={(data) => { handleNewProduct(data); }}
         />
       )}

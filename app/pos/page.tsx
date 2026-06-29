@@ -29,6 +29,7 @@ import { Button } from "@/components/ui/Button";
 import { BarcodeScanner } from "@/components/pos/BarcodeScanner";
 import { NewProductModal } from "@/components/forms/NewProductModal";
 import { Badge } from "@/components/ui/Badge";
+import { useToast } from "@/components/ui/Toast";
 import { products as mockProducts } from "@/lib/mock-data";
 import { formatCurrency, cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/context";
@@ -79,6 +80,9 @@ export default function POSPage() {
   const { create: createTransaction, creating } = useCreateTransaction();
   const { create: createCustomer } = useCreateCustomer();
   const { user } = useAuth();
+  const { toast } = useToast();
+  // Seuls boss/manager/supervisor/stockist peuvent créer des produits
+  const canCreateProduct = ["boss", "manager", "supervisor", "stockist"].includes(user?.role ?? "");
   const { data: activeShifts } = useActiveShifts();
   const { config: licenseConfig } = useLicense();
   const storeInfo = getStoreInfo(licenseConfig);
@@ -265,13 +269,20 @@ export default function POSPage() {
           beepRef.current.play().catch(() => {});
         }
       } else {
-        // Produit NON trouvé → ouvrir modal création avec barcode pré-rempli
-        setPendingBarcode(code);
-        setSearch("");
-        setShowNewProductModal(true);
+        // Produit NON trouvé
+        if (canCreateProduct) {
+          // Managers/stockists → ouvrir modal création
+          setPendingBarcode(code);
+          setSearch("");
+          setShowNewProductModal(true);
+        } else {
+          // Cashier → message simple, pas de création
+          setSearch("");
+          toast(t.pos.productNotFoundCashier || "Product not found — please ask your manager to add it.", "warning");
+        }
       }
     },
-    [search, products, addToCart, useServerSearch, scanBarcode]
+    [search, products, addToCart, useServerSearch, scanBarcode, canCreateProduct, toast, t]
   );
 
   // Scan via caméra (ZXing)
@@ -303,14 +314,21 @@ export default function POSPage() {
           beepRef.current.play().catch(() => {});
         }
       } else {
-        // Produit non trouvé → ouvrir le modal de création avec le barcode pré-rempli
-        setPendingBarcode(code);
-        setShowScanner(false);
-        setShowNewProductModal(true);
+        // Produit non trouvé
         setScanResult({ code, status: "not_found" });
+        if (canCreateProduct) {
+          // Managers/stockists → ouvrir modal création
+          setPendingBarcode(code);
+          setShowScanner(false);
+          setShowNewProductModal(true);
+        } else {
+          // Cashier → message simple
+          setShowScanner(false);
+          toast(t.pos.productNotFoundCashier || "Product not found — please ask your manager to add it.", "warning");
+        }
       }
     },
-    [products, addToCart, useServerSearch, scanBarcode]
+    [products, addToCart, useServerSearch, scanBarcode, canCreateProduct, toast, t]
   );
 
   // Handler quand un produit est créé depuis le modal (scan checkout)

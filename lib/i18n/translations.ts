@@ -249,6 +249,7 @@ export const translations = {
       openMyRegister: "Ouvrir ma caisse →",
       syncSuccess: "{n} vente(s) synchronisée(s) avec succès",
       syncFailed: "{n} vente(s) en attente — échec de sync",
+      productNotFoundCashier: "Produit introuvable — demandez à votre responsable de l'ajouter.",
       // Registre inline
       openRegisterTitle: "Ouvrir votre caisse",
       chooseRegister: "Choisir une caisse",
@@ -1462,6 +1463,7 @@ export const translations = {
       openMyRegister: "Open my register →",
       syncSuccess: "{n} sale(s) synced successfully",
       syncFailed: "{n} sale(s) pending — sync failed",
+      productNotFoundCashier: "Product not found — please ask your manager to add it.",
       // Inline register open
       openRegisterTitle: "Open your register",
       chooseRegister: "Choose a register",
