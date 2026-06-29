@@ -32,6 +32,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { suppliers as mockSuppliers } from "@/lib/mock-data";
 import { useSuppliers, usePurchaseOrders, useCreatePurchaseOrder, useProducts } from "@/lib/hooks/useApi";
+import { useBarcodeScanner } from "@/lib/hooks/useBarcodeScanner";
 import { suppliersApi, purchaseOrdersApi, productsApi } from "@/lib/api";
 import { formatCurrency, cn } from "@/lib/utils";
 import type { Supplier } from "@/lib/types";
@@ -191,8 +192,9 @@ export default function AchatsPage() {
     setDeliveryLines((l) => l.map((line, idx) => idx === i ? { ...line, [field]: value } : line));
 
   // Scanner: cherche par barcode ou SKU et ajoute une ligne
-  const handleScanProduct = useCallback(async () => {
-    const code = scanInput.trim();
+  // Accepte un code directement (hook global) ou depuis l'input manuel
+  const handleScanProduct = useCallback(async (codeArg?: string) => {
+    const code = (codeArg ?? scanInput).trim();
     if (!code) return;
     // Chercher dans les produits déjà chargés
     const found = allProducts.find((p) => p.barcode === code || p.sku.toLowerCase() === code.toLowerCase());
@@ -218,6 +220,12 @@ export default function AchatsPage() {
       setScanInput("");
     }
   }, [scanInput, allProducts, deliveryLines, toast]);
+
+  // Global barcode scanner — actif seulement quand le formulaire de livraison est ouvert
+  useBarcodeScanner(
+    useCallback((code: string) => { handleScanProduct(code); }, [handleScanProduct]),
+    !showDeliveryForm || showNewProductModal
+  );
 
   // Handler quand un produit est créé depuis le modal
   const handleProductCreated = useCallback(async (data: Omit<Product, "id">) => {
@@ -762,26 +770,26 @@ export default function AchatsPage() {
                 />
               </div>
 
-              {/* Scanner barcode */}
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+              {/* Scanner barcode — global, pas besoin de cliquer */}
+              <div className="bg-[#f0fdf4] border-2 border-[#86efac] rounded-xl p-3">
                 <div className="flex items-center gap-2">
-                  <ScanLine className="w-4 h-4 text-blue-600 shrink-0" />
+                  <div className="flex items-center gap-2 flex-1">
+                    <ScanLine className="w-4 h-4 text-[#16a34a] shrink-0 animate-pulse" />
+                    <span className="text-sm font-medium text-[#15803d]">
+                      {t.stocks?.scanBarcode || "Scanner prêt"} — {t.achats.scanHint || "scan a product to add it"}
+                    </span>
+                  </div>
+                  {/* Fallback saisie manuelle */}
                   <input
                     ref={scanInputRef}
                     type="text"
                     value={scanInput}
                     onChange={(e) => setScanInput(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleScanProduct(); } }}
-                    placeholder={t.achats.scanPlaceholder}
-                    className="flex-1 border border-blue-300 rounded-lg px-3 py-1.5 text-sm text-[var(--text-primary)] outline-none focus:border-blue-500 bg-white"
+                    placeholder={t.achats.scanPlaceholder || "Manual barcode..."}
+                    className="w-40 border border-[#86efac] rounded-lg px-2 py-1 text-sm outline-none focus:border-[#16a34a] bg-white"
                   />
-                  <Button size="sm" onClick={handleScanProduct} disabled={!scanInput.trim()}>
-                    {t.achats.scanAdd}
-                  </Button>
                 </div>
-                <p className="text-[11px] text-blue-600 mt-1.5">
-                  {t.achats.scanHint}
-                </p>
               </div>
 
               {/* Items table */}
