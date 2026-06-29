@@ -247,6 +247,8 @@ export const translations = {
       // Shift warning
       noShiftWarning: "Aucune caisse ouverte à votre nom — vos ventes ne seront pas liées à un registre.",
       openMyRegister: "Ouvrir ma caisse →",
+      syncSuccess: "{n} vente(s) synchronisée(s) avec succès",
+      syncFailed: "{n} vente(s) en attente — échec de sync",
       // Registre inline
       openRegisterTitle: "Ouvrir votre caisse",
       chooseRegister: "Choisir une caisse",
@@ -771,6 +773,9 @@ export const translations = {
       totalRegisterRevenue: "CA total caisses",
       totalDifferences: "Écarts total",
       loadingRegisters: "Chargement des caisses actives…",
+      registerInUse: "En cours — autre caissier",
+      noShiftForMe: "Aucune caisse ouverte à votre nom",
+      noShiftHint: "Ouvrez une caisse ci-dessous avant de commencer les ventes.",
       successOpen: "Caisse ouverte avec succès",
       errorOpen: "Erreur lors de l'ouverture de la caisse",
       successClose: "Caisse fermée avec succès",
@@ -1455,6 +1460,8 @@ export const translations = {
       // Shift warning
       noShiftWarning: "No register open under your name — sales won't be linked to a register.",
       openMyRegister: "Open my register →",
+      syncSuccess: "{n} sale(s) synced successfully",
+      syncFailed: "{n} sale(s) pending — sync failed",
       // Inline register open
       openRegisterTitle: "Open your register",
       chooseRegister: "Choose a register",
@@ -1967,6 +1974,9 @@ export const translations = {
       totalRegisterRevenue: "Total register revenue",
       totalDifferences: "Total differences",
       loadingRegisters: "Loading active registers…",
+      registerInUse: "In use — another cashier",
+      noShiftForMe: "No register open under your name",
+      noShiftHint: "Open a register below before starting sales.",
       successOpen: "Register opened successfully",
       errorOpen: "Error opening register",
       successClose: "Register closed successfully",

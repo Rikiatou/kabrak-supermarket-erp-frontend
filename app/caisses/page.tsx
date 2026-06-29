@@ -433,7 +433,7 @@ function RegisterCard({
             </Button>
           ) : (
             <div className="mt-auto pt-2 text-center text-[11px] text-[var(--text-muted)] bg-slate-50 rounded-lg py-2">
-              En cours — autre caissier
+              {t.caisses.registerInUse}
             </div>
           )}
         </div>
@@ -694,8 +694,8 @@ export default function CaissesPage() {
         <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-3">
           <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
           <div>
-            <p className="text-sm font-semibold text-amber-800">Aucune caisse ouverte à votre nom</p>
-            <p className="text-xs text-amber-600 mt-0.5">Ouvrez une caisse ci-dessous avant de commencer les ventes.</p>
+            <p className="text-sm font-semibold text-amber-800">{t.caisses.noShiftForMe}</p>
+            <p className="text-xs text-amber-600 mt-0.5">{t.caisses.noShiftHint}</p>
           </div>
         </div>
       )}

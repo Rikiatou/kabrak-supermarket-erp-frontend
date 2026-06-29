@@ -174,10 +174,10 @@ export default function POSPage() {
       localStorage.setItem("kabrak_pending_tx", JSON.stringify(remaining));
       refreshPendingCount();
       if (remaining.length === 0 && pending.length > 0) {
-        setSyncMsg(`${pending.length} vente(s) synchronisée(s) avec succès`);
+        setSyncMsg(t.pos.syncSuccess.replace("{n}", String(pending.length)));
         setTimeout(() => setSyncMsg(null), 4000);
       } else if (remaining.length > 0) {
-        setSyncMsg(`${remaining.length} vente(s) en attente — échec de sync`);
+        setSyncMsg(t.pos.syncFailed.replace("{n}", String(remaining.length)));
         setTimeout(() => setSyncMsg(null), 6000);
       }
     } catch {}
@@ -342,7 +342,7 @@ export default function POSPage() {
       reload();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Erreur";
-      alert(`Erreur création produit: ${msg}`);
+      alert(`Error: ${msg}`);
     }
   }, [addToCart, reload]);
 
@@ -792,7 +792,7 @@ export default function POSPage() {
         <div className="flex items-center gap-2 ml-auto">
           {pendingTxCount > 0 && (
             <span className="text-[11px] bg-amber-50 text-amber-700 border border-amber-200 rounded-md px-2 py-0.5 font-medium">
-              {pendingTxCount} en attente
+              {t.pos.pendingCount.replace("{n}", String(pendingTxCount))}
             </span>
           )}
           {syncMsg && (
@@ -802,14 +802,14 @@ export default function POSPage() {
           )}
           <div className="flex items-center gap-1.5">
             <span className={`w-2 h-2 rounded-full ${isOnline ? "bg-[#16a34a]" : "bg-amber-400 animate-pulse"}`} />
-            <span className="text-[12px] text-[#9ca3af]">{isOnline ? "En ligne" : "Hors ligne"}</span>
+            <span className="text-[12px] text-[#9ca3af]">{isOnline ? t.pos.online : t.pos.offline}</span>
           </div>
           <button
             onClick={() => { reloadRecentTransactions(); setShowHistoryModal(true); }}
             className="h-7 px-3 text-[12px] font-medium text-[#6b7280] hover:bg-[#f3f4f6] rounded-lg transition-colors flex items-center gap-1.5"
           >
             <History className="w-3.5 h-3.5" />
-            Historique
+            {t.pos.history}
           </button>
         </div>
       </div>
@@ -819,8 +819,8 @@ export default function POSPage() {
         <div className="bg-amber-50 border-b border-amber-200 px-5 py-2.5 flex items-center gap-3 shrink-0">
           <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
           <p className="text-[13px] font-medium text-amber-800">
-            Aucune caisse ouverte à votre nom — vos ventes ne seront pas liées à un registre.{" "}
-            <a href="/caisses" className="underline font-bold hover:text-amber-900">Ouvrir ma caisse →</a>
+            {t.pos.noShiftWarning}{" "}
+            <a href="/caisses" className="underline font-bold hover:text-amber-900">{t.pos.openMyRegister}</a>
           </p>
         </div>
       )}
@@ -873,7 +873,7 @@ export default function POSPage() {
                 <div>
                   <h2 className="text-[16px] font-bold text-[#111827]">{t.pos.currentOrder}</h2>
                   <p className="text-[12px] text-[#9ca3af] tabular-nums">
-                    {cart.reduce((s, i) => s + i.quantity, 0)} article(s)
+                    {cart.reduce((s, i) => s + i.quantity, 0)} {t.pos.itemsArticle}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -887,14 +887,14 @@ export default function POSPage() {
                     )}
                   >
                     <Users className="w-3.5 h-3.5" />
-                    {selectedCustomer ? selectedCustomer.firstName : "Client"}
+                    {selectedCustomer ? selectedCustomer.firstName : t.pos.customer}
                   </button>
                   {cart.length > 0 && (
                     <button
                       onClick={clearCart}
                       className="h-8 px-3 text-[12px] font-medium text-red-400 hover:bg-red-50 rounded-lg flex items-center gap-1.5 transition-colors border border-[#fecaca]"
                     >
-                      <Trash2 className="w-3.5 h-3.5" /> Vider
+                      <Trash2 className="w-3.5 h-3.5" /> {t.pos.clearCart}
                     </button>
                   )}
                 </div>
@@ -905,8 +905,8 @@ export default function POSPage() {
                 {cart.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full">
                     <ShoppingCart className="w-20 h-20 mb-4 text-[#e5e7eb]" />
-                    <p className="text-[16px] font-semibold text-[#d1d5db]">Panier vide</p>
-                    <p className="text-[13px] text-[#e5e7eb] mt-1">Scannez un produit pour commencer</p>
+                    <p className="text-[16px] font-semibold text-[#d1d5db]">{t.pos.emptyCartTitle}</p>
+                    <p className="text-[13px] text-[#e5e7eb] mt-1">{t.pos.scanHint}</p>
                   </div>
                 ) : (
                   <div className="divide-y divide-[#f9fafb]">
@@ -923,8 +923,8 @@ export default function POSPage() {
                           <div className="flex-1 min-w-0">
                             <p className="text-[15px] font-semibold text-[#111827] truncate flex items-center gap-2">
                               {item.product.name}
-                              {hasMarkdown && <span className="text-[10px] font-bold bg-red-100 text-red-600 px-1.5 py-0.5 rounded shrink-0">PROMO</span>}
-                              {isExpired && <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded shrink-0">EXPIRE</span>}
+                              {hasMarkdown && <span className="text-[10px] font-bold bg-red-100 text-red-600 px-1.5 py-0.5 rounded shrink-0">{t.pos.promo}</span>}
+                              {isExpired && <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded shrink-0">{t.pos.expired}</span>}
                             </p>
                             <p className="text-[13px] text-[#9ca3af] tabular-nums mt-0.5">
                               {hasMarkdown ? (
@@ -968,7 +968,7 @@ export default function POSPage() {
                       const v = parseInt(e.target.value) || 0;
                       setCashierDiscountAmount(Math.max(0, Math.min(subtotal, v)));
                     }}
-                    placeholder="Remise (FCFA)"
+                    placeholder={t.pos.discountPlaceholder}
                     className="flex-1 border border-[#e5e7eb] rounded-lg px-3 py-2 text-[13px] font-semibold text-rose-600 tabular-nums outline-none focus:border-rose-400 bg-white"
                   />
                   {cashierDiscountAmount > 0 && (
@@ -977,17 +977,17 @@ export default function POSPage() {
                 </div>
                 <div className="px-5 pb-4">
                   <div className="flex justify-between text-[13px] text-[#9ca3af] mb-1.5">
-                    <span>Sous-total</span>
+                    <span>{t.pos.subtotal}</span>
                     <span className="tabular-nums">{formatCurrency(subtotal)}</span>
                   </div>
                   {discount > 0 && (
                     <div className="flex justify-between text-[13px] text-rose-500 mb-1.5">
-                      <span>Remise {cashierDiscountReason ? `(${cashierDiscountReason})` : ""}</span>
+                      <span>{t.pos.discount}{cashierDiscountReason ? ` (${cashierDiscountReason})` : ""}</span>
                       <span className="tabular-nums">-{formatCurrency(discount)}</span>
                     </div>
                   )}
                   <div className="flex justify-between items-baseline pt-3 border-t border-[#e5e7eb]">
-                    <span className="text-[15px] font-bold text-[#374151] uppercase tracking-wide">Total</span>
+                    <span className="text-[15px] font-bold text-[#374151] uppercase tracking-wide">{t.pos.total}</span>
                     <span className="text-[44px] font-black text-[#16a34a] tabular-nums leading-none">
                       {formatCurrency(total)}
                     </span>
@@ -996,7 +996,7 @@ export default function POSPage() {
                 {hasStockIssues && (
                   <div className="mx-5 mb-3 flex items-center gap-2 text-[12px] text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
                     <AlertCircle className="w-4 h-4 shrink-0" />
-                    Stock insuffisant: {stockIssues.map(i => i.product.name).join(", ")}
+                    {t.pos.outOfStock}: {stockIssues.map(i => i.product.name).join(", ")}
                   </div>
                 )}
                 <div className="px-5 pb-5">
@@ -1006,7 +1006,7 @@ export default function POSPage() {
                     className="w-full h-14 bg-[#16a34a] hover:bg-[#15803d] active:scale-[0.99] text-white text-[18px] font-bold rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_4px_14px_rgba(22,163,74,.3)] flex items-center justify-center gap-2"
                   >
                     <ChevronRight className="w-5 h-5" />
-                    Encaisser
+                    {t.pos.encaisser}
                   </button>
                 </div>
               </div>
@@ -1027,7 +1027,7 @@ export default function POSPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={handleSearchSubmit}
-                placeholder="Chercher ou scanner un produit..."
+                placeholder={t.pos.scanOrSearch}
                 className="flex-1 bg-transparent text-[14px] text-[#111827] placeholder:text-[#9ca3af] outline-none"
                 autoFocus
               />
@@ -1040,7 +1040,7 @@ export default function POSPage() {
                 onClick={() => setShowScanner(true)}
                 className="ml-1 h-7 px-2.5 bg-[#f0fdf4] border border-[#86efac] rounded-lg text-[12px] font-semibold text-[#15803d] flex items-center gap-1 hover:bg-[#dcfce7] transition-colors shrink-0"
               >
-                <ScanLine className="w-3.5 h-3.5" /> Cam
+                <ScanLine className="w-3.5 h-3.5" /> {t.pos.camera}
               </button>
             </div>
           </div>
@@ -1068,7 +1068,7 @@ export default function POSPage() {
             {productsLoading ? (
               <div className="flex flex-col items-center justify-center h-40">
                 <div className="w-6 h-6 border-2 border-[#16a34a] border-t-transparent rounded-full animate-spin mb-2" />
-                <p className="text-[13px] text-[#9ca3af]">Chargement...</p>
+                <p className="text-[13px] text-[#9ca3af]">{t.pos.loading}</p>
               </div>
             ) : productsError ? (
               <div className="flex flex-col items-center justify-center h-40 text-red-500">
@@ -1078,7 +1078,7 @@ export default function POSPage() {
             ) : (useServerSearch && searchLoading) ? (
               <div className="flex flex-col items-center justify-center h-40">
                 <div className="w-6 h-6 border-2 border-[#16a34a] border-t-transparent rounded-full animate-spin mb-2" />
-                <p className="text-[13px] text-[#9ca3af]">Recherche...</p>
+                <p className="text-[13px] text-[#9ca3af]">{t.pos.searching}</p>
               </div>
             ) : filtered.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-40 text-[#9ca3af]">
