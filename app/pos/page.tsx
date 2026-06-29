@@ -1032,13 +1032,13 @@ export default function POSPage() {
           )}
         </div>
 
-        {/* RIGHT — Produits (45%) */}
+        {/* RIGHT — Recherche & Scan (Retail Mode) */}
         <div className="flex-1 flex flex-col bg-[#f7f8fa]">
 
-          {/* Barre de recherche */}
-          <div className="px-4 pt-4 pb-3">
-            <div className="flex items-center gap-2 bg-white border border-[#e5e7eb] rounded-xl px-4 py-2.5 focus-within:border-[#16a34a] focus-within:ring-2 focus-within:ring-[#16a34a]/10 transition-all shadow-sm">
-              <Search className="w-4 h-4 text-[#9ca3af] shrink-0" />
+          {/* Grande barre de recherche/scanner */}
+          <div className="px-6 pt-6 pb-4">
+            <div className="flex items-center gap-3 bg-white border-2 border-[#e5e7eb] rounded-2xl px-5 py-4 focus-within:border-[#16a34a] focus-within:ring-4 focus-within:ring-[#16a34a]/10 transition-all shadow-sm">
+              <Search className="w-6 h-6 text-[#9ca3af] shrink-0" />
               <input
                 ref={searchRef}
                 type="text"
@@ -1046,115 +1046,110 @@ export default function POSPage() {
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={handleSearchSubmit}
                 placeholder={t.pos.scanOrSearch}
-                className="flex-1 bg-transparent text-[14px] text-[#111827] placeholder:text-[#9ca3af] outline-none"
+                className="flex-1 bg-transparent text-[18px] text-[#111827] placeholder:text-[#9ca3af] outline-none"
                 autoFocus
               />
               {search && (
                 <button onClick={() => setSearch("")}>
-                  <X className="w-4 h-4 text-[#9ca3af] hover:text-[#374151]" />
+                  <X className="w-5 h-5 text-[#9ca3af] hover:text-[#374151]" />
                 </button>
               )}
               <button
                 onClick={() => setShowScanner(true)}
-                className="ml-1 h-7 px-2.5 bg-[#f0fdf4] border border-[#86efac] rounded-lg text-[12px] font-semibold text-[#15803d] flex items-center gap-1 hover:bg-[#dcfce7] transition-colors shrink-0"
+                className="ml-1 h-9 px-3 bg-[#f0fdf4] border border-[#86efac] rounded-xl text-[13px] font-semibold text-[#15803d] flex items-center gap-1.5 hover:bg-[#dcfce7] transition-colors shrink-0"
               >
-                <ScanLine className="w-3.5 h-3.5" /> {t.pos.camera}
+                <ScanLine className="w-4 h-4" /> {t.pos.camera}
               </button>
             </div>
           </div>
 
-          {/* Categories */}
-          <div className="px-4 pb-3 flex gap-2 overflow-x-auto">
-            {CATEGORIES.map((cat, idx) => (
-              <button
-                key={idx}
-                onClick={() => setActiveCategoryIdx(idx)}
-                className={cn(
-                  "px-3 py-1.5 text-[12px] font-semibold rounded-lg whitespace-nowrap transition-all shrink-0",
-                  activeCategoryIdx === idx
-                    ? "bg-[#16a34a] text-white shadow-sm"
-                    : "bg-white text-[#6b7280] border border-[#e5e7eb] hover:border-[#86efac] hover:text-[#16a34a]"
-                )}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-
-          {/* Grille produits */}
-          <div className="flex-1 overflow-y-auto px-4 pb-4">
-            {productsLoading ? (
-              <div className="flex flex-col items-center justify-center h-40">
-                <div className="w-6 h-6 border-2 border-[#16a34a] border-t-transparent rounded-full animate-spin mb-2" />
-                <p className="text-[13px] text-[#9ca3af]">{t.pos.loading}</p>
-              </div>
-            ) : productsError ? (
-              <div className="flex flex-col items-center justify-center h-40 text-red-500">
-                <AlertCircle className="w-8 h-8 mb-2" />
-                <p className="text-[13px] font-medium">Impossible de charger les produits</p>
-              </div>
-            ) : (useServerSearch && searchLoading) ? (
-              <div className="flex flex-col items-center justify-center h-40">
-                <div className="w-6 h-6 border-2 border-[#16a34a] border-t-transparent rounded-full animate-spin mb-2" />
-                <p className="text-[13px] text-[#9ca3af]">{t.pos.searching}</p>
-              </div>
-            ) : filtered.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-40 text-[#9ca3af]">
-                <Search className="w-8 h-8 mb-2 opacity-30" />
-                <p className="text-[13px]">{t.common.noResults}</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-3 xl:grid-cols-4 gap-3">
-                {filtered.map((product) => {
-                  const inCart = cart.find((i) => i.product.id === product.id);
-                  const outOfStock = product.stock === 0;
-                  return (
-                    <button
-                      key={product.id}
-                      onClick={() => !outOfStock && addToCart(product)}
-                      disabled={outOfStock}
-                      className={cn(
-                        "relative text-left bg-white border rounded-xl p-4 transition-all duration-150",
-                        outOfStock
-                          ? "opacity-40 cursor-not-allowed border-[#e5e7eb]"
-                          : inCart
-                          ? "border-[#16a34a] shadow-[0_0_0_2px_#16a34a20] bg-[#f0fdf4]"
-                          : "border-[#e5e7eb] hover:border-[#86efac] hover:shadow-sm cursor-pointer active:scale-[0.98]"
-                      )}
-                    >
-                      {inCart && (
-                        <span className="absolute top-2.5 right-2.5 w-6 h-6 bg-[#16a34a] text-white text-[11px] font-bold rounded-full flex items-center justify-center tabular-nums">
-                          {inCart.quantity}
-                        </span>
-                      )}
-                      <div className="w-10 h-10 bg-[#f3f4f6] rounded-lg flex items-center justify-center mb-3 text-[15px] font-bold text-[#9ca3af]">
-                        {product.name.charAt(0)}
-                      </div>
-                      <p className="text-[13px] font-semibold text-[#111827] leading-snug line-clamp-2 mb-2">
-                        {product.name}
-                      </p>
-                      <div className="flex items-end justify-between">
+          {/* Dropdown résultats de recherche */}
+          {search && (
+            <div className="flex-1 overflow-y-auto px-6 pb-6">
+              {productsLoading ? (
+                <div className="flex flex-col items-center justify-center h-40">
+                  <div className="w-6 h-6 border-2 border-[#16a34a] border-t-transparent rounded-full animate-spin mb-2" />
+                  <p className="text-[13px] text-[#9ca3af]">{t.pos.loading}</p>
+                </div>
+              ) : (useServerSearch && searchLoading) ? (
+                <div className="flex flex-col items-center justify-center h-40">
+                  <div className="w-6 h-6 border-2 border-[#16a34a] border-t-transparent rounded-full animate-spin mb-2" />
+                  <p className="text-[13px] text-[#9ca3af]">{t.pos.searching}</p>
+                </div>
+              ) : filtered.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-40 text-[#9ca3af]">
+                  <Search className="w-8 h-8 mb-2 opacity-30" />
+                  <p className="text-[13px]">{t.common.noResults}</p>
+                </div>
+              ) : (
+                <div className="bg-white rounded-xl border border-[#e5e7eb] overflow-hidden shadow-sm">
+                  {filtered.slice(0, 20).map((product) => {
+                    const inCart = cart.find((i) => i.product.id === product.id);
+                    const outOfStock = product.stock === 0;
+                    return (
+                      <button
+                        key={product.id}
+                        onClick={() => !outOfStock && addToCart(product)}
+                        disabled={outOfStock}
+                        className={cn(
+                          "w-full text-left px-4 py-3 flex items-center gap-3 border-b border-[#f3f4f6] last:border-0 transition-colors",
+                          outOfStock
+                            ? "opacity-40 cursor-not-allowed"
+                            : inCart
+                            ? "bg-[#f0fdf4] hover:bg-[#dcfce7]"
+                            : "hover:bg-slate-50"
+                        )}
+                      >
+                        <div className="w-10 h-10 bg-[#f3f4f6] rounded-lg flex items-center justify-center text-[14px] font-bold text-[#9ca3af] shrink-0">
+                          {product.name.charAt(0)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[14px] font-semibold text-[#111827] truncate">
+                            {product.name}
+                          </p>
+                          <p className="text-[12px] text-[#9ca3af]">
+                            {product.barcode || product.sku || "—"}
+                          </p>
+                        </div>
+                        {inCart && (
+                          <span className="w-6 h-6 bg-[#16a34a] text-white text-[11px] font-bold rounded-full flex items-center justify-center tabular-nums shrink-0">
+                            {inCart.quantity}
+                          </span>
+                        )}
                         <span className={cn(
-                          "text-[15px] font-bold tabular-nums",
+                          "text-[15px] font-bold tabular-nums shrink-0",
                           hasActiveMarkdown(product) ? "text-red-600" : "text-[#16a34a]"
                         )}>
                           {formatCurrency(getEffectivePrice(product))}
                         </span>
                         <span className={cn(
-                          "text-[11px] font-medium tabular-nums",
+                          "text-[11px] font-medium tabular-nums shrink-0 w-12 text-right",
                           product.stock <= product.minStock / 4 ? "text-red-500"
                           : product.stock <= product.minStock ? "text-amber-500"
                           : "text-[#d1d5db]"
                         )}>
                           {outOfStock ? "0" : product.stock}
                         </span>
-                      </div>
-                    </button>
-                  );
-                })}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Espace vide quand pas de recherche — guider le caissier */}
+          {!search && (
+            <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center px-6">
+              <div className="w-20 h-20 bg-[#f0fdf4] rounded-2xl flex items-center justify-center">
+                <ScanLine className="w-10 h-10 text-[#16a34a]" />
               </div>
-            )}
-          </div>
+              <div>
+                <p className="text-[18px] font-bold text-[#374151]">{t.pos.scanHint}</p>
+                <p className="text-[14px] text-[#9ca3af] mt-1">{t.pos.scanOrSearch}</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
