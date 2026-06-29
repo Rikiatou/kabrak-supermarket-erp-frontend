@@ -130,7 +130,7 @@ export function NewProductModal({ onClose, onSave, prefillBarcode }: NewProductM
                 {/* Section: Identity */}
                 <div>
                   <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-widest mb-3">
-                    Identification
+                    {t.forms.sectionIdentity}
                   </p>
                   <div className="grid grid-cols-2 gap-4">
                     <Field label={t.forms.productName} error={errors.name} required span={2}>
@@ -162,7 +162,7 @@ export function NewProductModal({ onClose, onSave, prefillBarcode }: NewProductM
                 {/* Section: Pricing */}
                 <div>
                   <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-widest mb-3">
-                    Prix & Marges
+                    {t.forms.sectionPricing}
                   </p>
                   <div className="grid grid-cols-2 gap-4">
                     <Field label={t.forms.salePrice} error={errors.price} required>
@@ -183,10 +183,10 @@ export function NewProductModal({ onClose, onSave, prefillBarcode }: NewProductM
                             : margin >= 10 ? "bg-[var(--warning-light)] text-amber-700"
                             : "bg-[var(--danger-light)] text-red-600"
                         )}>
-                          <span>Gross margin:</span>
+                          <span>{t.forms.grossMargin}:</span>
                           <span className="tabular-nums">{margin}%</span>
                           <span className="text-xs font-normal opacity-70">
-                            {margin >= 20 ? "✓ Bonne marge" : margin >= 10 ? "⚠ Marge faible" : "✗ Marge insuffisante"}
+                            {margin >= 20 ? `✓ ${t.forms.marginGood}` : margin >= 10 ? `⚠ ${t.forms.marginLow}` : `✗ ${t.forms.marginBad}`}
                           </span>
                         </div>
                       </div>
@@ -197,7 +197,7 @@ export function NewProductModal({ onClose, onSave, prefillBarcode }: NewProductM
                 {/* Section: Stock */}
                 <div>
                   <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-widest mb-3">
-                    Stock
+                    {t.forms.sectionStock}
                   </p>
                   <div className="grid grid-cols-3 gap-4">
                     <Field label={t.forms.initialStock} error={errors.stock} required>
@@ -221,7 +221,7 @@ export function NewProductModal({ onClose, onSave, prefillBarcode }: NewProductM
                 {/* Section: Supplier & Expiry */}
                 <div>
                   <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-widest mb-3">
-                    Fournisseur & Expiration
+                    {t.forms.sectionSupplier}
                   </p>
                   <div className="grid grid-cols-2 gap-4">
                     <Field label={t.forms.supplier}>

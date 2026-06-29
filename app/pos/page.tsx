@@ -236,24 +236,42 @@ export default function POSPage() {
 
   // Scan code-barres: quand on tape un code-barres exact + Entrée, ajouter directement
   const handleSearchSubmit = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Enter" && search.trim()) {
-        // Chercher par code-barres exact
-        const found = products.find(
-          (p) => p.barcode === search.trim() || p.sku.toLowerCase() === search.trim().toLowerCase()
-        );
-        if (found && found.stock > 0) {
-          addToCart(found);
-          // BIP sonore
-          if (beepRef.current) {
-            beepRef.current.currentTime = 0;
-            beepRef.current.play().catch(() => {});
-          }
-          setSearch("");
+    async (e: React.KeyboardEvent) => {
+      if (e.key !== "Enter" || !search.trim()) return;
+      const code = search.trim();
+
+      // 1. Chercher en local d'abord
+      let found = products.find(
+        (p) => p.barcode === code || p.sku.toLowerCase() === code.toLowerCase()
+      );
+
+      // 2. Si pas trouvé localement et mode serveur, chercher sur le serveur
+      if (!found && useServerSearch) {
+        found = await scanBarcode(code) ?? undefined;
+      }
+
+      if (found && found.stock > 0) {
+        // Produit trouvé en stock → ajouter au panier
+        addToCart(found);
+        if (beepRef.current) {
+          beepRef.current.currentTime = 0;
+          beepRef.current.play().catch(() => {});
         }
+        setSearch("");
+      } else if (found && found.stock <= 0) {
+        // Produit trouvé mais rupture de stock → laisser la recherche visible
+        if (beepRef.current) {
+          beepRef.current.currentTime = 0;
+          beepRef.current.play().catch(() => {});
+        }
+      } else {
+        // Produit NON trouvé → ouvrir modal création avec barcode pré-rempli
+        setPendingBarcode(code);
+        setSearch("");
+        setShowNewProductModal(true);
       }
     },
-    [search, products, addToCart]
+    [search, products, addToCart, useServerSearch, scanBarcode]
   );
 
   // Scan via caméra (ZXing)
