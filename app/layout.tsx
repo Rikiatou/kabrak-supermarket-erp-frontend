@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import { I18nProvider } from "@/lib/i18n/context";
 import { ToastProvider } from "@/components/ui/Toast";
 import { AuthProvider } from "@/lib/auth/context";
@@ -9,14 +9,11 @@ import { LicenseProvider } from "@/lib/license/context";
 import { LicenseGate } from "@/lib/license/LicenseGate";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
 });
 
 export const viewport: Viewport = {
@@ -24,21 +21,21 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#0f172a",
+  themeColor: "#16a34a",
 };
 
 export const metadata: Metadata = {
   title: {
-    template: "%s — KABRAK Retail",
-    default: "KABRAK Retail",
+    template: "%s — KABRAK ENG",
+    default: "KABRAK ENG — Retail Management",
   },
-  description: "Complete retail management solution — POS, inventory, invoices, reports",
-  applicationName: "KABRAK Retail",
+  description: "KABRAK ENG — Solution de gestion retail: POS, stock, factures, rapports",
+  applicationName: "KABRAK ENG",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
-    title: "KABRAK Retail",
+    statusBarStyle: "default",
+    title: "KABRAK ENG",
   },
   formatDetection: {
     telephone: false,
@@ -53,7 +50,7 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
-      className={`${geistSans.variable} ${geistMono.variable} h-full`}
+      className={`${inter.variable} h-full`}
     >
       <body className="h-full bg-[var(--background)]">
           <I18nProvider><LangAttribute /><ToastProvider><LicenseProvider><LicenseGate><AuthProvider><RoleGuard>{children}</RoleGuard></AuthProvider></LicenseGate></LicenseProvider></ToastProvider></I18nProvider>

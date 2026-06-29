@@ -12,7 +12,6 @@ import {
   BarChart3,
   Cpu,
   Store,
-  ChevronRight,
   Upload,
   LogOut,
   FileText,
@@ -45,7 +44,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       ],
     },
     {
-      label: "Operations",
+      label: "Ventes",
       items: [
         { href: "/pos", label: t.nav.pos, icon: ShoppingCart, badge: null },
         { href: "/caisses", label: t.nav.caisses, icon: Store, badge: null },
@@ -53,7 +52,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       ],
     },
     {
-      label: "Inventory",
+      label: "Stock",
       items: [
         { href: "/stocks", label: t.nav.stocks, icon: Package, badge: 6 },
         { href: "/import", label: t.nav.import, icon: Upload, badge: null },
@@ -62,7 +61,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       ],
     },
     {
-      label: "Procurement",
+      label: "Achats",
       items: [
         { href: "/achats", label: t.nav.achats, icon: Truck, badge: null },
       ],
@@ -76,14 +75,14 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       ],
     },
     {
-      label: "Insights",
+      label: "Analyses",
       items: [
-        { href: "/historique", label: "Product History", icon: History, badge: null },
+        { href: "/historique", label: t.nav.historique || "Historique", icon: History, badge: null },
         { href: "/ia", label: t.nav.ia, icon: Cpu, badge: null },
       ],
     },
     {
-      label: "Team",
+      label: "Equipe",
       items: [
         { href: "/employes", label: t.nav.employes, icon: Users, badge: null },
         { href: "/planning", label: t.nav.planning, icon: Calendar, badge: null },
@@ -92,35 +91,33 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     {
       label: "",
       items: [
-        { href: "/settings", label: "Settings", icon: Settings, badge: null },
+        { href: "/settings", label: t.nav.settings || "Parametres", icon: Settings, badge: null },
       ],
     },
   ];
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-[260px] bg-[#0f172a] flex flex-col z-40">
-      {/* Logo — client logo or KABRAK default */}
-      <div className="h-16 flex items-center px-4 border-b border-white/[0.06] shrink-0 justify-between">
-        <div className="flex items-center gap-3">
+    <aside className="fixed left-0 top-0 h-screen w-[252px] bg-[var(--sidebar-bg)] border-r border-[var(--sidebar-border)] flex flex-col z-40">
+      {/* Brand header */}
+      <div className="h-[60px] flex items-center px-5 border-b border-[var(--sidebar-border)] shrink-0 justify-between">
+        <div className="flex items-center gap-2.5">
           {config?.logoUrl ? (
             <img
               src={config.logoUrl}
               alt={config.supermarketName}
-              className="w-8 h-8 rounded-lg object-cover shrink-0"
+              className="w-8 h-8 rounded-lg object-cover shrink-0 ring-1 ring-[var(--border)]"
             />
           ) : (
-            <img
-              src="/kabrak-logo.jpeg"
-              alt="KABRAK"
-              className="w-8 h-8 rounded-lg object-cover shrink-0"
-            />
+            <div className="w-8 h-8 rounded-lg bg-[var(--brand)] flex items-center justify-center shrink-0 shadow-[var(--shadow-brand)]">
+              <span className="text-white font-bold text-[13px] tracking-tight">K</span>
+            </div>
           )}
           <div className="min-w-0">
-            <span className="text-white font-semibold text-[15px] leading-none tracking-tight truncate block">
-              {config?.supermarketName || "KABRAK Retail"}
+            <span className="text-[var(--text-primary)] font-semibold text-[14px] leading-none tracking-tight truncate block">
+              {config?.supermarketName || "KABRAK"}
             </span>
-            <span className="block text-[10px] text-slate-400 tracking-widest uppercase mt-0.5">
-              {license?.type === "MULTI_STORE" ? "Multi-Store" : "Retail"}
+            <span className="block text-[10px] text-[var(--text-muted)] tracking-wider uppercase mt-1 font-medium">
+              {license?.type === "MULTI_STORE" ? "Multi-Store" : "Retail Suite"}
             </span>
           </div>
         </div>
@@ -129,9 +126,6 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto px-3 py-4">
-        <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest px-3 mb-3">
-          {t.nav.navigation}
-        </p>
         <ul className="space-y-0.5">
           {navGroups.map((group) => {
             const visibleItems = group.items.filter((item) =>
@@ -139,9 +133,9 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             );
             if (visibleItems.length === 0) return null;
             return (
-              <li key={group.label || group.items[0]?.href} className="mb-1">
+              <li key={group.label || group.items[0]?.href} className="mb-0.5">
                 {group.label && (
-                  <p className="px-3 pt-3 pb-1 text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-widest">
+                  <p className="px-3 pt-4 pb-1 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">
                     {group.label}
                   </p>
                 )}
@@ -154,26 +148,23 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
                           href={href}
                           onClick={onNavigate}
                           className={cn(
-                            "group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150",
+                            "group flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150",
                             active
-                              ? "bg-[var(--brand)] text-white shadow-md shadow-blue-900/30"
-                              : "text-slate-400 hover:text-white hover:bg-white/[0.06]"
+                              ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)]"
+                              : "text-[var(--sidebar-text)] hover:text-[var(--sidebar-text-hover)] hover:bg-[var(--surface-2)]"
                           )}
                         >
-                          <Icon className="w-4 h-4 shrink-0" />
+                          <Icon className={cn("w-[18px] h-[18px] shrink-0", active ? "text-[var(--brand)]" : "")} />
                           <span className="flex-1 truncate">{label}</span>
                           {badge != null && badge > 0 && (
                             <span
                               className={cn(
                                 "text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center tabular-nums",
-                                active ? "bg-white/20 text-white" : "bg-red-500 text-white"
+                                active ? "bg-[var(--brand)] text-white" : "bg-[var(--danger)] text-white"
                               )}
                             >
                               {badge}
                             </span>
-                          )}
-                          {active && (
-                            <ChevronRight className="w-3.5 h-3.5 text-white/60 shrink-0" />
                           )}
                         </Link>
                       </li>
@@ -186,17 +177,17 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         </ul>
       </nav>
 
-      {/* Footer */}
-      <div className="px-4 py-3 border-t border-white/[0.06] shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-white/[0.08] flex items-center justify-center text-white text-[11px] font-medium shrink-0">
+      {/* Footer — user + signature */}
+      <div className="px-3 py-3 border-t border-[var(--sidebar-border)] shrink-0">
+        <div className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-[var(--surface-2)] transition-colors">
+          <div className="w-8 h-8 rounded-full bg-[var(--brand-light)] flex items-center justify-center text-[var(--brand-dark)] text-[11px] font-semibold shrink-0">
             {user ? user.firstName.charAt(0) + user.lastName.charAt(0) : "AB"}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-white text-[12px] font-medium truncate">
+            <p className="text-[var(--text-primary)] text-[12px] font-medium truncate">
               {user ? `${user.firstName} ${user.lastName}` : "Grace Johnson"}
             </p>
-            <p className="text-slate-500 text-[11px] truncate capitalize">
+            <p className="text-[var(--text-muted)] text-[11px] truncate capitalize">
               {user ? user.role : "Boss"}
             </p>
           </div>
@@ -204,13 +195,15 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             <button
               onClick={logout}
               title="Sign out"
-              className="text-slate-400 hover:text-red-400 transition-colors"
+              className="text-[var(--text-muted)] hover:text-[var(--danger)] transition-colors p-1"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-[16px] h-[16px]" />
             </button>
           )}
         </div>
-        <p className="text-[10px] text-slate-600 mt-3 text-center">Powered by KABRAK eng</p>
+        <p className="text-[10px] text-[var(--text-muted)] mt-2.5 text-center font-medium tracking-wide">
+          KABRAK ENG <span className="text-[var(--brand)]">v2.0</span>
+        </p>
       </div>
     </aside>
   );

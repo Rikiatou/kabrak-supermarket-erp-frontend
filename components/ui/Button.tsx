@@ -13,22 +13,22 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantStyles: Record<ButtonVariant, string> = {
   primary:
-    "bg-[var(--brand)] text-white hover:bg-[var(--brand-dark)] active:scale-[0.98] shadow-sm",
+    "bg-[var(--brand)] text-white hover:bg-[var(--brand-hover)] active:scale-[0.98] shadow-[var(--shadow-xs)]",
   secondary:
-    "bg-white text-[var(--text-primary)] border border-[var(--border)] hover:bg-[var(--surface-hover)] active:scale-[0.98]",
+    "bg-white text-[var(--text-primary)] border border-[var(--border)] hover:bg-[var(--surface-2)] active:scale-[0.98]",
   ghost:
-    "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] active:scale-[0.98]",
+    "text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] active:scale-[0.98]",
   danger:
-    "bg-[var(--danger)] text-white hover:bg-red-600 active:scale-[0.98] shadow-sm",
+    "bg-[var(--danger)] text-white hover:bg-[var(--danger)] active:scale-[0.98] shadow-[var(--shadow-xs)]",
   success:
-    "bg-[var(--success)] text-white hover:bg-emerald-600 active:scale-[0.98] shadow-sm",
+    "bg-[var(--success)] text-white hover:bg-[var(--brand-hover)] active:scale-[0.98] shadow-[var(--shadow-xs)]",
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
-  sm: "h-8 px-3 text-xs gap-1.5 rounded-lg",
-  md: "h-9 px-4 text-sm gap-2 rounded-xl",
-  lg: "h-11 px-5 text-sm gap-2 rounded-xl",
-  icon: "h-9 w-9 rounded-xl",
+  sm: "h-8 px-3 text-[12px] gap-1.5 rounded-md",
+  md: "h-9 px-4 text-[13px] gap-2 rounded-lg",
+  lg: "h-10 px-5 text-[14px] gap-2 rounded-lg",
+  icon: "h-9 w-9 rounded-lg",
 };
 
 export function Button({

@@ -21,6 +21,8 @@ export const translations = {
       scanner: "Scanner",
       import: "Import",
       navigation: "Navigation",
+      historique: "Historique",
+      settings: "Paramètres",
     },
     // Topbar
     topbar: {
@@ -1198,6 +1200,8 @@ export const translations = {
       scanner: "Scanner",
       import: "Import",
       navigation: "Navigation",
+      historique: "History",
+      settings: "Settings",
     },
     topbar: {
       search: "Quick search…",

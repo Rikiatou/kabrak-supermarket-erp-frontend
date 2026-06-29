@@ -133,20 +133,30 @@ export default function DashboardPage() {
       title={t.dashboard.title}
       subtitle={t.dashboard.subtitle}
     >
+      {/* Hero greeting */}
+      <div className="mb-6">
+        <h2 className="text-[22px] font-bold text-[var(--text-primary)] tracking-tight">
+          Bonjour, {user?.firstName || "Boss"}
+        </h2>
+        <p className="text-[13px] text-[var(--text-muted)] mt-0.5">
+          {t.dashboard.subtitle}
+        </p>
+      </div>
+
       {/* Status bar */}
-      <div className="flex items-center gap-3 mb-6 flex-wrap">
-        <div className="flex items-center gap-2 bg-[var(--success-light)] text-emerald-700 text-xs font-medium px-3 py-1.5 rounded-full">
-          <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+      <div className="flex items-center gap-2 mb-5 flex-wrap">
+        <div className="flex items-center gap-2 bg-[var(--success-light)] text-[var(--success)] text-[11px] font-semibold px-3 py-1.5 rounded-md">
+          <span className="w-1.5 h-1.5 bg-[var(--success)] rounded-full animate-pulse" />
           {t.dashboard.cashierOpen} — {openCashiersCount} {t.dashboard.activeCashiers}
         </div>
         {criticalAlerts > 0 && (
-          <div className="flex items-center gap-2 bg-[var(--danger-light)] text-red-700 text-xs font-medium px-3 py-1.5 rounded-full">
+          <div className="flex items-center gap-2 bg-[var(--danger-light)] text-[var(--danger)] text-[11px] font-semibold px-3 py-1.5 rounded-md">
             <AlertTriangle className="w-3.5 h-3.5" />
             {criticalAlerts} {t.dashboard.criticalOutOfStock}
           </div>
         )}
         {expiringAlerts > 0 && (
-          <div className="flex items-center gap-2 bg-[var(--warning-light)] text-amber-700 text-xs font-medium px-3 py-1.5 rounded-full">
+          <div className="flex items-center gap-2 bg-[var(--warning-light)] text-[var(--warning)] text-[11px] font-semibold px-3 py-1.5 rounded-md">
             <AlertTriangle className="w-3.5 h-3.5" />
             {expiringAlerts} {t.dashboard.expiringSoon}
           </div>
@@ -160,7 +170,7 @@ export default function DashboardPage() {
             <Link
               key={s.href + s.label}
               href={s.href}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold transition-all hover:opacity-80 active:scale-95 ${s.color}`}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-[12px] font-semibold transition-all hover:opacity-80 active:scale-95 ${s.color}`}
             >
               <s.icon className="w-3.5 h-3.5" />
               {s.label}
@@ -170,13 +180,13 @@ export default function DashboardPage() {
       )}
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <KpiCard
           label={t.dashboard.caRevenue}
           value={revenue}
           previous={yesterdayRevenue}
           format="currency"
-          icon={revenueChange >= 0 ? <TrendingUp className="w-5 h-5 text-[var(--brand)]" /> : <TrendingDown className="w-5 h-5 text-red-500" />}
+          icon={revenueChange >= 0 ? <TrendingUp className="w-5 h-5 text-[var(--brand)]" /> : <TrendingDown className="w-5 h-5 text-[var(--danger)]" />}
           iconBg="bg-[var(--brand-light)]"
         />
         <KpiCard
@@ -184,7 +194,7 @@ export default function DashboardPage() {
           value={averageBasket?.average ?? 0}
           previous={0}
           format="currency"
-          icon={<ShoppingBag className="w-5 h-5 text-emerald-600" />}
+          icon={<ShoppingBag className="w-5 h-5 text-[var(--success)]" />}
           iconBg="bg-[var(--success-light)]"
         />
         <KpiCard
@@ -192,7 +202,7 @@ export default function DashboardPage() {
           value={transactionsCount}
           previous={yesterdayTransactions}
           format="number"
-          icon={<ShoppingBag className="w-5 h-5 text-indigo-600" />}
+          icon={<ShoppingBag className="w-5 h-5 text-[var(--info)]" />}
           iconBg="bg-[var(--info-light)]"
         />
         <KpiCard
@@ -200,7 +210,7 @@ export default function DashboardPage() {
           value={unpaidInvoices?.totalUnpaid ?? 0}
           previous={0}
           format="currency"
-          icon={<AlertTriangle className="w-5 h-5 text-red-600" />}
+          icon={<AlertTriangle className="w-5 h-5 text-[var(--danger)]" />}
           iconBg="bg-[var(--danger-light)]"
         />
       </div>
@@ -248,11 +258,11 @@ export default function DashboardPage() {
                   </span>
                   <div className="w-full flex items-end justify-center h-24">
                     <div
-                      className={`w-full max-w-[40px] rounded-t-lg transition-all hover:opacity-80 ${
+                      className={`w-full max-w-[40px] rounded-t-md transition-all hover:opacity-80 ${
                         isToday
-                          ? "bg-gradient-to-t from-[var(--brand)] to-blue-400"
+                          ? "bg-gradient-to-t from-[var(--brand)] to-[var(--brand-mid)]"
                           : day.revenue > 0
-                            ? "bg-gradient-to-t from-blue-300 to-blue-200"
+                            ? "bg-gradient-to-t from-[var(--brand-mid)] to-[var(--brand-light)]"
                             : "bg-slate-100"
                       }`}
                       style={{ height: `${Math.max(heightPct, 2)}%` }}

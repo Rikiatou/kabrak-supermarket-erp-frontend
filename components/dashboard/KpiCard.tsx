@@ -37,11 +37,11 @@ export function KpiCard({
       : `${(value ?? 0).toFixed(1)}%`;
 
   return (
-    <div className="bg-white border border-[var(--border)] rounded-2xl p-5 shadow-[var(--shadow-sm)] hover:shadow-[var(--shadow)] transition-shadow duration-200">
-      <div className="flex items-start justify-between mb-4">
+    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 shadow-[var(--shadow-xs)] hover:shadow-[var(--shadow-sm)] transition-shadow duration-200">
+      <div className="flex items-start justify-between mb-3">
         <div
           className={cn(
-            "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
+            "w-9 h-9 rounded-lg flex items-center justify-center shrink-0",
             iconBg
           )}
         >
@@ -49,12 +49,12 @@ export function KpiCard({
         </div>
         <div
           className={cn(
-            "flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg",
+            "flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md",
             isFlat
               ? "bg-slate-100 text-slate-500"
               : isUp
-              ? "bg-[var(--success-light)] text-emerald-700"
-              : "bg-[var(--danger-light)] text-red-600"
+              ? "bg-[var(--success-light)] text-[var(--success)]"
+              : "bg-[var(--danger-light)] text-[var(--danger)]"
           )}
         >
           {isFlat ? (
@@ -68,11 +68,11 @@ export function KpiCard({
         </div>
       </div>
 
-      <p className="text-2xl font-bold text-[var(--text-primary)] tabular-nums leading-none mb-1">
+      <p className="text-[22px] font-bold text-[var(--text-primary)] tabular-nums leading-none mb-1 tracking-tight">
         {display}
         {suffix && <span className="text-sm font-normal text-[var(--text-muted)] ml-1">{suffix}</span>}
       </p>
-      <p className="text-xs text-[var(--text-muted)] font-medium">{label}</p>
+      <p className="text-[12px] text-[var(--text-secondary)] font-medium">{label}</p>
       <p className="text-[11px] text-[var(--text-muted)] mt-1">
         {t.kpiCard.vsYesterday}{" "}
         <span className="tabular-nums">
