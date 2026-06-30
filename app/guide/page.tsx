@@ -60,8 +60,8 @@ const ALL_MODULES: ModuleGuide[] = [
     title: { fr: "Caisse / POS", en: "Checkout / POS" },
     subtitle: { fr: "Point de vente", en: "Point of sale" },
     description: {
-      fr: "L'interface de caisse permet de traiter les ventes rapidement. Scanner un code-barres ou rechercher un produit, sélectionner la quantité, appliquer des remises et encaisser le paiement.",
-      en: "The POS interface allows fast sale processing. Scan a barcode or search a product, set quantity, apply discounts, and collect payment.",
+      fr: "L'interface de caisse permet de traiter les ventes rapidement. Scanner un code-barres ou rechercher un produit, sélectionner la quantité, appliquer des remises et encaisser le paiement. Inclut la mise en attente de ventes et l'affichage client automatique.",
+      en: "The POS interface allows fast sale processing. Scan a barcode or search a product, set quantity, apply discounts, and collect payment. Includes sale holding and automatic customer display.",
     },
     actions: [
       { fr: "Scanner un code-barres ou rechercher par nom", en: "Scan a barcode or search by name" },
@@ -70,13 +70,24 @@ const ALL_MODULES: ModuleGuide[] = [
       { fr: "Encaisser en espèces, mobile money ou carte", en: "Collect payment in cash, mobile money, or card" },
       { fr: "Imprimer un reçu thermique ou A4", en: "Print a thermal or A4 receipt" },
       { fr: "Associer un client fidélité à la vente", en: "Link a loyalty customer to the sale" },
+      { fr: "Mettre une vente en attente ('Attente') si le client part temporairement", en: "Hold a sale ('Hold') if the customer leaves temporarily" },
+      { fr: "Rappeler une vente en attente ('Rappeler') quand le client revient", en: "Recall a held sale ('Recall') when the customer returns" },
+      { fr: "Connecter un afficheur client USB (bouton 'USB')", en: "Connect a USB customer display ('USB' button)" },
     ],
     tips: [
       { fr: "Touche Entrée après le code-barres = ajout instantané", en: "Enter key after barcode = instant add" },
       { fr: "Le POS fonctionne même sans connexion internet (mode hors-ligne)", en: "POS works offline (offline mode)" },
+      { fr: "Bouton 'Attente' (orange) : sauvegarde le panier, vide la caisse pour servir un autre client", en: "'Hold' button (orange): saves the cart, clears the register to serve another customer" },
+      { fr: "Bouton 'Rappeler' (bleu, avec badge) : liste les paniers en attente avec n°, articles, total et heure", en: "'Recall' button (blue, with badge): lists held carts with number, items, total and time" },
+      { fr: "Les paniers en attente persistent même après fermeture du navigateur", en: "Held carts persist even after closing the browser" },
+      { fr: "Écran client : ouvrir /pos/display dans un nouvel onglet, glisser sur le 2e moniteur, F11 = plein écran", en: "Customer display: open /pos/display in a new tab, drag to 2nd monitor, F11 = fullscreen" },
+      { fr: "L'écran client se met à jour automatiquement à chaque scan (rien à cliquer)", en: "The customer display updates automatically on every scan (nothing to click)" },
+      { fr: "Afficheur USB : bouton 'USB' → Chrome demande le port COM → connecté (vert). Chrome/Edge uniquement", en: "USB display: 'USB' button → Chrome asks for COM port → connected (green). Chrome/Edge only" },
+      { fr: "L'écran client affiche le nom du magasin et les messages dans la langue choisie (FR/EN)", en: "Customer display shows store name and messages in the selected language (FR/EN)" },
     ],
     warnings: [
       { fr: "Toujours ouvrir une session de caisse avant de commencer à vendre", en: "Always open a cash session before starting to sell" },
+      { fr: "L'afficheur USB nécessite Chrome ou Edge (Web Serial API non supporté sur Firefox)", en: "USB display requires Chrome or Edge (Web Serial API not supported on Firefox)" },
     ],
   },
   {
@@ -87,8 +98,8 @@ const ALL_MODULES: ModuleGuide[] = [
     title: { fr: "Stocks & Inventaire", en: "Stock & Inventory" },
     subtitle: { fr: "Gestion des produits et niveaux de stock", en: "Product and stock level management" },
     description: {
-      fr: "Gérer tout le catalogue produits : ajouter, modifier, ajuster les stocks, suivre les dates d'expiration, et consulter les mouvements par produit.",
-      en: "Manage the full product catalog: add, edit, adjust stock, track expiry dates, and view movements per product.",
+      fr: "Gérer tout le catalogue produits : ajouter, modifier, ajuster les stocks, suivre les dates d'expiration par lot, et consulter les mouvements par produit.",
+      en: "Manage the full product catalog: add, edit, adjust stock, track expiry dates per batch, and view movements per product.",
     },
     actions: [
       { fr: "Ajouter un nouveau produit (nom, prix, code-barres, catégorie)", en: "Add a new product (name, price, barcode, category)" },
@@ -97,10 +108,16 @@ const ALL_MODULES: ModuleGuide[] = [
       { fr: "Voir les articles en rupture ou proches de l'expiration", en: "View out-of-stock or near-expiry items" },
       { fr: "Consulter l'historique des mouvements d'un produit", en: "View the movement history of a product" },
       { fr: "Appliquer un prix de promotion temporaire", en: "Apply a temporary promotional price" },
+      { fr: "Consulter les lots (batches) d'un produit — section dépliable 'Lots'", en: "View a product's batches — expandable 'Batches' section" },
     ],
     tips: [
       { fr: "Le badge rouge sur le menu Stocks indique le nombre d'alertes actives", en: "The red badge on the Stock menu shows the number of active alerts" },
       { fr: "Un article dont la date d'expiration est dans 7 jours passe en alerte orange", en: "An item expiring within 7 days turns to an orange alert" },
+      { fr: "Section 'Lots' : chaque livraison crée un lot avec sa propre date d'expiration", en: "'Batches' section: each delivery creates a batch with its own expiry date" },
+      { fr: "Un produit peut avoir plusieurs lots avec des dates différentes (même code-barres)", en: "A product can have multiple batches with different dates (same barcode)" },
+      { fr: "À la caisse, le système vend automatiquement le lot le plus ancien en premier (FIFO)", en: "At checkout, the system automatically sells the oldest batch first (FIFO)" },
+      { fr: "Chaque lot affiche : quantité restante/initiale, date de réception, date d'expiration, D-jours", en: "Each batch shows: remaining/initial quantity, received date, expiry date, D-days" },
+      { fr: "Couleurs des lots : rouge = expiré, orange = ≤7 jours, normal = OK", en: "Batch colors: red = expired, orange = ≤7 days, normal = OK" },
     ],
   },
   {
@@ -152,18 +169,21 @@ const ALL_MODULES: ModuleGuide[] = [
     title: { fr: "Achats & Fournisseurs", en: "Purchases & Suppliers" },
     subtitle: { fr: "Commandes et réceptions de marchandises", en: "Purchase orders and goods receipt" },
     description: {
-      fr: "Gérer les fournisseurs, créer des bons de commande, enregistrer les livraisons et mettre à jour le stock automatiquement à la réception.",
-      en: "Manage suppliers, create purchase orders, record deliveries, and auto-update stock on receipt.",
+      fr: "Gérer les fournisseurs, créer des bons de commande, enregistrer les livraisons et mettre à jour le stock automatiquement à la réception. Chaque livraison avec date d'expiration crée un lot (batch) séparé.",
+      en: "Manage suppliers, create purchase orders, record deliveries, and auto-update stock on receipt. Each delivery with an expiry date creates a separate batch.",
     },
     actions: [
       { fr: "Créer et gérer les fiches fournisseurs", en: "Create and manage supplier cards" },
       { fr: "Créer un bon de commande (BC) avec les articles commandés", en: "Create a purchase order (PO) with ordered items" },
       { fr: "Enregistrer une livraison directe (bon de livraison)", en: "Record a direct delivery (delivery note)" },
-      { fr: "Valider la réception : le stock est mis à jour automatiquement", en: "Confirm receipt: stock is updated automatically" },
+      { fr: "Saisir la date d'expiration pour chaque ligne de livraison", en: "Enter the expiry date for each delivery line" },
+      { fr: "Valider la réception : le stock est mis à jour + un lot est créé automatiquement", en: "Confirm receipt: stock is updated + a batch is created automatically" },
       { fr: "Scanner les articles reçus directement depuis le module", en: "Scan received items directly from the module" },
     ],
     tips: [
       { fr: "Un bon de commande partiellement reçu reste en statut 'partiel' jusqu'à réception complète", en: "A partially received PO stays in 'partial' status until fully received" },
+      { fr: "La date d'expiration saisie crée un lot visible dans Stocks → détail produit → 'Lots'", en: "The entered expiry date creates a batch visible in Stocks → product detail → 'Batches'" },
+      { fr: "Deux livraisons du même produit avec dates différentes = deux lots séparés", en: "Two deliveries of the same product with different dates = two separate batches" },
     ],
   },
   {
