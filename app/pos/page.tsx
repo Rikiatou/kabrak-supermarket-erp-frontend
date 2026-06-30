@@ -1594,14 +1594,6 @@ export default function POSPage() {
 
     if (!receipt) return;
 
-
-
-    const printWindow = window.open("", "_blank", "width=400,height=600");
-
-    if (!printWindow) return;
-
-
-
     const now = new Date();
 
     const dateStr = now.toLocaleDateString("en-GB");
@@ -1654,7 +1646,25 @@ export default function POSPage() {
 
 
 
-    printWindow.document.write(`
+    // Utiliser un iframe caché au lieu d'un popup (évite les bloqueurs de popup)
+    const printFrame = document.createElement("iframe");
+    printFrame.style.position = "fixed";
+    printFrame.style.right = "0";
+    printFrame.style.bottom = "0";
+    printFrame.style.width = "0";
+    printFrame.style.height = "0";
+    printFrame.style.border = "0";
+    document.body.appendChild(printFrame);
+
+    const printDoc = printFrame.contentWindow?.document || printFrame.contentDocument;
+
+    if (!printDoc) {
+      document.body.removeChild(printFrame);
+      toast(locale === "fr" ? "Erreur impression — réessayer" : "Print error — retry", "warning");
+      return;
+    }
+
+    printDoc.write(`
 
       <html>
 
@@ -1760,15 +1770,18 @@ export default function POSPage() {
 
     `);
 
-    printWindow.document.close();
+    printDoc.close();
 
-    printWindow.focus();
+    printFrame.contentWindow?.focus();
 
     setTimeout(() => {
 
-      printWindow.print();
+      printFrame.contentWindow?.print();
 
-      printWindow.close();
+      // Supprimer l'iframe après impression
+      setTimeout(() => {
+        if (printFrame.parentNode) document.body.removeChild(printFrame);
+      }, 1000);
 
     }, 500);
 
@@ -1780,11 +1793,23 @@ export default function POSPage() {
 
   const handleReprintTransaction = useCallback((tx: ApiTransaction) => {
 
-    const printWindow = window.open("", "_blank", "width=400,height=600");
+    // Utiliser un iframe caché (évite les bloqueurs de popup)
+    const printFrame = document.createElement("iframe");
+    printFrame.style.position = "fixed";
+    printFrame.style.right = "0";
+    printFrame.style.bottom = "0";
+    printFrame.style.width = "0";
+    printFrame.style.height = "0";
+    printFrame.style.border = "0";
+    document.body.appendChild(printFrame);
 
-    if (!printWindow) return;
+    const printDoc = printFrame.contentWindow?.document || printFrame.contentDocument;
 
-
+    if (!printDoc) {
+      document.body.removeChild(printFrame);
+      toast(locale === "fr" ? "Erreur impression — réessayer" : "Print error — retry", "warning");
+      return;
+    }
 
     const date = new Date(tx.date);
 
@@ -1836,7 +1861,7 @@ export default function POSPage() {
 
 
 
-    printWindow.document.write(`
+    printDoc.write(`
 
       <html>
 
@@ -1936,15 +1961,17 @@ export default function POSPage() {
 
     `);
 
-    printWindow.document.close();
+    printDoc.close();
 
-    printWindow.focus();
+    printFrame.contentWindow?.focus();
 
     setTimeout(() => {
 
-      printWindow.print();
+      printFrame.contentWindow?.print();
 
-      printWindow.close();
+      setTimeout(() => {
+        if (printFrame.parentNode) document.body.removeChild(printFrame);
+      }, 1000);
 
     }, 500);
 
