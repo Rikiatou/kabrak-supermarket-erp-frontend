@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { formatCurrency } from "@/lib/utils";
-import { STORE_INFO } from "../store-info";
+import { STORE_INFO, getStoreInfo } from "../store-info";
+import { useLicense } from "@/lib/license/context";
 
 type DisplayState = {
   type: "idle" | "cart" | "payment" | "thanks";
@@ -28,11 +29,28 @@ function getDisplayState(): DisplayState {
   }
 }
 
+function getLang(): "fr" | "en" {
+  if (typeof window === "undefined") return "fr";
+  try {
+    const raw = localStorage.getItem("kabrak-locale");
+    return raw === "en" ? "en" : "fr";
+  } catch {
+    return "fr";
+  }
+}
+
 export default function CustomerDisplayPage() {
   const [state, setState] = useState<DisplayState>({ type: "idle" });
+  const [lang, setLang] = useState<"fr" | "en">("fr");
+  const { config: licenseConfig } = useLicense();
+  const storeInfo = getStoreInfo(licenseConfig);
+  const L = lang === "fr" ? "fr" : "en";
 
   useEffect(() => {
-    const update = () => setState(getDisplayState());
+    const update = () => {
+      setState(getDisplayState());
+      setLang(getLang());
+    };
     update();
     window.addEventListener("storage", update);
     const interval = setInterval(update, 500); // fallback polling
@@ -47,11 +65,11 @@ export default function CustomerDisplayPage() {
       <div className="min-h-screen bg-gradient-to-br from-slate-900 to-[var(--brand)] flex flex-col items-center justify-center text-white p-8">
         <div className="text-center space-y-6">
           <div className="w-32 h-32 bg-white/20 rounded-full flex items-center justify-center mx-auto">
-            <span className="text-6xl font-bold">{STORE_INFO.name.charAt(0)}</span>
+            <span className="text-6xl font-bold">{storeInfo.name.charAt(0)}</span>
           </div>
-          <h1 className="text-6xl font-bold">{STORE_INFO.name}</h1>
-          <p className="text-2xl opacity-80">Bienvenue · Welcome</p>
-          <p className="text-lg opacity-60">{STORE_INFO.address}</p>
+          <h1 className="text-6xl font-bold">{storeInfo.name}</h1>
+          <p className="text-2xl opacity-80">{L === "fr" ? "Bienvenue" : "Welcome"}</p>
+          <p className="text-lg opacity-60">{storeInfo.address}</p>
         </div>
       </div>
     );
@@ -64,9 +82,9 @@ export default function CustomerDisplayPage() {
           <div className="w-32 h-32 bg-white/20 rounded-full flex items-center justify-center mx-auto">
             <span className="text-6xl font-bold">✓</span>
           </div>
-          <h1 className="text-6xl font-bold">Merci!</h1>
-          <p className="text-3xl opacity-90">Thank you for your purchase</p>
-          <p className="text-2xl opacity-80">See you soon</p>
+          <h1 className="text-6xl font-bold">{L === "fr" ? "Merci!" : "Thank you!"}</h1>
+          <p className="text-3xl opacity-90">{L === "fr" ? "Merci pour votre achat" : "Thank you for your purchase"}</p>
+          <p className="text-2xl opacity-80">{L === "fr" ? "À bientôt" : "See you soon"}</p>
         </div>
       </div>
     );
@@ -77,12 +95,12 @@ export default function CustomerDisplayPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--text-primary)]">{STORE_INFO.name}</h1>
-          <p className="text-sm text-[var(--text-muted)]">{STORE_INFO.address}</p>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">{storeInfo.name}</h1>
+          <p className="text-sm text-[var(--text-muted)]">{storeInfo.address}</p>
         </div>
         <div className="text-right">
-          <p className="text-sm text-[var(--text-muted)]">{state.type === "payment" ? "Paiement en cours" : "Votre panier"}</p>
-          <p className="text-sm text-[var(--text-muted)]">{state.itemCount} article{state.itemCount !== 1 ? "s" : ""}</p>
+          <p className="text-sm text-[var(--text-muted)]">{state.type === "payment" ? (L === "fr" ? "Paiement en cours" : "Payment in progress") : (L === "fr" ? "Votre panier" : "Your cart")}</p>
+          <p className="text-sm text-[var(--text-muted)]">{state.itemCount} {L === "fr" ? "article" : "item"}{state.itemCount !== 1 ? (L === "fr" ? "s" : "s") : ""}</p>
           {state.customer && (
             <p className="text-sm font-medium text-[var(--brand)]">{state.customer.name} · {state.customer.points} pts</p>
           )}
@@ -108,7 +126,7 @@ export default function CustomerDisplayPage() {
             </div>
           ) : (
             <div className="h-full flex items-center justify-center text-[var(--text-muted)]">
-              <p className="text-xl">No active items</p>
+              <p className="text-xl">{L === "fr" ? "Aucun article" : "No active items"}</p>
             </div>
           )}
         </div>
@@ -117,24 +135,24 @@ export default function CustomerDisplayPage() {
         <div className="bg-[var(--brand)] text-white p-8">
           {state.discount && state.discount > 0 && (
             <div className="flex justify-between items-center mb-2 opacity-80">
-              <span className="text-lg">Remise</span>
+              <span className="text-lg">{L === "fr" ? "Remise" : "Discount"}</span>
               <span className="text-xl font-bold tabular-nums">-{formatCurrency(state.discount)}</span>
             </div>
           )}
           <div className="flex justify-between items-center">
             <span className="text-2xl font-medium opacity-90">
-              {state.type === "payment" ? "TOTAL DUE" : "TOTAL"}
+              {state.type === "payment" ? (L === "fr" ? "TOTAL À PAYER" : "TOTAL DUE") : "TOTAL"}
             </span>
             <span className="text-6xl font-bold tabular-nums">{formatCurrency(state.total || 0)}</span>
           </div>
           {state.type === "payment" && state.amountDue != null && state.amountDue > 0 && (
             <div className="mt-4 text-right">
-              <p className="text-lg opacity-80">Remaining: {formatCurrency(state.amountDue)}</p>
+              <p className="text-lg opacity-80">{L === "fr" ? "Reste à payer" : "Remaining"}: {formatCurrency(state.amountDue)}</p>
             </div>
           )}
           {state.change != null && state.change > 0 && (
             <div className="mt-4 text-right">
-              <p className="text-lg opacity-80">Monnaie: {formatCurrency(state.change)}</p>
+              <p className="text-lg opacity-80">{L === "fr" ? "Monnaie" : "Change"}: {formatCurrency(state.change)}</p>
             </div>
           )}
         </div>

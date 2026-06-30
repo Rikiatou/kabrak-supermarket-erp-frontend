@@ -190,7 +190,7 @@ interface HeldCart {
 
 export default function POSPage() {
 
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
 
   const { products: apiProducts, loading, reload } = useProducts();
 
@@ -984,7 +984,11 @@ export default function POSPage() {
 
       toast("Afficheur USB connecté", "success");
 
-      await writeToUsbDisplay("  KABRAK MARKET  ", "   Bienvenue!   ");
+      const storeName = (storeInfo.name || "KABRAK").slice(0, 20).padEnd(20, " ");
+
+      const welcome = (locale === "fr" ? "   Bienvenue!   " : "    Welcome!    ").slice(0, 20).padEnd(20, " ");
+
+      await writeToUsbDisplay(storeName, welcome);
 
     } catch (e: any) {
 
@@ -1226,17 +1230,25 @@ export default function POSPage() {
 
       if (cart.length === 0) {
 
-        writeToUsbDisplay("  KABRAK MARKET  ", "   Bienvenue!   ");
+        const storeName = (storeInfo.name || "KABRAK").slice(0, 20).padEnd(20, " ");
+
+        const welcome = (locale === "fr" ? "   Bienvenue!   " : "    Welcome!    ").slice(0, 20).padEnd(20, " ");
+
+        writeToUsbDisplay(storeName, welcome);
 
       } else {
 
         const totalStr = total.toLocaleString("fr-FR") + " F";
 
+        const payMsg = locale === "fr" ? "  Paiement...   " : "  Payment...    ";
+
+        const thanksMsg = locale === "fr" ? "  Merci!        " : "  Thank you!    ";
+
         writeToUsbDisplay(
 
           `${itemCount} art. ${totalStr}`.slice(0, 20),
 
-          checkoutStep === "payment" ? "  Paiement...   " : "  Merci!        "
+          checkoutStep === "payment" ? payMsg : thanksMsg
 
         );
 
@@ -1244,7 +1256,7 @@ export default function POSPage() {
 
     }
 
-  }, [cart, checkoutStep, subtotal, discount, total, selectedCustomer]);
+  }, [cart, checkoutStep, subtotal, discount, total, selectedCustomer, locale, storeInfo.name]);
 
 
 
