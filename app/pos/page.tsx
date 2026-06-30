@@ -50,6 +50,12 @@ import {
 
   ShoppingCart,
 
+  PauseCircle,
+
+  ListRestart,
+
+  Monitor,
+
 } from "lucide-react";
 
 
@@ -87,6 +93,22 @@ import type { Product, CartItem } from "@/lib/types";
 import { STORE_INFO, getStoreInfo } from "./store-info";
 
 import { useLicense } from "@/lib/license/context";
+
+
+
+// Web Serial API types
+declare global {
+  interface Navigator {
+    serial?: {
+      requestPort(options?: Record<string, unknown>): Promise<SerialPort>;
+    };
+  }
+  interface SerialPort {
+    open(options: { baudRate: number; dataBits?: number; stopBits?: number; parity?: string }): Promise<void>;
+    close(): Promise<void>;
+    writable: WritableStream<Uint8Array> | null;
+  }
+}
 
 
 
@@ -141,6 +163,26 @@ interface ReceiptData {
   change?: number;
 
   split?: SplitPayment;
+
+}
+
+
+
+interface HeldCart {
+
+  id: string;
+
+  holdNumber: number;
+
+  timestamp: string;
+
+  items: CartItem[];
+
+  customer: ApiCustomer | null;
+
+  discountAmount: number;
+
+  discountReason: string;
 
 }
 
@@ -279,6 +321,26 @@ export default function POSPage() {
   const [pendingTxCount, setPendingTxCount] = useState(0);
 
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
+
+  const [heldCarts, setHeldCarts] = useState<HeldCart[]>(() => {
+
+    if (typeof window === "undefined") return [];
+
+    try {
+
+      const raw = localStorage.getItem("kabrak_held_carts");
+
+      return raw ? JSON.parse(raw) : [];
+
+    } catch { return []; }
+
+  });
+
+  const [showHeldCarts, setShowHeldCarts] = useState(false);
+
+  const [usbDisplayConnected, setUsbDisplayConnected] = useState(false);
+
+  const usbPortRef = useRef<SerialPort | null>(null);
 
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -796,6 +858,166 @@ export default function POSPage() {
 
 
 
+  // ── Hold / Recall cart ──────────────────────────────────────────
+
+  const holdCart = () => {
+
+    if (cart.length === 0) return;
+
+    const holdNumber = heldCarts.length + 1;
+
+    const held: HeldCart = {
+
+      id: `hold-${Date.now()}`,
+
+      holdNumber,
+
+      timestamp: new Date().toISOString(),
+
+      items: [...cart],
+
+      customer: selectedCustomer,
+
+      discountAmount: cashierDiscountAmount,
+
+      discountReason: cashierDiscountReason,
+
+    };
+
+    const updated = [...heldCarts, held];
+
+    setHeldCarts(updated);
+
+    localStorage.setItem("kabrak_held_carts", JSON.stringify(updated));
+
+    clearCart();
+
+    setSelectedCustomer(null);
+
+    toast(`Transaction #${holdNumber} mise en attente`, "success");
+
+  };
+
+
+
+  const recallCart = (held: HeldCart) => {
+
+    if (cart.length > 0) {
+
+      toast("Vider le panier actuel avant de rappeler", "warning");
+
+      return;
+
+    }
+
+    setCart(held.items);
+
+    setSelectedCustomer(held.customer);
+
+    setCashierDiscountAmount(held.discountAmount);
+
+    setCashierDiscountReason(held.discountReason);
+
+    const updated = heldCarts.filter((h) => h.id !== held.id);
+
+    setHeldCarts(updated);
+
+    localStorage.setItem("kabrak_held_carts", JSON.stringify(updated));
+
+    setShowHeldCarts(false);
+
+    toast(`Transaction #${held.holdNumber} rappelée`, "success");
+
+  };
+
+
+
+  // ── USB Customer Display (Web Serial API) ───────────────────────
+
+  const writeToUsbDisplay = async (line1: string, line2: string) => {
+
+    if (!usbPortRef.current) return;
+
+    try {
+
+      const writer = usbPortRef.current.writable?.getWriter();
+
+      if (!writer) return;
+
+      const enc = new TextEncoder();
+
+      const pad = (s: string, n: number) => s.slice(0, n).padEnd(n);
+
+      // FF = form feed (clear display on most VFD/LCD)
+
+      const msg = '\x0C' + pad(line1, 20) + pad(line2, 20);
+
+      await writer.write(enc.encode(msg));
+
+      writer.releaseLock();
+
+    } catch { /* ignore write errors */ }
+
+  };
+
+
+
+  const connectUsbDisplay = async () => {
+
+    if (!('serial' in navigator)) {
+
+      toast("Web Serial non supporté — utiliser Chrome ou Edge", "warning");
+
+      return;
+
+    }
+
+    try {
+
+      const port = await (navigator as any).serial.requestPort();
+
+      await port.open({ baudRate: 9600, dataBits: 8, stopBits: 1, parity: "none" });
+
+      usbPortRef.current = port;
+
+      setUsbDisplayConnected(true);
+
+      toast("Afficheur USB connecté", "success");
+
+      await writeToUsbDisplay("  KABRAK MARKET  ", "   Bienvenue!   ");
+
+    } catch (e: any) {
+
+      if (e?.name !== "NotAllowedError") {
+
+        toast("Erreur connexion afficheur", "warning");
+
+      }
+
+    }
+
+  };
+
+
+
+  const disconnectUsbDisplay = async () => {
+
+    if (usbPortRef.current) {
+
+      try { await usbPortRef.current.close(); } catch {}
+
+      usbPortRef.current = null;
+
+    }
+
+    setUsbDisplayConnected(false);
+
+    toast("Afficheur USB déconnecté", "success");
+
+  };
+
+
+
   const subtotal = cart.reduce((s, i) => s + getEffectivePrice(i.product) * i.quantity, 0);
 
   const tax = Math.round(subtotal * TAX_RATE);
@@ -995,6 +1217,32 @@ export default function POSPage() {
     // Déclencher un événement pour les autres onglets (écran client)
 
     window.dispatchEvent(new StorageEvent("storage", { key: "kabrak_pos_display" }));
+
+    // USB display update
+
+    if (usbPortRef.current) {
+
+      const itemCount = cart.reduce((s, i) => s + i.quantity, 0);
+
+      if (cart.length === 0) {
+
+        writeToUsbDisplay("  KABRAK MARKET  ", "   Bienvenue!   ");
+
+      } else {
+
+        const totalStr = total.toLocaleString("fr-FR") + " F";
+
+        writeToUsbDisplay(
+
+          `${itemCount} art. ${totalStr}`.slice(0, 20),
+
+          checkoutStep === "payment" ? "  Paiement...   " : "  Merci!        "
+
+        );
+
+      }
+
+    }
 
   }, [cart, checkoutStep, subtotal, discount, total, selectedCustomer]);
 
@@ -1854,6 +2102,70 @@ export default function POSPage() {
 
                     <button
 
+                      onClick={holdCart}
+
+                      className="h-8 px-3 text-[12px] font-medium text-amber-600 hover:bg-amber-50 rounded-lg flex items-center gap-1.5 transition-colors border border-amber-200"
+
+                    >
+
+                      <PauseCircle className="w-3.5 h-3.5" /> Attente
+
+                    </button>
+
+                  )}
+
+                  {heldCarts.length > 0 && (
+
+                    <button
+
+                      onClick={() => setShowHeldCarts(true)}
+
+                      className="relative h-8 px-3 text-[12px] font-medium text-blue-600 hover:bg-blue-50 rounded-lg flex items-center gap-1.5 transition-colors border border-blue-200"
+
+                    >
+
+                      <ListRestart className="w-3.5 h-3.5" /> Rappeler
+
+                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+
+                        {heldCarts.length}
+
+                      </span>
+
+                    </button>
+
+                  )}
+
+                  <button
+
+                    onClick={usbDisplayConnected ? disconnectUsbDisplay : connectUsbDisplay}
+
+                    title={usbDisplayConnected ? "Déconnecter afficheur USB" : "Connecter afficheur USB"}
+
+                    className={cn(
+
+                      "h-8 px-3 text-[12px] font-medium rounded-lg flex items-center gap-1.5 transition-colors border",
+
+                      usbDisplayConnected
+
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+
+                        : "bg-slate-50 text-slate-500 border-slate-200 hover:border-slate-300"
+
+                    )}
+
+                  >
+
+                    <Monitor className="w-3.5 h-3.5" />
+
+                    {usbDisplayConnected ? "USB ●" : "USB"}
+
+                  </button>
+
+                  {cart.length > 0 && (
+
+                    <button
+
                       onClick={clearCart}
 
                       className="h-8 px-3 text-[12px] font-medium text-red-400 hover:bg-red-50 rounded-lg flex items-center gap-1.5 transition-colors border border-[#fecaca]"
@@ -2454,6 +2766,56 @@ export default function POSPage() {
 
         />
 
+      )}
+
+      {/* Held Carts Modal */}
+
+      {showHeldCarts && (
+        <>
+          <div className="fixed inset-0 bg-black/30 z-[80]" onClick={() => setShowHeldCarts(false)} />
+          <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 pointer-events-none">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md pointer-events-auto">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
+                <div className="flex items-center gap-2">
+                  <ListRestart className="w-5 h-5 text-blue-600" />
+                  <h2 className="text-base font-bold">Transactions en attente</h2>
+                </div>
+                <button onClick={() => setShowHeldCarts(false)} className="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center">
+                  <X className="w-4 h-4 text-[var(--text-muted)]" />
+                </button>
+              </div>
+              <div className="p-4 space-y-2 max-h-80 overflow-y-auto">
+                {heldCarts.length === 0 ? (
+                  <p className="text-center text-sm text-[var(--text-muted)] py-6">Aucune transaction en attente</p>
+                ) : heldCarts.map((held) => (
+                  <button
+                    key={held.id}
+                    onClick={() => recallCart(held)}
+                    className="w-full text-left p-3 rounded-xl border border-[var(--border)] hover:border-blue-300 hover:bg-blue-50 transition-colors flex items-center gap-3"
+                  >
+                    <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm shrink-0">
+                      #{held.holdNumber}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-[var(--text-primary)]">
+                        {held.items.length} article{held.items.length !== 1 ? "s" : ""}
+                        {held.customer ? ` — ${held.customer.firstName}` : ""}
+                      </p>
+                      <p className="text-xs text-[var(--text-muted)]">
+                        {new Date(held.timestamp).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-sm font-bold text-[var(--text-primary)] tabular-nums">
+                        {held.items.reduce((s, i) => s + i.quantity * i.product.price, 0).toLocaleString("fr-FR")} F
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </>
       )}
 
     </div>
