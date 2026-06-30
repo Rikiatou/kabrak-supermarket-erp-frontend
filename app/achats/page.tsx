@@ -32,7 +32,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { useSuppliers, usePurchaseOrders, useCreatePurchaseOrder, useProducts } from "@/lib/hooks/useApi";
 import { useBarcodeScanner } from "@/lib/hooks/useBarcodeScanner";
-import { suppliersApi, purchaseOrdersApi, productsApi } from "@/lib/api";
+import { suppliersApi, purchaseOrdersApi, productsApi, batchesApi } from "@/lib/api";
 import { formatCurrency, cn } from "@/lib/utils";
 import type { Supplier } from "@/lib/types";
 import type { Product } from "@/lib/types";
@@ -240,6 +240,14 @@ export default function AchatsPage() {
           expiryDate: l.expiryDate || undefined,
         })),
       });
+      // Créer un lot (batch) pour chaque ligne avec date d'expiration
+      for (const l of validLines) {
+        await batchesApi.create({
+          productId: l.productId,
+          quantity: l.qty,
+          expiryDate: l.expiryDate || undefined,
+        }).catch(() => {}); // non-bloquant
+      }
       toast(`${t.achats.deliverySaved} ${validLines.length} ${t.achats.deliverySavedProducts}`, "success");
       reloadOrders();
       reloadSuppliers();

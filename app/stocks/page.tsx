@@ -25,10 +25,10 @@ import { useToast } from "@/components/ui/Toast";
 import { NewProductModal } from "@/components/forms/NewProductModal";
 import { useProducts, useStockAlerts, useSetMarkdown, useRemoveMarkdown } from "@/lib/hooks/useApi";
 import { useBarcodeScanner } from "@/lib/hooks/useBarcodeScanner";
-import { productsApi, stockApi, apiProductToFrontend } from "@/lib/api";
+import { productsApi, stockApi, apiProductToFrontend, batchesApi } from "@/lib/api";
 import { getEffectivePrice, hasActiveMarkdown } from "@/lib/api";
 import type { Product } from "@/lib/types";
-import type { ApiStockMovement } from "@/lib/api";
+import type { ApiStockMovement, ApiProductBatch } from "@/lib/api";
 
 type SortKey = "name" | "stock" | "price" | "category";
 type SortDir = "asc" | "desc";
@@ -651,6 +651,9 @@ function ProductDetailPanel({
   const { toast } = useToast();
   const [history, setHistory] = useState<ApiStockMovement[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [batches, setBatches] = useState<ApiProductBatch[]>([]);
+  const [batchesLoading, setBatchesLoading] = useState(false);
+  const [showBatches, setShowBatches] = useState(false);
   const margin = product.price - product.costPrice;
   const marginRate = Math.round((margin / product.price) * 100);
   const daysLeft = product.expiryDate
@@ -674,6 +677,14 @@ function ProductDetailPanel({
       });
     return () => { cancelled = true; };
   }, [product.id]);
+
+  const loadBatches = () => {
+    setBatchesLoading(true);
+    batchesApi.list(product.id)
+      .then((res) => setBatches(Array.isArray(res) ? res : []))
+      .catch(() => setBatches([]))
+      .finally(() => setBatchesLoading(false));
+  };
 
   return (
     <>
@@ -756,6 +767,64 @@ function ProductDetailPanel({
                 <span className="text-xs font-medium text-[var(--text-primary)]">{value}</span>
               </div>
             ))}
+          </div>
+
+          {/* Batches / Lots */}
+          <div>
+            <button
+              onClick={() => {
+                if (!showBatches && batches.length === 0 && !batchesLoading) loadBatches();
+                setShowBatches(!showBatches);
+              }}
+              className="w-full flex items-center justify-between text-xs font-semibold text-[var(--text-muted)] uppercase tracking-widest mb-3 hover:text-[var(--text-primary)] transition-colors"
+            >
+              <span className="flex items-center gap-1.5">
+                <Package className="w-3.5 h-3.5" />
+                {t.stocks.batches || "Lots"} ({batches.length})
+              </span>
+              <ChevronDown className={cn("w-4 h-4 transition-transform", showBatches && "rotate-180")} />
+            </button>
+            {showBatches && (
+              <div className="bg-slate-50 rounded-xl p-3 max-h-[260px] overflow-y-auto">
+                {batchesLoading ? (
+                  <p className="text-xs text-[var(--text-muted)] text-center py-4">{t.common.loading}</p>
+                ) : batches.length === 0 ? (
+                  <p className="text-xs text-[var(--text-muted)] text-center py-4">{t.stocks.noBatches || "Aucun lot — stock géré en global"}</p>
+                ) : (
+                  <div className="space-y-2">
+                    {batches.map((batch) => {
+                      const batchDaysLeft = batch.expiryDate
+                        ? Math.ceil((new Date(batch.expiryDate).getTime() - Date.now()) / 86400000)
+                        : null;
+                      return (
+                        <div key={batch.id} className="flex items-center justify-between text-xs py-2 border-b border-[var(--border-subtle)] last:border-0">
+                          <div className="flex-1">
+                            <p className="font-medium text-[var(--text-primary)]">
+                              {batch.quantity} / {batch.initialQty} {product.unit}
+                              {batch.batchNumber && <span className="text-[var(--text-muted)] ml-1">— {batch.batchNumber}</span>}
+                            </p>
+                            <p className="text-[var(--text-muted)]">
+                              {t.stocks.received || "Reçu"}: {formatDate(batch.receivedDate)}
+                              {batch.expiryDate && ` · ${t.stocks.expiration || "Expiration"}: ${formatDate(batch.expiryDate)}`}
+                            </p>
+                          </div>
+                          <span className={cn(
+                            "font-bold tabular-nums shrink-0 px-2 py-0.5 rounded-md",
+                            batchDaysLeft !== null && batchDaysLeft <= 0
+                              ? "bg-red-100 text-red-700"
+                              : batchDaysLeft !== null && batchDaysLeft <= 7
+                              ? "bg-amber-100 text-amber-700"
+                              : "text-[var(--text-secondary)]"
+                          )}>
+                            {batchDaysLeft !== null ? `D-${batchDaysLeft}` : "—"}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Product history */}

@@ -1034,6 +1034,30 @@ export const notificationsApi = {
 };
 
 // ========================================
+// BATCHES (LOTS PRODUITS)
+// ========================================
+export interface ApiProductBatch {
+  id: string;
+  productId: string;
+  batchNumber?: string;
+  quantity: number;
+  initialQty: number;
+  expiryDate?: string;
+  receivedDate: string;
+  product?: { id: string; name: string; barcode: string; price: number; category: string };
+}
+
+export const batchesApi = {
+  list: (productId?: string) =>
+    fetchAPI<ApiProductBatch[]>(`/batches${productId ? `?productId=${productId}` : ""}`),
+  expiring: () => fetchAPI<ApiProductBatch[]>(`/batches?expiring=true`),
+  expiryAlerts: () => fetchAPI<{ expired: ApiProductBatch[]; expiring7: ApiProductBatch[]; expiring30: ApiProductBatch[] }>(`/batches/expiry-alerts`),
+  create: (data: { productId: string; batchNumber?: string; quantity: number; expiryDate?: string }) =>
+    fetchAPI<ApiProductBatch>(`/batches`, { method: "POST", body: JSON.stringify(data) }),
+  remove: (id: string) => fetchAPI<{ id: string }>(`/batches/${id}`, { method: "DELETE" }),
+};
+
+// ========================================
 // RETURNS (RETOURS PRODUITS)
 // ========================================
 export interface ApiReturnItem {
