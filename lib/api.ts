@@ -11,6 +11,7 @@ const FALLBACK_API_URL = "https://kabrak-api-production.up.railway.app/api";
 let activeApiUrl = PRIMARY_API_URL;
 let lastFailoverTime = 0;
 const FAILOVER_COOLDOWN_MS = 30000; // 30s avant de retester le primaire
+let localOverrideFailed = false; // si l'override local a échoué, l'ignorer
 
 // Helper pour les requêtes avec bascule automatique
 async function fetchAPI<T>(
@@ -25,7 +26,7 @@ async function fetchAPI<T>(
 
   // Permettre override via localStorage (pour config caisses)
   let baseUrl = activeApiUrl;
-  if (typeof window !== "undefined") {
+  if (typeof window !== "undefined" && !localOverrideFailed) {
     const localOverride = localStorage.getItem("kabrak_api_url");
     if (localOverride) baseUrl = localOverride;
   }
@@ -68,20 +69,21 @@ async function fetchAPI<T>(
     });
   } catch (err) {
     // Le serveur primaire ne répond pas — basculer vers le cloud
-    if (baseUrl === PRIMARY_API_URL || baseUrl === localStorage.getItem("kabrak_api_url")) {
-      console.warn("Serveur local injoignable, bascule vers le cloud…");
-      activeApiUrl = FALLBACK_API_URL;
-      lastFailoverTime = Date.now();
-      // Réessayer avec le cloud
-      const cloudUrl = `${FALLBACK_API_URL}${endpoint}`;
-      res = await fetch(cloudUrl, {
-        ...options,
-        headers,
-        signal: AbortSignal.timeout(10000),
-      });
-    } else {
-      throw err;
+    const isOverride = typeof window !== "undefined" && baseUrl === localStorage.getItem("kabrak_api_url");
+    if (isOverride) {
+      // L'override local a échoué — l'ignorer pour les prochains appels
+      localOverrideFailed = true;
     }
+    console.warn("Serveur local injoignable, bascule vers le cloud…");
+    activeApiUrl = FALLBACK_API_URL;
+    lastFailoverTime = Date.now();
+    // Réessayer avec le cloud
+    const cloudUrl = `${FALLBACK_API_URL}${endpoint}`;
+    res = await fetch(cloudUrl, {
+      ...options,
+      headers,
+      signal: AbortSignal.timeout(10000),
+    });
   }
 
   if (res.status === 401 && typeof window !== "undefined") {
