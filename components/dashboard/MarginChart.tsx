@@ -10,7 +10,6 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import { marginByCategory as mockData } from "@/lib/mock-data";
 import { formatCurrency } from "@/lib/utils";
 import { useMarginByCategory } from "@/lib/hooks/useApi";
 import { useI18n } from "@/lib/i18n/context";
@@ -73,8 +72,8 @@ export function MarginChart() {
   const { t } = useI18n();
   const { data: apiData } = useMarginByCategory();
 
-  // Fallback sur mock si backend indisponible
-  const data = apiData.length > 0 ? apiData : mockData;
+  // Données réelles uniquement
+  const data = apiData;
 
   return (
     <ResponsiveContainer width="100%" height={220}>

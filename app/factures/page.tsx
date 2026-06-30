@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   FileText,
   Download,
@@ -64,52 +64,6 @@ interface Payment {
   note?: string;
 }
 
-const mockInvoices: Invoice[] = [
-  {
-    id: "1",
-    number: "FAC-2026-0001",
-    date: "2026-06-18",
-    dueDate: "2026-07-18",
-    clientName: "Restaurant Le Baobab",
-    clientPhone: "+237 6 91 23 45 67",
-    clientEmail: "contact@baobab.cm",
-    items: [
-      { description: "Scented rice 25kg", quantity: 10, unitPrice: 18000, total: 180000 },
-      { description: "Vegetable oil 5L", quantity: 5, unitPrice: 12000, total: 60000 },
-    ],
-    subtotal: 240000,
-    tax: 37200,
-    total: 277200,
-    paidAmount: 277200,
-    balance: 0,
-    status: "paid",
-    payments: [
-      { id: "p1", amount: 277200, method: "mobile", date: "2026-06-18", note: "Full payment MTN MoMo" },
-    ],
-  },
-  {
-    id: "2",
-    number: "FAC-2026-0002",
-    date: "2026-06-17",
-    dueDate: "2026-07-17",
-    clientName: "Hotel Mont Febe",
-    clientPhone: "+237 6 72 34 56 78",
-    clientEmail: "achats@montfebe.cm",
-    items: [
-      { description: "Boissons diverses", quantity: 1, unitPrice: 350000, total: 350000 },
-    ],
-    subtotal: 350000,
-    tax: 54250,
-    total: 404250,
-    paidAmount: 150000,
-    balance: 254250,
-    status: "partial",
-    payments: [
-      { id: "p2", amount: 150000, method: "cash", date: "2026-06-17", note: "Cash deposit" },
-    ],
-  },
-];
-
 export default function FacturesPage() {
   const { t } = useI18n();
   const { toast } = useToast();
@@ -152,8 +106,8 @@ export default function FacturesPage() {
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [paymentNote, setPaymentNote] = useState("");
 
-  // Convertir les factures API au format frontend, fallback sur mock
-  const invoices: Invoice[] = apiInvoices && apiInvoices.invoices && apiInvoices.invoices.length > 0
+  // Convertir les factures API au format frontend — données réelles uniquement
+  const invoices: Invoice[] = apiInvoices && apiInvoices.invoices
     ? apiInvoices.invoices.map((inv) => ({
         id: inv.id,
         number: inv.number,
@@ -182,7 +136,7 @@ export default function FacturesPage() {
           note: p.note,
         })),
       }))
-    : mockInvoices;
+    : [];
   const [clientName, setClientName] = useState("");
   const [clientPhone, setClientPhone] = useState("");
   const [clientEmail, setClientEmail] = useState("");
@@ -193,6 +147,19 @@ export default function FacturesPage() {
   // Scanner barcode dans invoice
   const [scanSearch, setScanSearch] = useState("");
   const scanRef = useRef<HTMLInputElement>(null);
+
+  // Auto-focus scanner quand le modal de création s'ouvre
+  useEffect(() => {
+    if (showModal && scanRef.current) {
+      const timer = setTimeout(() => scanRef.current?.focus(), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [showModal]);
+
+  // Re-focus scanner quand on clique n'importe où dans le modal (comportement scanner)
+  const refocusScanner = () => {
+    if (showModal) scanRef.current?.focus();
+  };
 
   const handleInvoiceScan = (e: React.KeyboardEvent) => {
     if (e.key !== "Enter" || !scanSearch.trim()) return;
@@ -968,7 +935,7 @@ export default function FacturesPage() {
       {/* Modal: Create invoice */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowModal(false)}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-5 space-y-4" onClick={(e) => { e.stopPropagation(); refocusScanner(); }}>
             <div className="flex items-center justify-between sticky top-0 bg-white pb-2 border-b border-[var(--border)]">
               <h3 className="text-sm font-bold text-[var(--text-primary)]">{t.factures.newInvoice}</h3>
               <button onClick={() => setShowModal(false)} className="p-1 hover:bg-slate-100 rounded-lg">
@@ -1006,6 +973,7 @@ export default function FacturesPage() {
                   <input
                     ref={scanRef}
                     type="text"
+                    autoFocus
                     value={scanSearch}
                     onChange={(e) => setScanSearch(e.target.value)}
                     onKeyDown={handleInvoiceScan}
@@ -1410,7 +1378,7 @@ export default function FacturesPage() {
                       ))}
                     </select>
 
-                    {/* Price difference calculation */}
+                    {/* Price difference + remaining balance calculation */}
                     {exchangeProductId && (() => {
                       const newProd = products.find((p) => p.id === exchangeProductId);
                       const oldItem = collectionInvoice.items[exchangeItemIdx];
@@ -1418,19 +1386,38 @@ export default function FacturesPage() {
                       const oldTotal = oldItem.total;
                       const newTotal = newProd.price * oldItem.quantity;
                       const diff = newTotal - oldTotal;
+                      // Remaining balance = nouveau total - ce qui a déjà été payé
+                      // Si > 0: le client doit payer plus
+                      // Si < 0: le magasin doit rembourser
+                      const paidAmount = collectionInvoice.paidAmount;
+                      const remainingBalance = newTotal - paidAmount;
                       return (
                         <div className={`mt-3 p-4 rounded-xl border ${diff > 0 ? "bg-amber-50 border-amber-200" : diff < 0 ? "bg-emerald-50 border-emerald-200" : "bg-slate-50 border-slate-200"}`}>
-                          <div className="flex items-center justify-between mb-1">
+                          {/* Différence de prix (ancien vs nouveau) */}
+                          <div className="flex items-center justify-between mb-2">
                             <span className="text-sm text-[var(--text-secondary)]">
                               {diff > 0 ? t.factures.toPay : diff < 0 ? t.factures.toRefund : t.factures.priceDiff}
                             </span>
-                            <span className={`text-xl font-bold tabular-nums ${diff > 0 ? "text-amber-700" : diff < 0 ? "text-emerald-700" : "text-slate-500"}`}>
+                            <span className={`text-lg font-bold tabular-nums ${diff > 0 ? "text-amber-700" : diff < 0 ? "text-emerald-700" : "text-slate-500"}`}>
                               {diff === 0 ? "—" : `${diff > 0 ? "+" : ""}${formatCurrency(Math.abs(diff))}`}
                             </span>
                           </div>
-                          <div className="text-xs text-[var(--text-muted)] flex justify-between">
+                          <div className="text-xs text-[var(--text-muted)] flex justify-between mb-3">
                             <span>{collectionInvoice.items[exchangeItemIdx].description}: {formatCurrency(oldTotal)}</span>
                             <span>→ {newProd.name}: {formatCurrency(newTotal)}</span>
+                          </div>
+                          {/* Solde restant après échange */}
+                          <div className="border-t border-current/10 pt-2 flex items-center justify-between">
+                            <span className="text-sm font-semibold text-[var(--text-primary)]">
+                              {remainingBalance > 0 ? t.factures.remainingToPay : remainingBalance < 0 ? t.factures.remainingToRefund : t.factures.balanceSettled}
+                            </span>
+                            <span className={`text-xl font-bold tabular-nums ${remainingBalance > 0 ? "text-amber-700" : remainingBalance < 0 ? "text-emerald-700" : "text-slate-500"}`}>
+                              {remainingBalance === 0 ? "—" : formatCurrency(Math.abs(remainingBalance))}
+                            </span>
+                          </div>
+                          <div className="text-xs text-[var(--text-muted)] flex justify-between mt-1">
+                            <span>{t.factures.newTotal}: {formatCurrency(newTotal)}</span>
+                            <span>{t.factures.alreadyPaid}: {formatCurrency(paidAmount)}</span>
                           </div>
                         </div>
                       );
@@ -1466,10 +1453,18 @@ export default function FacturesPage() {
                         const diff = (newProd.price * oldItem.quantity) - oldItem.total;
                         await updateStatus(collectionInvoice.id, "paid");
                         if (diff > 0) {
+                          // Le client doit payer la différence
                           await addPayment(collectionInvoice.id, {
                             amount: diff,
                             method: "cash",
                             note: `Échange: ${oldItem.description} → ${newProd.name}`,
+                          });
+                        } else if (diff < 0) {
+                          // Le magasin doit rembourser la différence — enregistrer un paiement négatif
+                          await addPayment(collectionInvoice.id, {
+                            amount: diff, // montant négatif = remboursement
+                            method: "cash",
+                            note: `Remboursement échange: ${oldItem.description} → ${newProd.name}`,
                           });
                         }
                         toast(t.factures.exchangeDone, "success");

@@ -9,7 +9,6 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { salesByHour as mockData } from "@/lib/mock-data";
 import { formatCurrency } from "@/lib/utils";
 import { useSalesByHour } from "@/lib/hooks/useApi";
 import { useI18n } from "@/lib/i18n/context";
@@ -45,8 +44,8 @@ export function SalesChart() {
   const { t } = useI18n();
   const { data: apiData } = useSalesByHour();
 
-  // Fallback sur mock si backend indisponible
-  const data = apiData.length > 0 ? apiData : mockData;
+  // Données réelles uniquement
+  const data = apiData;
 
   return (
     <ResponsiveContainer width="100%" height={220}>

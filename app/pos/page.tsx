@@ -894,7 +894,7 @@ export default function POSPage() {
 
     setSelectedCustomer(null);
 
-    toast(`Transaction #${holdNumber} mise en attente`, "success");
+    toast(t.pos.transactionHeld.replace("{n}", String(holdNumber)), "success");
 
   };
 
@@ -904,7 +904,7 @@ export default function POSPage() {
 
     if (cart.length > 0) {
 
-      toast("Vider le panier actuel avant de rappeler", "warning");
+      toast(t.pos.clearCartBeforeRecall, "warning");
 
       return;
 
@@ -926,7 +926,7 @@ export default function POSPage() {
 
     setShowHeldCarts(false);
 
-    toast(`Transaction #${held.holdNumber} rappelée`, "success");
+    toast(t.pos.transactionRecalled.replace("{n}", String(held.holdNumber)), "success");
 
   };
 
@@ -982,7 +982,7 @@ export default function POSPage() {
 
       setUsbDisplayConnected(true);
 
-      toast("Afficheur USB connecté", "success");
+      toast(t.pos.usbDisplayConnected, "success");
 
       const storeName = (storeInfo.name || "KABRAK").slice(0, 20).padEnd(20, " ");
 
@@ -994,7 +994,7 @@ export default function POSPage() {
 
       if (e?.name !== "NotAllowedError") {
 
-        toast("Erreur connexion afficheur", "warning");
+        toast(t.pos.usbDisplayError, "warning");
 
       }
 
@@ -1016,7 +1016,7 @@ export default function POSPage() {
 
     setUsbDisplayConnected(false);
 
-    toast("Afficheur USB déconnecté", "success");
+    toast(t.pos.usbDisplayDisconnected, "success");
 
   };
 
@@ -2120,7 +2120,7 @@ export default function POSPage() {
 
                     >
 
-                      <PauseCircle className="w-3.5 h-3.5" /> Attente
+                      <PauseCircle className="w-3.5 h-3.5" /> {t.pos.hold}
 
                     </button>
 
@@ -2136,7 +2136,7 @@ export default function POSPage() {
 
                     >
 
-                      <ListRestart className="w-3.5 h-3.5" /> Rappeler
+                      <ListRestart className="w-3.5 h-3.5" /> {t.pos.recall}
 
                       <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
 
@@ -2152,7 +2152,7 @@ export default function POSPage() {
 
                     onClick={usbDisplayConnected ? disconnectUsbDisplay : connectUsbDisplay}
 
-                    title={usbDisplayConnected ? "Déconnecter afficheur USB" : "Connecter afficheur USB"}
+                    title={usbDisplayConnected ? t.pos.usbDisconnect : t.pos.usbConnect}
 
                     className={cn(
 
@@ -2170,7 +2170,7 @@ export default function POSPage() {
 
                     <Monitor className="w-3.5 h-3.5" />
 
-                    {usbDisplayConnected ? "USB ●" : "USB"}
+                    {usbDisplayConnected ? `${t.pos.usb} ●` : t.pos.usb}
 
                   </button>
 
@@ -2790,7 +2790,7 @@ export default function POSPage() {
               <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
                 <div className="flex items-center gap-2">
                   <ListRestart className="w-5 h-5 text-blue-600" />
-                  <h2 className="text-base font-bold">Transactions en attente</h2>
+                  <h2 className="text-base font-bold">{t.pos.pendingTransactions}</h2>
                 </div>
                 <button onClick={() => setShowHeldCarts(false)} className="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center">
                   <X className="w-4 h-4 text-[var(--text-muted)]" />
@@ -2798,7 +2798,7 @@ export default function POSPage() {
               </div>
               <div className="p-4 space-y-2 max-h-80 overflow-y-auto">
                 {heldCarts.length === 0 ? (
-                  <p className="text-center text-sm text-[var(--text-muted)] py-6">Aucune transaction en attente</p>
+                  <p className="text-center text-sm text-[var(--text-muted)] py-6">{t.pos.noPendingTransactions}</p>
                 ) : heldCarts.map((held) => (
                   <button
                     key={held.id}
@@ -2810,7 +2810,7 @@ export default function POSPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-[var(--text-primary)]">
-                        {held.items.length} article{held.items.length !== 1 ? "s" : ""}
+                        {held.items.length} {held.items.length !== 1 ? t.pos.articles : t.pos.article}
                         {held.customer ? ` — ${held.customer.firstName}` : ""}
                       </p>
                       <p className="text-xs text-[var(--text-muted)]">

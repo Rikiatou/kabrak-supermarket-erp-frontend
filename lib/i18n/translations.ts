@@ -255,6 +255,21 @@ export const translations = {
       enableAutoPrint: "Imprimer le ticket automatiquement",
       paymentSuccess: "Paiement réussi",
       openCustomerDisplay: "Écran client",
+      // Hold / Recall
+      hold: "Attente",
+      recall: "Rappeler",
+      pendingTransactions: "Transactions en attente",
+      noPendingTransactions: "Aucune transaction en attente",
+      transactionHeld: "Transaction #{n} mise en attente",
+      transactionRecalled: "Transaction #{n} rappelée",
+      clearCartBeforeRecall: "Vider le panier actuel avant de rappeler",
+      // USB Display
+      usb: "USB",
+      usbConnect: "Connecter afficheur USB",
+      usbDisconnect: "Déconnecter afficheur USB",
+      usbDisplayConnected: "Afficheur USB connecté",
+      usbDisplayDisconnected: "Afficheur USB déconnecté",
+      usbDisplayError: "Erreur connexion afficheur",
       categories: {
         all: "Tous",
       },
@@ -1100,6 +1115,11 @@ export const translations = {
       priceDiff: "Différence de prix",
       toPay: "Supplément à payer",
       toRefund: "Remboursement",
+      remainingToPay: "Reste à payer",
+      remainingToRefund: "Reste à rembourser",
+      balanceSettled: "Solde équilibré",
+      newTotal: "Nouveau total",
+      alreadyPaid: "Déjà payé",
       confirmExchange: "Confirmer l'échange",
       confirmCollection: "Confirmer la collecte",
       collectionDone: "Article collecté !",
@@ -1418,6 +1438,7 @@ export const translations = {
       cashier: "Caissier",
       refunded: "Remboursé",
       validated: "Validé",
+      noTransactions: "Aucune transaction récente",
     },
     // Stock Alerts
     stockAlerts: {
@@ -1426,6 +1447,7 @@ export const translations = {
       expiringSoon: "Expire bientôt",
       units: "unités",
       expiresOn: "Expire le",
+      noAlerts: "Aucune alerte",
     },
     // Charts
     charts: {
@@ -1777,6 +1799,21 @@ export const translations = {
       enableAutoPrint: "Print receipt automatically",
       paymentSuccess: "Payment successful",
       openCustomerDisplay: "Customer display",
+      // Hold / Recall
+      hold: "Hold",
+      recall: "Recall",
+      pendingTransactions: "Pending transactions",
+      noPendingTransactions: "No pending transactions",
+      transactionHeld: "Transaction #{n} put on hold",
+      transactionRecalled: "Transaction #{n} recalled",
+      clearCartBeforeRecall: "Clear current cart before recalling",
+      // USB Display
+      usb: "USB",
+      usbConnect: "Connect USB display",
+      usbDisconnect: "Disconnect USB display",
+      usbDisplayConnected: "USB display connected",
+      usbDisplayDisconnected: "USB display disconnected",
+      usbDisplayError: "USB display connection error",
       categories: {
         all: "All",
       },
@@ -2608,6 +2645,11 @@ export const translations = {
       priceDiff: "Price Difference",
       toPay: "Extra to pay",
       toRefund: "Refund",
+      remainingToPay: "Remaining to pay",
+      remainingToRefund: "Remaining to refund",
+      balanceSettled: "Balance settled",
+      newTotal: "New total",
+      alreadyPaid: "Already paid",
       confirmExchange: "Confirm Exchange",
       confirmCollection: "Confirm Collection",
       collectionDone: "Item collected!",
@@ -2915,6 +2957,7 @@ export const translations = {
       cashier: "Cashier",
       refunded: "Refunded",
       validated: "Validated",
+      noTransactions: "No recent transactions",
     },
     stockAlerts: {
       critical: "Critical",
@@ -2922,6 +2965,7 @@ export const translations = {
       expiringSoon: "Expiring soon",
       units: "units",
       expiresOn: "Expires on",
+      noAlerts: "No alerts",
     },
     charts: {
       revenue: "Revenue",

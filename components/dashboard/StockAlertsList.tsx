@@ -1,7 +1,6 @@
 "use client";
 
 import { AlertTriangle, Clock, ArrowDown } from "lucide-react";
-import { stockAlerts as mockAlerts } from "@/lib/mock-data";
 import { Badge } from "@/components/ui/Badge";
 import { formatDate } from "@/lib/utils";
 import { useStockAlerts } from "@/lib/hooks/useApi";
@@ -78,6 +77,7 @@ function AlertRow({ alert }: { alert: StockAlert }) {
 }
 
 export function StockAlertsList() {
+  const { t } = useI18n();
   const { alerts } = useStockAlerts();
 
   // Convertir les alertes du backend au format StockAlert du frontend
@@ -116,14 +116,18 @@ export function StockAlertsList() {
       ].slice(0, 10)
     : [];
 
-  // Fallback sur mock si backend indisponible
-  const displayAlerts = backendAlerts.length > 0 ? backendAlerts : mockAlerts;
+  // Données réelles uniquement — pas de mock
+  const displayAlerts = backendAlerts;
 
   return (
     <div className="divide-y divide-transparent">
-      {displayAlerts.map((alert, index) => (
-        <AlertRow key={`${alert.id}-${alert.severity}-${index}`} alert={alert} />
-      ))}
+      {displayAlerts.length === 0 ? (
+        <p className="text-center text-sm text-[var(--text-muted)] py-6">{t.stockAlerts.noAlerts || "Aucune alerte"}</p>
+      ) : (
+        displayAlerts.map((alert, index) => (
+          <AlertRow key={`${alert.id}-${alert.severity}-${index}`} alert={alert} />
+        ))
+      )}
     </div>
   );
 }
