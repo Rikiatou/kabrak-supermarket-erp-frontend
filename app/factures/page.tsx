@@ -68,13 +68,13 @@ export default function FacturesPage() {
   const { t } = useI18n();
   const { toast } = useToast();
   const { config: licenseConfig } = useLicense();
-  const supermarketName = licenseConfig?.supermarketName || "KABRAK MARKET";
-  const supermarketAddress = licenseConfig?.address || "KABRAK Retail - Yaounde, Cameroon";
-  const supermarketPhone = licenseConfig?.phone ? `Tel: ${licenseConfig.phone}` : "Tel: +237 233 332 600";
+  const supermarketName = licenseConfig?.supermarketName || "EASY SHOP LIMBE";
+  const supermarketAddress = licenseConfig?.address || "5 NAMBEKE STREET";
+  const supermarketPhone = licenseConfig?.phone ? `Tel: ${licenseConfig.phone}` : "Tel: 233332600";
   const logoUrl = licenseConfig?.logoUrl || "";
   const rccmNumber = (licenseConfig as any)?.rccmNumber || "";
   const taxNumber = (licenseConfig as any)?.taxNumber || "";
-  const invoiceFooter = licenseConfig?.invoiceFooter || `${supermarketName} - ${supermarketAddress} - ${supermarketPhone}`;
+  const invoiceFooter = licenseConfig?.invoiceFooter || "goods sold are not refundable\nThanks for patronizing us";
 
   const statusConfig: Record<string, { label: string; color: string }> = {
     draft: { label: t.factures.status.draft, color: "bg-slate-100 text-slate-600" },
@@ -579,9 +579,8 @@ export default function FacturesPage() {
     pdf.setTextColor(150, 150, 150);
     pdf.setFontSize(7);
     pdf.setFont("helvetica", "normal");
-    pdf.text("Goods sold are non refundable", pageWidth / 2, y, { align: "center" });
+    pdf.text("goods sold are not refundable", pageWidth / 2, y, { align: "center" });
     pdf.text("Thanks for patronizing us", pageWidth / 2, y + 4, { align: "center" });
-    pdf.text(invoiceFooter, pageWidth / 2, y + 9, { align: "center" });
 
     // Signature
     pdf.setDrawColor(180, 180, 180);
@@ -684,8 +683,8 @@ export default function FacturesPage() {
           <div class="small">Paid: ${formatCurrency(invoice.paidAmount)}</div>
           <div class="small">Balance: ${formatCurrency(invoice.balance)}</div>
           <div class="dashed"></div>
-          <div class="center small">${invoiceFooter}</div>
-          <div class="center small">Goods sold are non refundable</div>
+          <div class="center small">goods sold are not refundable</div>
+          <div class="center small">Thanks for patronizing us</div>
         </body></html>
       `);
     } else {
@@ -751,7 +750,7 @@ export default function FacturesPage() {
           </table>
           ${paymentsHtml}
           <div class="signature">Signature & stamp</div>
-          <div class="footer">${invoiceFooter}</div>
+          <div class="footer">goods sold are not refundable<br>Thanks for patronizing us</div>
         </body></html>
       `);
     }
@@ -761,14 +760,14 @@ export default function FacturesPage() {
   };
 
   const sendWhatsApp = (invoice: Invoice) => {
-    const msg = `Hello ${invoice.clientName},%0A%0AHere is your invoice ${invoice.number} from ${supermarketName}.%0A%0ATotal amount: ${formatCurrency(invoice.total)}%0ADate: ${new Date(invoice.date).toLocaleDateString()}%0A%0AGoods sold are non refundable.%0AThanks for patronizing us!`;
+    const msg = `Hello ${invoice.clientName},%0A%0AHere is your invoice ${invoice.number} from ${supermarketName}.%0A%0ATotal amount: ${formatCurrency(invoice.total)}%0ADate: ${new Date(invoice.date).toLocaleDateString()}%0A%0Agoods sold are not refundable.%0AThanks for patronizing us!`;
     window.open(`https://wa.me/${invoice.clientPhone.replace(/[^0-9]/g, "")}?text=${msg}`, "_blank");
     toast(`${t.factures.whatsappOpened} ${invoice.clientName}`, "info");
   };
 
   const sendEmail = (invoice: Invoice) => {
     const subject = `Invoice ${invoice.number} - ${supermarketName}`;
-    const body = `Hello ${invoice.clientName},\n\nPlease find attached your invoice ${invoice.number}.\n\nTotal amount: ${formatCurrency(invoice.total)}\nDate: ${new Date(invoice.date).toLocaleDateString()}\n\nGoods sold are non refundable.\nThanks for patronizing us.\n\n${supermarketName}`;
+    const body = `Hello ${invoice.clientName},\n\nPlease find attached your invoice ${invoice.number}.\n\nTotal amount: ${formatCurrency(invoice.total)}\nDate: ${new Date(invoice.date).toLocaleDateString()}\n\ngoods sold are not refundable.\nThanks for patronizing us.\n\n${supermarketName}`;
     window.location.href = `mailto:${invoice.clientEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     toast(t.factures.emailPrepared.replace("{email}", invoice.clientEmail), "info");
   };

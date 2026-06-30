@@ -1582,9 +1582,13 @@ export default function POSPage() {
 
         <style>
 
-          @page { size: 80mm auto; margin: 0; }
+          @page { size: 80mm; margin: 0; }
 
-          body { width: 72mm; margin: 4mm auto; font-family: 'Courier New', monospace; color: #000; }
+          * { -webkit-print-color-adjust: exact; }
+
+          html, body { width: 80mm; margin: 0; padding: 0; }
+
+          body { padding: 4mm 4mm 8mm; font-family: 'Courier New', monospace; color: #000; font-size: 11px; line-height: 1.3; }
 
           h1 { font-size: 14px; text-align: center; margin: 0 0 2px; }
 
@@ -1602,7 +1606,17 @@ export default function POSPage() {
 
           .small { font-size: 10px; }
 
-          @media print { body { width: 72mm; } }
+          @media print {
+
+            body { width: 80mm; padding: 4mm 4mm 8mm; }
+
+            /* Empêcher la coupure du ticket */
+
+            * { page-break-inside: avoid; break-inside: avoid; }
+
+            .no-break { page-break-inside: avoid; break-inside: avoid; }
+
+          }
 
         </style>
 
@@ -1690,7 +1704,7 @@ export default function POSPage() {
 
       printWindow.close();
 
-    }, 250);
+    }, 500);
 
   }, [receipt, user]);
 
@@ -1766,9 +1780,13 @@ export default function POSPage() {
 
         <style>
 
-          @page { size: 80mm auto; margin: 0; }
+          @page { size: 80mm; margin: 0; }
 
-          body { width: 72mm; margin: 4mm auto; font-family: 'Courier New', monospace; color: #000; }
+          * { -webkit-print-color-adjust: exact; }
+
+          html, body { width: 80mm; margin: 0; padding: 0; }
+
+          body { padding: 4mm 4mm 8mm; font-family: 'Courier New', monospace; color: #000; font-size: 11px; line-height: 1.3; }
 
           h1 { font-size: 14px; text-align: center; margin: 0 0 2px; }
 
@@ -1786,7 +1804,13 @@ export default function POSPage() {
 
           .small { font-size: 10px; }
 
-          @media print { body { width: 72mm; } }
+          @media print {
+
+            body { width: 80mm; padding: 4mm 4mm 8mm; }
+
+            * { page-break-inside: avoid; break-inside: avoid; }
+
+          }
 
         </style>
 
@@ -1864,7 +1888,7 @@ export default function POSPage() {
 
       printWindow.close();
 
-    }, 250);
+    }, 500);
 
   }, [t]);
 
