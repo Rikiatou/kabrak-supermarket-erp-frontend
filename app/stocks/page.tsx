@@ -581,7 +581,7 @@ export default function StocksPage() {
               </div>
               {markdownProduct.expiryDate && (
                 <div className="flex justify-between">
-                  <span className="text-[var(--text-muted)]">Expiration</span>
+                  <span className="text-[var(--text-muted)]">{t.stocks.expiration}</span>
                   <span className="font-semibold">{formatDate(markdownProduct.expiryDate)}</span>
                 </div>
               )}

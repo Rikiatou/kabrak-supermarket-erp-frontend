@@ -21,7 +21,7 @@ export function MobileNav() {
   const tabs = allTabs.filter((tab) => canAccess(user?.role, tab.href));
 
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-[var(--border)] z-30 safe-area-pb">
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-[var(--border)] z-[60] safe-area-pb">
       <div className="flex items-center justify-around h-14 px-2">
         {tabs.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + "/");

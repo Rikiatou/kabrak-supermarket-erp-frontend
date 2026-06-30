@@ -225,6 +225,7 @@ export default function FacturesPage() {
         }
       }
       setScanSearch("");
+      scanRef.current?.focus();
       toast(`${found.name} — ${formatCurrency(found.price)}`, "success");
     } else {
       toast(t.factures.barcodeNotFound.replace("{code}", code), "warning");
@@ -1033,6 +1034,7 @@ export default function FacturesPage() {
                               }
                             }
                             setScanSearch("");
+                            scanRef.current?.focus();
                             toast(`${p.name} — ${formatCurrency(p.price)}`, "success");
                           }}
                           className="w-full text-left px-3 py-2.5 text-sm hover:bg-slate-50 flex items-center justify-between border-b border-[var(--border)] last:border-0"

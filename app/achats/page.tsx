@@ -714,7 +714,7 @@ export default function AchatsPage() {
                   <div className="flex items-center gap-2 flex-1">
                     <ScanLine className="w-4 h-4 text-[#16a34a] shrink-0 animate-pulse" />
                     <span className="text-sm font-medium text-[#15803d]">
-                      {t.stocks?.scanBarcode || "Scanner prêt"} — {t.achats.scanHint || "scan a product to add it"}
+                      {t.stocks.scannerReady} — {t.achats.scanHint}
                     </span>
                   </div>
                   {/* Fallback saisie manuelle */}

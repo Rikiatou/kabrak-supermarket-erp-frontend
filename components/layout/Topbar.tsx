@@ -47,7 +47,7 @@ export function Topbar({ title, subtitle, onMenuClick }: TopbarProps) {
   };
 
   return (
-    <header className="h-14 lg:h-16 bg-white border-b border-[var(--border)] flex items-center px-3 lg:px-6 gap-2 lg:gap-4 sticky top-0 z-30">
+    <header className="h-14 lg:h-16 bg-white border-b border-[var(--border)] flex items-center px-3 lg:px-6 gap-2 lg:gap-4 sticky top-0 z-[60]">
       {/* Menu button - mobile only */}
       {onMenuClick && (
         <button

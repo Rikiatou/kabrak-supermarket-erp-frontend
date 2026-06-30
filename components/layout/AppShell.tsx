@@ -33,10 +33,10 @@ export function AppShell({ children, title, subtitle }: AppShellProps) {
       {drawerOpen && (
         <>
           <div
-            className="fixed inset-0 bg-black/50 z-50 lg:hidden"
+            className="fixed inset-0 bg-black/50 z-[70] lg:hidden"
             onClick={() => setDrawerOpen(false)}
           />
-          <div className="fixed left-0 top-0 h-screen z-50 lg:hidden animate-in slide-in-from-left">
+          <div className="fixed left-0 top-0 h-screen z-[70] lg:hidden animate-in slide-in-from-left">
             <Sidebar onNavigate={() => setDrawerOpen(false)} />
           </div>
         </>
