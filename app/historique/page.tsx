@@ -14,6 +14,8 @@ import {
   ChevronRight,
   Download,
   Calendar,
+  RotateCcw,
+  X,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Card } from "@/components/ui/Card";
@@ -21,8 +23,8 @@ import { Badge } from "@/components/ui/Badge";
 import { useI18n } from "@/lib/i18n/context";
 import { useToast } from "@/components/ui/Toast";
 import { useProducts, useRecentTransactions } from "@/lib/hooks/useApi";
-import { stockApi } from "@/lib/api";
-import type { ApiStockMovement, ApiTransaction } from "@/lib/api";
+import { stockApi, returnsApi } from "@/lib/api";
+import type { ApiStockMovement, ApiTransaction, ApiTransactionItem } from "@/lib/api";
 import type { Product } from "@/lib/types";
 import { formatCurrency, formatDate, formatTime, cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth/context";
@@ -106,6 +108,69 @@ export default function HistoriquePage() {
   const isCashier = user?.role === "cashier";
   const cashierIdFilter = isCashier ? (user?.id ?? undefined) : undefined;
   const { transactions: mySales, loading: loadingSales } = useRecentTransactions(100, cashierIdFilter);
+
+  // Return modal state
+  const [returnTx, setReturnTx] = useState<ApiTransaction | null>(null);
+  const [returnReason, setReturnReason] = useState("defect");
+  const [returnResolution, setReturnResolution] = useState("refund");
+  const [returnRefundMethod, setReturnRefundMethod] = useState("cash");
+  const [returnNote, setReturnNote] = useState("");
+  const [returnQtys, setReturnQtys] = useState<Record<string, number>>({});
+  const [returnExchangeIds, setReturnExchangeIds] = useState<Record<string, string>>({});
+  const [submittingReturn, setSubmittingReturn] = useState(false);
+
+  const openReturnModal = (tx: ApiTransaction) => {
+    setReturnTx(tx);
+    setReturnReason("defect");
+    setReturnResolution("refund");
+    setReturnRefundMethod("cash");
+    setReturnNote("");
+    const qtys: Record<string, number> = {};
+    tx.items?.forEach((it) => { qtys[it.productId] = 0; });
+    setReturnQtys(qtys);
+    setReturnExchangeIds({});
+  };
+
+  const handleSubmitReturn = async () => {
+    if (!returnTx) return;
+    const itemsToReturn = (returnTx.items || []).filter((it) => (returnQtys[it.productId] || 0) > 0);
+    if (itemsToReturn.length === 0) {
+      toast("Sélectionner au moins un article à retourner", "warning");
+      return;
+    }
+    setSubmittingReturn(true);
+    try {
+      await returnsApi.create({
+        originalTransactionId: returnTx.id,
+        clientName: returnTx.customer ? `${returnTx.customer.firstName} ${returnTx.customer.lastName}` : undefined,
+        reason: returnReason,
+        resolution: returnResolution,
+        refundMethod: returnResolution === "refund" ? returnRefundMethod : undefined,
+        note: returnNote || undefined,
+        items: itemsToReturn.map((it) => {
+          const qty = returnQtys[it.productId];
+          const exchId = returnExchangeIds[it.productId];
+          const exchProd = exchId ? products.find((p) => p.id === exchId) : undefined;
+          return {
+            productId: it.productId,
+            productName: it.product?.name || it.productId,
+            quantity: qty,
+            unitPrice: it.unitPrice,
+            total: qty * it.unitPrice,
+            exchangeProductId: exchProd?.id,
+            exchangeProductName: exchProd?.name,
+            exchangeTotal: exchProd ? exchProd.price * qty : undefined,
+          };
+        }),
+      });
+      toast(t.historique.returnSuccess, "success");
+      setReturnTx(null);
+    } catch {
+      toast("Erreur lors du retour", "warning");
+    } finally {
+      setSubmittingReturn(false);
+    }
+  };
 
   // MOVEMENT_CONFIG inside component so it reads t live
   const MOVEMENT_CONFIG: Record<MovementType, { label: string; variant: "success" | "danger" | "warning"; icon: typeof ArrowDownToLine }> = {
@@ -334,11 +399,18 @@ export default function HistoriquePage() {
                       <span>{tx.items?.length || 0} articles</span>
                     </div>
                   </div>
-                  <div className="text-right shrink-0">
+                  <div className="text-right shrink-0 flex flex-col items-end gap-1">
                     <div className="text-sm font-bold tabular-nums text-[var(--text-primary)]">{formatCurrency(tx.total)}</div>
                     {tx.discount > 0 && (
                       <div className="text-xs text-red-500 tabular-nums">-{formatCurrency(tx.discount)}</div>
                     )}
+                    <button
+                      onClick={() => openReturnModal(tx)}
+                      className="flex items-center gap-1 text-[10px] font-medium text-orange-600 bg-orange-50 hover:bg-orange-100 px-2 py-0.5 rounded-md transition-colors"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      {t.historique.returnProduct}
+                    </button>
                   </div>
                 </div>
               ))}
@@ -708,6 +780,185 @@ export default function HistoriquePage() {
         </div>
       </div>
       )}
+      {/* ── Return Modal ──────────────────────────────────────── */}
+      {returnTx && (
+        <>
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-[2px] z-50" onClick={() => setReturnTx(null)} />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg pointer-events-auto flex flex-col max-h-[90vh]">
+
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)] shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 bg-orange-50 rounded-xl flex items-center justify-center">
+                    <RotateCcw className="w-5 h-5 text-orange-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-semibold text-[var(--text-primary)]">{t.historique.returnModal}</h2>
+                    <p className="text-xs text-[var(--text-muted)]">{returnTx.transactionNumber} — {formatDate(returnTx.date)}</p>
+                  </div>
+                </div>
+                <button onClick={() => setReturnTx(null)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors">
+                  <X className="w-4 h-4 text-[var(--text-muted)]" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 space-y-5">
+
+                {/* Items to return */}
+                <div>
+                  <p className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-3">{t.historique.returnItems}</p>
+                  <div className="space-y-2">
+                    {(returnTx.items || []).map((item) => {
+                      const qty = returnQtys[item.productId] ?? 0;
+                      const exchId = returnExchangeIds[item.productId] ?? "";
+                      const exchProd = exchId ? products.find((p) => p.id === exchId) : null;
+                      return (
+                        <div key={item.productId} className={cn("p-3 rounded-xl border transition-colors", qty > 0 ? "bg-orange-50 border-orange-200" : "bg-slate-50 border-[var(--border)]")}>
+                          <div className="flex items-center justify-between mb-2">
+                            <div>
+                              <p className="text-sm font-medium text-[var(--text-primary)]">{item.product?.name || item.productId}</p>
+                              <p className="text-xs text-[var(--text-muted)]">{formatCurrency(item.unitPrice)} × {item.quantity}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-[var(--text-muted)]">{t.historique.returnQty}:</span>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => setReturnQtys((prev) => ({ ...prev, [item.productId]: Math.max(0, (prev[item.productId] ?? 0) - 1) }))}
+                                  className="w-6 h-6 rounded-lg bg-slate-200 hover:bg-slate-300 text-sm font-bold flex items-center justify-center"
+                                >−</button>
+                                <span className="w-6 text-center text-sm font-bold tabular-nums">{qty}</span>
+                                <button
+                                  onClick={() => setReturnQtys((prev) => ({ ...prev, [item.productId]: Math.min(item.quantity, (prev[item.productId] ?? 0) + 1) }))}
+                                  className="w-6 h-6 rounded-lg bg-slate-200 hover:bg-slate-300 text-sm font-bold flex items-center justify-center"
+                                >+</button>
+                              </div>
+                            </div>
+                          </div>
+                          {/* Exchange product selector (shown only if resolution = exchange and qty > 0) */}
+                          {returnResolution === "exchange" && qty > 0 && (
+                            <div className="mt-2 pt-2 border-t border-orange-200">
+                              <p className="text-[10px] text-orange-700 font-medium mb-1">{t.historique.returnExchangeItem}</p>
+                              <select
+                                value={exchId}
+                                onChange={(e) => setReturnExchangeIds((prev) => ({ ...prev, [item.productId]: e.target.value }))}
+                                className="w-full border border-orange-200 rounded-lg px-2 py-1.5 text-xs bg-white outline-none focus:border-orange-400"
+                              >
+                                <option value="">— Choisir —</option>
+                                {products.filter((p) => p.id !== item.productId).map((p) => (
+                                  <option key={p.id} value={p.id}>{p.name} — {formatCurrency(p.price)}</option>
+                                ))}
+                              </select>
+                              {exchProd && (() => {
+                                const diff = exchProd.price * qty - item.unitPrice * qty;
+                                return (
+                                  <p className={cn("text-xs mt-1 font-medium tabular-nums", diff > 0 ? "text-amber-600" : diff < 0 ? "text-emerald-600" : "text-slate-500")}>
+                                    {t.historique.returnExchangeDiff}: {diff > 0 ? "+" : ""}{formatCurrency(diff)}
+                                  </p>
+                                );
+                              })()}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Reason */}
+                <div>
+                  <label className="block text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-2">{t.historique.returnReason}</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { value: "defect", label: t.historique.returnReasonDefect },
+                      { value: "wrong_item", label: t.historique.returnReasonWrong },
+                      { value: "changed_mind", label: t.historique.returnReasonMind },
+                      { value: "other", label: t.historique.returnReasonOther },
+                    ].map((r) => (
+                      <button
+                        key={r.value}
+                        onClick={() => setReturnReason(r.value)}
+                        className={cn("py-2 px-3 rounded-xl text-xs font-medium border transition-colors text-left", returnReason === r.value ? "bg-orange-100 border-orange-400 text-orange-800" : "bg-slate-50 border-[var(--border)] text-[var(--text-secondary)] hover:bg-slate-100")}
+                      >{r.label}</button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Resolution */}
+                <div>
+                  <label className="block text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-2">{t.historique.returnResolution}</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { value: "refund", label: t.historique.returnResolutionRefund },
+                      { value: "exchange", label: t.historique.returnResolutionExchange },
+                    ].map((r) => (
+                      <button
+                        key={r.value}
+                        onClick={() => setReturnResolution(r.value)}
+                        className={cn("py-2.5 px-3 rounded-xl text-sm font-semibold border transition-colors", returnResolution === r.value ? "bg-orange-500 border-orange-500 text-white" : "bg-slate-50 border-[var(--border)] text-[var(--text-secondary)] hover:bg-slate-100")}
+                      >{r.label}</button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Refund method (only for refund) */}
+                {returnResolution === "refund" && (
+                  <div>
+                    <label className="block text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-2">{t.historique.returnRefundMethod}</label>
+                    <select
+                      value={returnRefundMethod}
+                      onChange={(e) => setReturnRefundMethod(e.target.value)}
+                      className="w-full border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm outline-none focus:border-orange-400 bg-white"
+                    >
+                      <option value="cash">{t.common.cash}</option>
+                      <option value="mobile">{t.common.mobile}</option>
+                      <option value="card">{t.common.card}</option>
+                    </select>
+                  </div>
+                )}
+
+                {/* Note */}
+                <div>
+                  <label className="block text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-2">{t.historique.returnNote}</label>
+                  <textarea
+                    value={returnNote}
+                    onChange={(e) => setReturnNote(e.target.value)}
+                    rows={2}
+                    placeholder="..."
+                    className="w-full border border-[var(--border)] rounded-xl px-3 py-2 text-sm resize-none outline-none focus:border-orange-400"
+                  />
+                </div>
+
+                {/* Total summary */}
+                {(() => {
+                  const total = (returnTx.items || []).reduce((s, it) => s + (returnQtys[it.productId] ?? 0) * it.unitPrice, 0);
+                  if (total === 0) return null;
+                  return (
+                    <div className="p-3 bg-orange-50 border border-orange-200 rounded-xl flex items-center justify-between">
+                      <span className="text-sm font-medium text-orange-800">{returnResolution === "refund" ? t.historique.returnTotal : t.historique.returnExchangeItem}</span>
+                      <span className="text-lg font-bold tabular-nums text-orange-700">{formatCurrency(total)}</span>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 py-4 border-t border-[var(--border)] shrink-0">
+                <button
+                  disabled={submittingReturn}
+                  onClick={handleSubmitReturn}
+                  className="w-full py-3 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 text-sm"
+                >
+                  <RotateCcw className={cn("w-4 h-4", submittingReturn && "animate-spin")} />
+                  {t.historique.returnConfirm}
+                </button>
+              </div>
+
+            </div>
+          </div>
+        </>
+      )}
+
     </AppShell>
   );
 }

@@ -1034,6 +1034,61 @@ export const notificationsApi = {
 };
 
 // ========================================
+// RETURNS (RETOURS PRODUITS)
+// ========================================
+export interface ApiReturnItem {
+  id: string;
+  productId?: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+  exchangeProductId?: string;
+  exchangeProductName?: string;
+  exchangeTotal?: number;
+}
+
+export interface ApiReturn {
+  id: string;
+  originalTransactionId?: string;
+  originalInvoiceId?: string;
+  clientName?: string;
+  returnDate: string;
+  reason: string;
+  resolution: string;
+  totalRefunded: number;
+  refundMethod?: string;
+  status: string;
+  note?: string;
+  items: ApiReturnItem[];
+  createdAt: string;
+}
+
+export const returnsApi = {
+  create: (data: {
+    originalTransactionId?: string;
+    clientName?: string;
+    reason: string;
+    resolution: string;
+    note?: string;
+    refundMethod?: string;
+    items: Array<{
+      productId?: string;
+      productName: string;
+      quantity: number;
+      unitPrice: number;
+      total: number;
+      exchangeProductId?: string;
+      exchangeProductName?: string;
+      exchangeTotal?: number;
+    }>;
+  }) => fetchAPI<ApiReturn>(`/returns`, { method: "POST", body: JSON.stringify(data) }),
+
+  list: () => fetchAPI<ApiReturn[]>(`/returns`),
+  stats: () => fetchAPI<{ total: number; totalAmount: number; byReason: Record<string, number> }>(`/returns/stats`),
+};
+
+// ========================================
 // HELPERS
 // ========================================
 
