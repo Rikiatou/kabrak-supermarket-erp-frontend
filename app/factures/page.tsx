@@ -29,6 +29,7 @@ import type { ApiInvoicePayment } from "@/lib/api";
 import jsPDF from "jspdf";
 import QRCode from "qrcode";
 import { useLicense } from "@/lib/license/context";
+import { useAuth } from "@/lib/auth/context";
 
 interface InvoiceItem {
   productId?: string;
@@ -68,6 +69,8 @@ export default function FacturesPage() {
   const { t } = useI18n();
   const { toast } = useToast();
   const { config: licenseConfig } = useLicense();
+  const { user } = useAuth();
+  const cashierName = user ? `${user.firstName} ${user.lastName}`.trim() : "";
   const supermarketName = licenseConfig?.supermarketName || "EASY SHOP LIMBE";
   const supermarketAddress = licenseConfig?.address || "5 NAMBEKE STREET";
   const supermarketPhone = licenseConfig?.phone ? `Tel: ${licenseConfig.phone}` : "Tel: 233332600";
@@ -434,7 +437,7 @@ export default function FacturesPage() {
     const clientBoxY = 78;
     pdf.setDrawColor(220, 220, 220);
     pdf.setFillColor(248, 250, 252);
-    pdf.roundedRect(margin, clientBoxY, contentWidth, 28, 2, 2, "FD");
+    pdf.roundedRect(margin, clientBoxY, contentWidth, 34, 2, 2, "FD");
     pdf.setTextColor(60, 60, 60);
     pdf.setFontSize(8);
     pdf.setFont("helvetica", "bold");
@@ -445,6 +448,11 @@ export default function FacturesPage() {
     pdf.setFontSize(8);
     pdf.text(invoice.clientPhone, margin + 4, clientBoxY + 20);
     if (invoice.clientEmail) pdf.text(invoice.clientEmail, margin + 4, clientBoxY + 25);
+    if (cashierName) {
+      pdf.setFont("helvetica", "bold");
+      pdf.text(`Served by: ${cashierName}`, margin + 4, clientBoxY + 31);
+      pdf.setFont("helvetica", "normal");
+    }
 
     // QR Code (right side of client box)
     try {
@@ -663,6 +671,7 @@ export default function FacturesPage() {
           <div class="dashed"></div>
           <div class="small"><b>Client:</b> ${invoice.clientName}</div>
           ${invoice.clientPhone ? `<div class="small">${invoice.clientPhone}</div>` : ""}
+          ${cashierName ? `<div class="small">Served by: ${cashierName}</div>` : ""}
           <div class="dashed"></div>
           <table>
             ${invoice.items.map((item) => `
@@ -737,6 +746,7 @@ export default function FacturesPage() {
             <b>${invoice.clientName}</b><br/>
             ${invoice.clientPhone}<br/>
             ${invoice.clientEmail || ""}
+            ${cashierName ? `<br/><span style="font-size:10px;color:#666">Served by: ${cashierName}</span>` : ""}
           </div>
           <table>
             <thead><tr><th>Description</th><th style="text-align:center">Qty</th><th style="text-align:right">Unit Price</th><th style="text-align:right">Total</th></tr></thead>

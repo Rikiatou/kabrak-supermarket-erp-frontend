@@ -1628,22 +1628,24 @@ export default function POSPage() {
 
 
 
+    // Format ticket style Retail Plus 50 : barcode + nom / qty @ prix = total
     const printItemsHtml = receipt.items
 
       .map((item) => {
 
         const effPrice = getEffectivePrice(item.product);
+        const barcode = item.product.barcode || "";
+        const name = item.product.name;
+        const total = effPrice * item.quantity;
 
         return `<tr>
-
-          <td style="font-size:11px;vertical-align:top">${item.product.name}</td>
-
-          <td style="text-align:center;font-size:11px;vertical-align:top">${item.quantity}</td>
-
-          <td style="text-align:right;font-size:11px;vertical-align:top">${formatCurrency(effPrice)}</td>
-
-          <td style="text-align:right;font-size:11px;vertical-align:top">${formatCurrency(effPrice * item.quantity)}</td>
-
+          <td colspan="2" style="font-size:10px;padding-top:3px">
+            <div style="font-weight:bold">${barcode} ${name}</div>
+            <div style="display:flex;justify-content:space-between;padding-left:4px">
+              <span>${item.quantity}.00 @ ${effPrice.toLocaleString("fr-CM")}</span>
+              <span style="font-weight:bold">${total.toLocaleString("fr-CM")}</span>
+            </div>
+          </td>
         </tr>`;
 
       })
@@ -1662,7 +1664,7 @@ export default function POSPage() {
 
         <style>
 
-          @page { size: 80mm; margin: 0; }
+          @page { size: 80mm 800mm; margin: 0; }
 
           * { -webkit-print-color-adjust: exact; }
 
@@ -1708,21 +1710,25 @@ export default function POSPage() {
 
         <p class="center small">${storeInfo.address}</p>
 
-        <p class="center small">${storeInfo.phone}</p>
+        <p class="center small">TEL: ${storeInfo.phone.replace(/^Tel:\s*/i, "")}</p>
 
-        <p class="center small">${dateStr}  ${timeStr}</p>
+        <br/>
 
-        <p class="center small">${t.pos.receipt}: ${receipt.id}</p>
+        <p class="center small">${new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}).toUpperCase()}&nbsp;&nbsp;${timeStr}</p>
 
-        <p class="center small">${t.pos.cashier}: ${receipt.cashier}</p>
+        <p class="center small">SALE #${receipt.id}&nbsp;&nbsp;S/P-${receipt.cashier}</p>
+
+        <div class="dashed"></div>
+
+        <table>${printItemsHtml}</table>
 
         <div class="dashed"></div>
 
         <table>
 
-          <tr><td class="small" style="font-weight:bold">${t.pos.receiptItem}</td><td class="small" style="text-align:center;font-weight:bold">${t.pos.receiptQty}</td><td class="small" style="text-align:right;font-weight:bold">${t.pos.receiptUnit}</td><td class="small" style="text-align:right;font-weight:bold">${t.pos.receiptTotal}</td></tr>
+          <tr><td class="small">SUBTOTAL</td><td class="right small">${receipt.subtotal.toLocaleString("fr-CM")}</td></tr>
 
-          ${printItemsHtml}
+          ${receipt.discount > 0 ? `<tr><td class="small">DISCOUNT</td><td class="right small">-${receipt.discount.toLocaleString("fr-CM")}</td></tr>` : ""}
 
         </table>
 
@@ -1730,43 +1736,23 @@ export default function POSPage() {
 
         <table>
 
-          <tr><td class="small">${t.pos.subtotal}</td><td class="right small">${formatCurrency(receipt.subtotal)}</td></tr>
+          <tr><td class="total">TOTAL SALE</td><td class="right total">${receipt.total.toLocaleString("fr-CM")}</td></tr>
 
-          ${receipt.discount > 0 ? `<tr><td class="small">${t.pos.discount} ${receipt.discountReason ? `(${receipt.discountReason})` : ""}</td><td class="right small">-${formatCurrency(receipt.discount)}</td></tr>` : ""}
+          <tr><td class="small">PAID ${methodLabel.toUpperCase()}</td><td class="right small">${(receipt.cashGiven ?? receipt.total).toLocaleString("fr-CM")}</td></tr>
 
-        </table>
+          ${receipt.change != null && receipt.change > 0 ? `<tr><td class="small">CHANGE</td><td class="right small">${receipt.change.toLocaleString("fr-CM")}</td></tr>` : ""}
 
-        <div class="dashed"></div>
-
-        <table><tr><td class="total">${t.pos.total.toUpperCase()}</td><td class="right total">${formatCurrency(receipt.total)}</td></tr></table>
-
-        <div class="dashed"></div>
-
-        <table>
-
-          <tr><td class="small">${methodLabel}</td><td class="right small">${formatCurrency(receipt.total)}</td></tr>
-
-          ${receipt.cashGiven != null ? `<tr><td class="small">${t.pos.amountGiven}</td><td class="right small">${formatCurrency(receipt.cashGiven)}</td></tr>` : ""}
-
-          ${receipt.change != null ? `<tr><td class="small">${t.pos.change}</td><td class="right small">${formatCurrency(receipt.change)}</td></tr>` : ""}
+          ${receipt.split ? `<tr><td class="small">- CASH</td><td class="right small">${receipt.split.cash.toLocaleString("fr-CM")}</td></tr><tr><td class="small">- MOBILE</td><td class="right small">${receipt.split.mobile.toLocaleString("fr-CM")}</td></tr>` : ""}
 
         </table>
 
-        ${receipt.split ? `<table>
-
-          <tr><td class="small">- ${t.pos.cash}</td><td class="right small">${formatCurrency(receipt.split.cash)}</td></tr>
-
-          <tr><td class="small">- ${t.pos.mobile}</td><td class="right small">${formatCurrency(receipt.split.mobile)}</td></tr>
-
-          <tr><td class="small">- ${t.pos.card}</td><td class="right small">${formatCurrency(receipt.split.card)}</td></tr>
-
-        </table>` : ""}
-
         <div class="dashed"></div>
 
-        <p class="center small" style="margin-top:8px">${(storeInfo.receiptFooter || t.pos.thankYou).split("\n").map((line: string, idx: number) => idx === 0 ? line : `<br/>${line}`).join("")}</p>
+        <p class="center small" style="margin-top:6px">goods sold are not refundable</p>
 
-        <p class="center small">${storeInfo.name}</p>
+        <p class="center small">Thanks for patronizing us</p>
+
+        <br/>
 
       </body>
 
@@ -1860,7 +1846,7 @@ export default function POSPage() {
 
         <style>
 
-          @page { size: 80mm; margin: 0; }
+          @page { size: 80mm 800mm; margin: 0; }
 
           * { -webkit-print-color-adjust: exact; }
 
@@ -1902,19 +1888,25 @@ export default function POSPage() {
 
         <p class="center small">${storeInfo.address}</p>
 
-        <p class="center small">${storeInfo.phone}</p>
+        <p class="center small">TEL: ${storeInfo.phone.replace(/^Tel:\s*/i, "")}</p>
 
-        <p class="center small">${dateStr}  ${timeStr}</p>
+        <br/>
 
-        <p class="center small">${t.pos.receipt}: ${tx.transactionNumber}</p>
+        <p class="center small">${new Date(tx.date).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}).toUpperCase()}&nbsp;&nbsp;${new Date(tx.date).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})}</p>
+
+        <p class="center small">SALE #${tx.transactionNumber}&nbsp;&nbsp;S/P-${user?.firstName || "CASHIER"}</p>
+
+        <div class="dashed"></div>
+
+        <table>${printItemsHtml}</table>
 
         <div class="dashed"></div>
 
         <table>
 
-          <tr><td class="small" style="font-weight:bold">${t.pos.receiptItem}</td><td class="small" style="text-align:center;font-weight:bold">${t.pos.receiptQty}</td><td class="small" style="text-align:right;font-weight:bold">${t.pos.receiptUnit}</td><td class="small" style="text-align:right;font-weight:bold">${t.pos.receiptTotal}</td></tr>
+          <tr><td class="small">SUBTOTAL</td><td class="right small">${tx.subtotal.toLocaleString("fr-CM")}</td></tr>
 
-          ${printItemsHtml}
+          ${tx.discount > 0 ? `<tr><td class="small">DISCOUNT</td><td class="right small">-${tx.discount.toLocaleString("fr-CM")}</td></tr>` : ""}
 
         </table>
 
@@ -1922,33 +1914,19 @@ export default function POSPage() {
 
         <table>
 
-          <tr><td class="small">${t.pos.subtotal}</td><td class="right small">${formatCurrency(tx.subtotal)}</td></tr>
+          <tr><td class="total">TOTAL SALE</td><td class="right total">${tx.total.toLocaleString("fr-CM")}</td></tr>
 
-          ${tx.discount > 0 ? `<tr><td class="small">${t.pos.discount}</td><td class="right small">-${formatCurrency(tx.discount)}</td></tr>` : ""}
+          <tr><td class="small">PAID ${methodLabel.toUpperCase()}</td><td class="right small">${(tx.cashGiven ?? tx.total).toLocaleString("fr-CM")}</td></tr>
 
-        </table>
-
-        <div class="dashed"></div>
-
-        <table><tr><td class="total">${t.pos.total.toUpperCase()}</td><td class="right total">${formatCurrency(tx.total)}</td></tr></table>
-
-        <div class="dashed"></div>
-
-        <table>
-
-          <tr><td class="small">${methodLabel}</td><td class="right small">${formatCurrency(tx.total)}</td></tr>
-
-          ${tx.cashGiven != null ? `<tr><td class="small">${t.pos.amountGiven}</td><td class="right small">${formatCurrency(tx.cashGiven)}</td></tr>` : ""}
-
-          ${tx.change != null ? `<tr><td class="small">${t.pos.change}</td><td class="right small">${formatCurrency(tx.change)}</td></tr>` : ""}
+          ${tx.change != null && tx.change > 0 ? `<tr><td class="small">CHANGE</td><td class="right small">${tx.change.toLocaleString("fr-CM")}</td></tr>` : ""}
 
         </table>
 
         <div class="dashed"></div>
 
-        <p class="center small" style="margin-top:8px">${(storeInfo.receiptFooter || t.pos.thankYou).split("\n").map((line: string, idx: number) => idx === 0 ? line : `<br/>${line}`).join("")}</p>
+        <p class="center small" style="margin-top:6px">goods sold are not refundable</p>
 
-        <p class="center small">${storeInfo.name}</p>
+        <p class="center small">Thanks for patronizing us</p>
 
         <p class="center small">(REPRINT)</p>
 
