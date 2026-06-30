@@ -964,9 +964,28 @@ export default function POSPage() {
 
   const connectUsbDisplay = async () => {
 
+    // Web Serial nécessite HTTPS ou localhost (contexte sécurisé)
+    if (!window.isSecureContext) {
+
+      toast(
+        locale === "fr"
+          ? "Afficheur USB : utilisez ce PC serveur (localhost:3000), pas via WiFi. L'écran client WiFi (/pos/display) fonctionne partout."
+          : "USB Display: use the server PC (localhost:3000), not via WiFi. The WiFi customer screen (/pos/display) works everywhere.",
+        "warning"
+      );
+
+      return;
+
+    }
+
     if (!('serial' in navigator)) {
 
-      toast("Web Serial non supporté — utiliser Chrome ou Edge", "warning");
+      toast(
+        locale === "fr"
+          ? "Afficheur USB non supporté — utiliser Chrome ou Edge (pas Firefox)"
+          : "USB display not supported — use Chrome or Edge (not Firefox)",
+        "warning"
+      );
 
       return;
 
@@ -976,7 +995,43 @@ export default function POSPage() {
 
       const port = await (navigator as any).serial.requestPort();
 
-      await port.open({ baudRate: 9600, dataBits: 8, stopBits: 1, parity: "none" });
+      // Essayer plusieurs baud rates courants pour afficheurs VFD/LCD client
+      const baudRates = [9600, 19200, 38400, 4800];
+
+      let opened = false;
+
+      for (const baud of baudRates) {
+
+        try {
+
+          await port.open({ baudRate: baud, dataBits: 8, stopBits: 1, parity: "none" });
+
+          opened = true;
+
+          console.log(`[USB Display] Connecté à ${baud} baud`);
+
+          break;
+
+        } catch {
+
+          // essayer le prochain baud rate
+
+        }
+
+      }
+
+      if (!opened) {
+
+        toast(
+          locale === "fr"
+            ? "Impossible d'ouvrir le port — vérifier que l'afficheur est branché et non utilisé par un autre logiciel"
+            : "Cannot open port — check display is plugged in and not used by another app",
+          "warning"
+        );
+
+        return;
+
+      }
 
       usbPortRef.current = port;
 
@@ -984,7 +1039,7 @@ export default function POSPage() {
 
       toast(t.pos.usbDisplayConnected, "success");
 
-      const storeName = (storeInfo.name || "KABRAK").slice(0, 20).padEnd(20, " ");
+      const storeName = (storeInfo.name || "EASY SHOP LIMBE").slice(0, 20).padEnd(20, " ");
 
       const welcome = (locale === "fr" ? "   Bienvenue!   " : "    Welcome!    ").slice(0, 20).padEnd(20, " ");
 
@@ -992,9 +1047,34 @@ export default function POSPage() {
 
     } catch (e: any) {
 
-      if (e?.name !== "NotAllowedError") {
+      if (e?.name === "NotAllowedError") {
 
-        toast(t.pos.usbDisplayError, "warning");
+        // Utilisateur a annulé la sélection du port — pas d'erreur à afficher
+
+        return;
+
+      }
+
+      // Port occupé ou autre erreur
+      const msg = e?.message || "";
+
+      if (msg.includes("already open") || msg.includes("Access denied")) {
+
+        toast(
+          locale === "fr"
+            ? "Port déjà utilisé — fermer Retail Plus 50 ou tout autre logiciel utilisant ce port"
+            : "Port already in use — close Retail Plus 50 or any other app using this port",
+          "warning"
+        );
+
+      } else {
+
+        toast(
+          locale === "fr"
+            ? `Erreur afficheur USB: ${msg || "connexion échouée"}`
+            : `USB display error: ${msg || "connection failed"}`,
+          "warning"
+        );
 
       }
 
