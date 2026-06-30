@@ -1,5 +1,12 @@
 // Client API pour connecter le frontend Next.js au backend NestJS
 // Architecture hybride: serveur local (primaire) + cloud (fallback)
+//
+// Logique de bascule:
+// 1. Local est TOUJOURS prioritaire (le magasin a du courant)
+// 2. Si local ne répond pas → bascule sur cloud (immédiat, pas d'attente)
+// 3. Si internet coupe → reste sur local (pas de bascule)
+// 4. Si local revient → bascule retour (retest toutes les 10s en arrière-plan)
+// 5. L'override localStorage (IP spécifique magasin) est toujours retesté
 
 // URL primaire (serveur local du magasin ou cloud selon déploiement)
 const PRIMARY_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
@@ -7,29 +14,33 @@ const PRIMARY_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:300
 // URL de fallback (cloud) — utilisée si le serveur local ne répond pas
 const FALLBACK_API_URL = "https://kabrak-api-production.up.railway.app/api";
 
-// Suivre quel serveur est actif
+// État de la connexion
 let activeApiUrl = PRIMARY_API_URL;
 let lastFailoverTime = 0;
-const FAILOVER_COOLDOWN_MS = 30000; // 30s avant de retester le primaire
-let localOverrideFailed = false; // si l'override local a échoué, l'ignorer
+let localAvailable = true; // optimiste: on suppose local OK au départ
+let lastLocalCheckTime = 0;
+const LOCAL_CHECK_INTERVAL_MS = 10000; // retester local toutes les 10s
+const LOCAL_TIMEOUT_MS = 2000; // 2s pour tester local (pas 5s)
 
 // Helper pour les requêtes avec bascule automatique
 async function fetchAPI<T>(
   endpoint: string,
   options?: RequestInit
 ): Promise<T> {
-  // Vérifier si on doit retester le serveur primaire
-  if (activeApiUrl !== PRIMARY_API_URL && Date.now() - lastFailoverTime > FAILOVER_COOLDOWN_MS) {
-    // Retester le primaire en arrière-plan
-    testPrimaryServer();
+  // Déterminer l'URL locale (override localStorage ou PRIMARY_API_URL)
+  let localUrl = PRIMARY_API_URL;
+  if (typeof window !== "undefined") {
+    const localOverride = localStorage.getItem("kabrak_api_url");
+    if (localOverride) localUrl = localOverride;
   }
 
-  // Permettre override via localStorage (pour config caisses)
-  let baseUrl = activeApiUrl;
-  if (typeof window !== "undefined" && !localOverrideFailed) {
-    const localOverride = localStorage.getItem("kabrak_api_url");
-    if (localOverride) baseUrl = localOverride;
+  // Si on est sur le cloud, retester le local en arrière-plan périodiquement
+  if (!localAvailable && Date.now() - lastLocalCheckTime > LOCAL_CHECK_INTERVAL_MS) {
+    testLocalServer(localUrl);
   }
+
+  // Choisir l'URL: si local disponible → local, sinon → cloud
+  let baseUrl = localAvailable ? localUrl : FALLBACK_API_URL;
 
   const url = `${baseUrl}${endpoint}`;
 
@@ -38,7 +49,6 @@ async function fetchAPI<T>(
   let licenseKey: string | null = null;
   if (typeof window !== "undefined") {
     token = localStorage.getItem("kabrak_auth_token");
-    // Recuperer la cle de licence pour verification backend
     try {
       const licData = localStorage.getItem("kabrak_license_data");
       if (licData) { licenseKey = JSON.parse(licData)?.licenseKey || null; }
@@ -50,12 +60,10 @@ async function fetchAPI<T>(
     ...(options?.headers as Record<string, string>),
   };
 
-  // Ajouter le token d'auth si disponible
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  // Ajouter la cle de licence pour verification backend
   if (licenseKey) {
     headers["x-license-key"] = licenseKey;
   }
@@ -65,25 +73,44 @@ async function fetchAPI<T>(
     res = await fetch(url, {
       ...options,
       headers,
-      signal: AbortSignal.timeout(5000), // 5s timeout
+      signal: AbortSignal.timeout(localAvailable ? 5000 : 10000),
     });
   } catch (err) {
-    // Le serveur primaire ne répond pas — basculer vers le cloud
-    const isOverride = typeof window !== "undefined" && baseUrl === localStorage.getItem("kabrak_api_url");
-    if (isOverride) {
-      // L'override local a échoué — l'ignorer pour les prochains appels
-      localOverrideFailed = true;
+    // Le serveur local ne répond pas — basculer vers le cloud
+    if (localAvailable) {
+      console.warn("Serveur local injoignable, bascule vers le cloud…");
+      localAvailable = false;
+      lastFailoverTime = Date.now();
+      // Réessayer avec le cloud
+      const cloudUrl = `${FALLBACK_API_URL}${endpoint}`;
+      try {
+        res = await fetch(cloudUrl, {
+          ...options,
+          headers,
+          signal: AbortSignal.timeout(10000),
+        });
+      } catch (cloudErr) {
+        // Le cloud ne répond pas non plus — essayer local quand même
+        // (cas: internet coupé mais serveur local OK)
+        localAvailable = true;
+        throw cloudErr;
+      }
+    } else {
+      // On était déjà sur le cloud et il a échoué — essayer local (peut-être revenu)
+      const localFullUrl = `${localUrl}${endpoint}`;
+      try {
+        res = await fetch(localFullUrl, {
+          ...options,
+          headers,
+          signal: AbortSignal.timeout(5000),
+        });
+        // Si local répond, marquer comme disponible
+        localAvailable = true;
+        console.log("Serveur local de nouveau disponible — bascule retour");
+      } catch {
+        throw err; // ni local ni cloud ne répondent
+      }
     }
-    console.warn("Serveur local injoignable, bascule vers le cloud…");
-    activeApiUrl = FALLBACK_API_URL;
-    lastFailoverTime = Date.now();
-    // Réessayer avec le cloud
-    const cloudUrl = `${FALLBACK_API_URL}${endpoint}`;
-    res = await fetch(cloudUrl, {
-      ...options,
-      headers,
-      signal: AbortSignal.timeout(10000),
-    });
   }
 
   if (res.status === 401 && typeof window !== "undefined") {
@@ -114,17 +141,15 @@ async function fetchAPI<T>(
 }
 
 // Tester si le serveur local est revenu (en arrière-plan, non-bloquant)
-async function testPrimaryServer() {
+async function testLocalServer(localUrl: string) {
+  lastLocalCheckTime = Date.now();
   try {
-    const testUrl = typeof window !== "undefined"
-      ? (localStorage.getItem("kabrak_api_url") || PRIMARY_API_URL)
-      : PRIMARY_API_URL;
-    const res = await fetch(`${testUrl}`, {
-      signal: AbortSignal.timeout(3000),
+    const res = await fetch(`${localUrl}`, {
+      signal: AbortSignal.timeout(LOCAL_TIMEOUT_MS),
     });
     if (res.ok) {
       console.log("Serveur local de nouveau disponible — bascule retour");
-      activeApiUrl = PRIMARY_API_URL;
+      localAvailable = true;
     }
   } catch {
     // Toujours down — rester sur le cloud
@@ -133,11 +158,14 @@ async function testPrimaryServer() {
 
 // Exporter l'état de la connexion pour le UI
 export function getServerStatus(): { isLocal: boolean; url: string } {
-  const override = typeof window !== "undefined" ? localStorage.getItem("kabrak_api_url") : null;
-  const url = override || activeApiUrl;
+  let localUrl = PRIMARY_API_URL;
+  if (typeof window !== "undefined") {
+    const override = localStorage.getItem("kabrak_api_url");
+    if (override) localUrl = override;
+  }
   return {
-    isLocal: url !== FALLBACK_API_URL,
-    url,
+    isLocal: localAvailable,
+    url: localAvailable ? localUrl : FALLBACK_API_URL,
   };
 }
 
