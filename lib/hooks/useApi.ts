@@ -32,6 +32,8 @@ import {
   type ApiInvoice,
   type ApiNotification,
   type ApiNotificationSummary,
+  type ApiReturn,
+  returnsApi,
 } from "@/lib/api";
 import type { Product } from "@/lib/types";
 
@@ -583,6 +585,48 @@ export function useStockAdjust() {
     }
   };
   return { adjust, adjusting };
+}
+
+// ========================================
+// HOOKS: Returns (Retours produits)
+// ========================================
+export function useReturns() {
+  const [returns, setReturns] = useState<ApiReturn[]>([]);
+  const [loading, setLoading] = useState(true);
+  const load = useCallback(() => {
+    setLoading(true);
+    returnsApi.list()
+      .then(setReturns)
+      .catch(() => setReturns([]))
+      .finally(() => setLoading(false));
+  }, []);
+  useEffect(() => { load(); }, [load]);
+  return { returns, loading, reload: load };
+}
+
+export function useCreateReturn() {
+  const [creating, setCreating] = useState(false);
+  const create = async (data: Parameters<typeof returnsApi.create>[0]) => {
+    setCreating(true);
+    try {
+      return await returnsApi.create(data);
+    } finally {
+      setCreating(false);
+    }
+  };
+  return { create, creating };
+}
+
+export function useReturnStats() {
+  const [stats, setStats] = useState<{ total: number; totalAmount: number; byReason: Record<string, number> } | null>(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    returnsApi.stats()
+      .then(setStats)
+      .catch(() => setStats(null))
+      .finally(() => setLoading(false));
+  }, []);
+  return { stats, loading };
 }
 
 // ========================================
