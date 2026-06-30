@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   Clock,
   ScanLine,
+  Package,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Card } from "@/components/ui/Card";
@@ -51,7 +52,7 @@ interface Invoice {
   total: number;
   paidAmount: number;
   balance: number;
-  status: "draft" | "sent" | "partial" | "paid" | "overdue" | "cancelled";
+  status: "draft" | "sent" | "partial" | "paid" | "overdue" | "cancelled" | "reserved";
   payments: Payment[];
 }
 
@@ -128,6 +129,7 @@ export default function FacturesPage() {
     paid: { label: t.factures.status.paid, color: "bg-emerald-100 text-emerald-700" },
     overdue: { label: t.factures.status.overdue, color: "bg-red-100 text-red-700" },
     cancelled: { label: t.factures.status.cancelled, color: "bg-slate-100 text-slate-400" },
+    reserved: { label: t.factures.status.reserved, color: "bg-purple-100 text-purple-700" },
   };
 
   const paymentMethodLabels: Record<string, string> = {
@@ -301,6 +303,10 @@ export default function FacturesPage() {
       } else {
         toast(`${t.factures.invoiceCreated}: ${result.number}`, "success");
       }
+      // Si collecte différée et payé intégralement → marquer comme réservé
+      if (deferredCollection) {
+        await updateStatus(result.id, "reserved");
+      }
       reload();
     } else {
       toast(t.factures.invoiceCreatedLocal, "warning");
@@ -311,6 +317,7 @@ export default function FacturesPage() {
     setClientEmail("");
     setAdvancePayment("");
     setAdvanceMethod("cash");
+    setDeferredCollection(false);
     setItems([{ description: "", quantity: 1, unitPrice: 0, total: 0 }]);
   };
 
@@ -618,6 +625,13 @@ export default function FacturesPage() {
     toast(`${t.factures.pdfGenerated} ${invoice.number}.pdf`, "success");
   };
 
+  // ── Reserved / Deferred Collection ──
+  const [deferredCollection, setDeferredCollection] = useState(false);
+  const [collectionInvoice, setCollectionInvoice] = useState<Invoice | null>(null);
+  const [exchangeMode, setExchangeMode] = useState(false);
+  const [exchangeProductId, setExchangeProductId] = useState("");
+  const [exchangeItemIdx, setExchangeItemIdx] = useState(0);
+
   // ── Print invoice via browser — A4 or ticket format ──
   const [printMenuInvoice, setPrintMenuInvoice] = useState<Invoice | null>(null);
 
@@ -882,6 +896,15 @@ export default function FacturesPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-1">
+                        {invoice.status === "reserved" && (
+                          <button
+                            onClick={() => { setCollectionInvoice(invoice); setExchangeMode(false); setExchangeProductId(""); }}
+                            className="px-2 py-1 text-xs font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors flex items-center gap-1"
+                          >
+                            <Package className="w-3.5 h-3.5" />
+                            {t.factures.processCollection}
+                          </button>
+                        )}
                         {invoice.balance > 0 && (
                           <button onClick={() => openPaymentModal(invoice)} className="px-2 py-1 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors flex items-center gap-1">
                             <Wallet className="w-3.5 h-3.5" />
@@ -1162,6 +1185,21 @@ export default function FacturesPage() {
               )}
             </div>
 
+            {/* Deferred Collection */}
+            <div className="flex items-start gap-3 p-3 bg-purple-50 border border-purple-200 rounded-xl mt-4">
+              <input
+                type="checkbox"
+                id="deferredCollection"
+                checked={deferredCollection}
+                onChange={(e) => setDeferredCollection(e.target.checked)}
+                className="mt-0.5 w-4 h-4 accent-purple-600"
+              />
+              <label htmlFor="deferredCollection" className="text-sm cursor-pointer">
+                <span className="font-medium text-purple-800">{t.factures.deferredCollection}</span>
+                <p className="text-xs text-purple-600 mt-0.5">{t.factures.deferredCollectionHint}</p>
+              </label>
+            </div>
+
             <div className="flex gap-2">
               <Button variant="secondary" className="flex-1" onClick={() => setShowModal(false)}>{t.common.cancel}</Button>
               <Button className="flex-1" onClick={handleCreate} disabled={!clientName}>{t.factures.create}</Button>
@@ -1296,6 +1334,166 @@ export default function FacturesPage() {
             )}
           </div>
         </div>
+      )}
+      {/* Collection / Exchange Modal */}
+      {collectionInvoice && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/30 backdrop-blur-[2px] z-50"
+            onClick={() => { setCollectionInvoice(null); setExchangeMode(false); setExchangeProductId(""); }}
+          />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg pointer-events-auto flex flex-col max-h-[90vh]">
+
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)] shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 bg-purple-50 rounded-xl flex items-center justify-center">
+                    <Package className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-semibold text-[var(--text-primary)]">{t.factures.collectionModal}</h2>
+                    <p className="text-xs text-[var(--text-muted)]">{collectionInvoice.number} — {collectionInvoice.clientName}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => { setCollectionInvoice(null); setExchangeMode(false); setExchangeProductId(""); }}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors"
+                >
+                  <X className="w-4 h-4 text-[var(--text-muted)]" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                {/* Reserved items */}
+                <div>
+                  <p className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-3">
+                    {t.factures.currentItems}
+                  </p>
+                  <div className="space-y-2">
+                    {collectionInvoice.items.map((item, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-[var(--border)]">
+                        <div className="flex-1 min-w-0 mr-3">
+                          <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{item.description}</p>
+                          <p className="text-xs text-[var(--text-muted)]">× {item.quantity} — {formatCurrency(item.unitPrice)} / unit</p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-sm font-bold text-[var(--text-primary)] tabular-nums">{formatCurrency(item.total)}</p>
+                          {!exchangeMode && (
+                            <button
+                              onClick={() => { setExchangeMode(true); setExchangeItemIdx(idx); }}
+                              className="text-[10px] text-purple-600 hover:text-purple-800 hover:underline mt-0.5 block"
+                            >
+                              {t.factures.exchangeItem} →
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Exchange section */}
+                {exchangeMode && (
+                  <div className="border-t border-[var(--border)] pt-4">
+                    <p className="text-[11px] font-bold text-purple-700 uppercase tracking-widest mb-3">
+                      {t.factures.newItem}
+                    </p>
+                    <select
+                      value={exchangeProductId}
+                      onChange={(e) => setExchangeProductId(e.target.value)}
+                      className="w-full border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm outline-none focus:border-purple-400 bg-white"
+                    >
+                      <option value="">— Choisir un article —</option>
+                      {products.map((p) => (
+                        <option key={p.id} value={p.id}>{p.name} — {formatCurrency(p.price)}</option>
+                      ))}
+                    </select>
+
+                    {/* Price difference calculation */}
+                    {exchangeProductId && (() => {
+                      const newProd = products.find((p) => p.id === exchangeProductId);
+                      const oldItem = collectionInvoice.items[exchangeItemIdx];
+                      if (!newProd || !oldItem) return null;
+                      const oldTotal = oldItem.total;
+                      const newTotal = newProd.price * oldItem.quantity;
+                      const diff = newTotal - oldTotal;
+                      return (
+                        <div className={`mt-3 p-4 rounded-xl border ${diff > 0 ? "bg-amber-50 border-amber-200" : diff < 0 ? "bg-emerald-50 border-emerald-200" : "bg-slate-50 border-slate-200"}`}>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm text-[var(--text-secondary)]">
+                              {diff > 0 ? t.factures.toPay : diff < 0 ? t.factures.toRefund : t.factures.priceDiff}
+                            </span>
+                            <span className={`text-xl font-bold tabular-nums ${diff > 0 ? "text-amber-700" : diff < 0 ? "text-emerald-700" : "text-slate-500"}`}>
+                              {diff === 0 ? "—" : `${diff > 0 ? "+" : ""}${formatCurrency(Math.abs(diff))}`}
+                            </span>
+                          </div>
+                          <div className="text-xs text-[var(--text-muted)] flex justify-between">
+                            <span>{collectionInvoice.items[exchangeItemIdx].description}: {formatCurrency(oldTotal)}</span>
+                            <span>→ {newProd.name}: {formatCurrency(newTotal)}</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 py-4 border-t border-[var(--border)] shrink-0 flex flex-col gap-2">
+                {!exchangeMode ? (
+                  <button
+                    onClick={async () => {
+                      await updateStatus(collectionInvoice.id, "paid");
+                      toast(t.factures.collectionDone, "success");
+                      reload();
+                      setCollectionInvoice(null);
+                    }}
+                    className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 text-sm"
+                  >
+                    <Package className="w-4 h-4" />
+                    {t.factures.confirmCollection}
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      disabled={!exchangeProductId}
+                      onClick={async () => {
+                        if (!exchangeProductId) return;
+                        const newProd = products.find((p) => p.id === exchangeProductId);
+                        const oldItem = collectionInvoice.items[exchangeItemIdx];
+                        if (!newProd || !oldItem) return;
+                        const diff = (newProd.price * oldItem.quantity) - oldItem.total;
+                        await updateStatus(collectionInvoice.id, "paid");
+                        if (diff > 0) {
+                          await addPayment(collectionInvoice.id, {
+                            amount: diff,
+                            method: "cash",
+                            note: `Échange: ${oldItem.description} → ${newProd.name}`,
+                          });
+                        }
+                        toast(t.factures.exchangeDone, "success");
+                        reload();
+                        setCollectionInvoice(null);
+                        setExchangeMode(false);
+                        setExchangeProductId("");
+                      }}
+                      className="w-full py-3 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white font-semibold rounded-xl transition-colors text-sm"
+                    >
+                      {t.factures.confirmExchange}
+                    </button>
+                    <button
+                      onClick={() => { setExchangeMode(false); setExchangeProductId(""); }}
+                      className="w-full py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+                    >
+                      ← {t.common.back}
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </>
       )}
     </AppShell>
   );
