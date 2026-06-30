@@ -21,6 +21,7 @@ import {
   Settings,
   History,
   Gift,
+  HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/context";
@@ -94,6 +95,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       label: "",
       items: [
         { href: "/settings", label: t.nav.settings, icon: Settings, badge: null },
+        { href: "/guide", label: t.nav.guide || "Guide", icon: HelpCircle, badge: null },
       ],
     },
   ];

@@ -26,6 +26,7 @@ export const ROLE_PERMISSIONS: Record<Role, string[]> = {
     "/ia",
     "/historique",
     "/settings",
+    "/guide",
   ],
   // Manager: same as boss minus /settings (cannot touch license/store config)
   manager: [
@@ -46,6 +47,7 @@ export const ROLE_PERMISSIONS: Record<Role, string[]> = {
     "/rapports",
     "/ia",
     "/historique",
+    "/guide",
   ],
   accountant: [
     "/dashboard",
@@ -62,6 +64,7 @@ export const ROLE_PERMISSIONS: Record<Role, string[]> = {
     "/comptabilite",
     "/rapports",
     "/historique",
+    "/guide",
   ],
   cashier: [
     "/dashboard",
@@ -72,6 +75,7 @@ export const ROLE_PERMISSIONS: Record<Role, string[]> = {
     "/historique",
     "/factures",
     "/cadeaux",
+    "/guide",
   ],
   stockist: [
     "/dashboard",
@@ -82,6 +86,7 @@ export const ROLE_PERMISSIONS: Record<Role, string[]> = {
     "/scanner",
     "/historique",
     "/factures",
+    "/guide",
   ],
 };
 
