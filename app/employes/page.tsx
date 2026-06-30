@@ -140,12 +140,13 @@ export default function EmployesPage() {
     setEmployees(mapped);
   }, [apiEmployees]);
 
-  const handleNewEmployee = async (data: Omit<Employee, "id" | "status" | "hoursThisWeek">) => {
+  const handleNewEmployee = async (data: Omit<Employee, "id" | "status" | "hoursThisWeek"> & { pin?: string }) => {
     setSaving(true);
     try {
-      // Générer un numéro d'employé unique basé sur un timestamp + PIN aléatoire
-      const employeeNumber = `EMP${Date.now().toString().slice(-6)}`;
-      const generatedPin = String(Math.floor(1000 + Math.random() * 9000)); // PIN 4 chiffres aléatoire
+      // Code employé unique basé sur timestamp
+      const employeeNumber = `EMP${Date.now().toString().slice(-5)}`;
+      // PIN fourni par le boss ou généré automatiquement
+      const finalPin = data.pin || String(Math.floor(1000 + Math.random() * 9000));
       const created = await employeesApi.create({
         employeeNumber,
         firstName: data.firstName,
@@ -156,7 +157,7 @@ export default function EmployesPage() {
         email: data.email || undefined,
         hireDate: data.hireDate ? new Date(data.hireDate) : new Date(),
         status: "active",
-        pin: generatedPin, // PIN aléatoire, communiquer à l'employé
+        pin: finalPin,
       });
       const newEmp: Employee = {
         id: created.id,
@@ -171,13 +172,14 @@ export default function EmployesPage() {
         hoursThisWeek: 0,
       };
       setEmployees((prev) => [newEmp, ...prev]);
-      toast(t.employes.employeeAdded.replace("{name}", `${data.firstName} ${data.lastName}`).replace("{pin}", generatedPin), "success");
       reloadEmployees();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : t.employes.errorAdd;
       toast(msg, "warning");
       // Fallback local
-      const newEmp: Employee = { ...data, id: `e${Date.now()}`, status: "active", hoursThisWeek: 0 };
+      const { pin: _pin, ...rest } = data;
+      void _pin;
+      const newEmp: Employee = { ...rest, id: `e${Date.now()}`, status: "active", hoursThisWeek: 0 };
       setEmployees((prev) => [newEmp, ...prev]);
     } finally {
       setSaving(false);

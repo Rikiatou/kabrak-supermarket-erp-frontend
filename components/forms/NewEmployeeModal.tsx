@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Users, CheckCircle2 } from "lucide-react";
+import { X, Users, CheckCircle2, Eye, EyeOff, Copy } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useI18n } from "@/lib/i18n/context";
 import { cn } from "@/lib/utils";
@@ -17,16 +17,17 @@ type FormData = {
   phone: string;
   email: string;
   hireDate: string;
+  pin: string;
 };
 
 const empty: FormData = {
   firstName: "", lastName: "", role: "", department: "",
-  phone: "", email: "", hireDate: "",
+  phone: "", email: "", hireDate: "", pin: "",
 };
 
 interface NewEmployeeModalProps {
   onClose: () => void;
-  onSave: (employee: Omit<Employee, "id" | "status" | "hoursThisWeek">) => void;
+  onSave: (employee: Omit<Employee, "id" | "status" | "hoursThisWeek"> & { pin?: string }) => void;
 }
 
 export function NewEmployeeModal({ onClose, onSave }: NewEmployeeModalProps) {
@@ -34,6 +35,8 @@ export function NewEmployeeModal({ onClose, onSave }: NewEmployeeModalProps) {
   const [form, setForm] = useState<FormData>(empty);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState(false);
+  const [showPin, setShowPin] = useState(false);
+  const [createdInfo, setCreatedInfo] = useState<{ name: string; code: string; pin: string } | null>(null);
 
   const set = (field: keyof FormData) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -49,8 +52,11 @@ export function NewEmployeeModal({ onClose, onSave }: NewEmployeeModalProps) {
     if (!form.role) errs.role = t.common.required;
     if (!form.department.trim()) errs.department = t.common.required;
     if (!form.phone.trim()) errs.phone = t.common.required;
-    if (!form.email.trim()) errs.email = t.common.required;
+    // email is optional
     if (!form.hireDate) errs.hireDate = t.common.required;
+    if (form.pin && (form.pin.length !== 4 || !/^\d{4}$/.test(form.pin))) {
+      errs.pin = "PIN doit être 4 chiffres";
+    }
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -58,20 +64,20 @@ export function NewEmployeeModal({ onClose, onSave }: NewEmployeeModalProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
+    const generatedCode = `EMP${Date.now().toString().slice(-5)}`;
+    const finalPin = form.pin.trim() || String(Math.floor(1000 + Math.random() * 9000));
+    setCreatedInfo({ name: `${form.firstName} ${form.lastName}`, code: generatedCode, pin: finalPin });
     onSave({
       firstName: form.firstName,
       lastName: form.lastName,
       role: form.role as Employee["role"],
       department: form.department,
       phone: form.phone,
-      email: form.email,
+      email: form.email || undefined as unknown as string,
       hireDate: form.hireDate,
+      pin: finalPin,
     });
     setSaved(true);
-    setTimeout(() => {
-      setSaved(false);
-      onClose();
-    }, 1400);
   };
 
   const initials = form.firstName && form.lastName
@@ -98,12 +104,51 @@ export function NewEmployeeModal({ onClose, onSave }: NewEmployeeModalProps) {
             </button>
           </div>
 
-          {saved ? (
-            <div className="flex flex-col items-center justify-center py-16 gap-3">
+          {/* Écran de confirmation après création */}
+          {saved && createdInfo ? (
+            <div className="flex flex-col items-center justify-center py-10 px-8 gap-4">
               <div className="w-16 h-16 bg-[var(--success-light)] rounded-full flex items-center justify-center">
                 <CheckCircle2 className="w-8 h-8 text-emerald-600" />
               </div>
-              <p className="text-base font-semibold text-[var(--text-primary)]">{t.forms.employeeSaved}</p>
+              <p className="text-base font-semibold text-[var(--text-primary)]">{createdInfo.name} — créé(e) !</p>
+
+              {/* Carte à donner à l'employé */}
+              <div className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+                <p className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-widest text-center">
+                  Informations de connexion — à communiquer à l&apos;employé
+                </p>
+                <div className="flex items-center justify-between gap-3 bg-white rounded-lg px-4 py-3 border border-slate-200">
+                  <div>
+                    <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wide">Code employé</p>
+                    <p className="text-lg font-bold font-mono text-[var(--text-primary)]">{createdInfo.code}</p>
+                  </div>
+                  <button
+                    onClick={() => navigator.clipboard?.writeText(createdInfo.code)}
+                    className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
+                    title="Copier"
+                  >
+                    <Copy className="w-4 h-4 text-[var(--text-muted)]" />
+                  </button>
+                </div>
+                <div className="flex items-center justify-between gap-3 bg-indigo-50 rounded-lg px-4 py-3 border border-indigo-200">
+                  <div>
+                    <p className="text-[10px] text-indigo-600 uppercase tracking-wide font-semibold">PIN secret</p>
+                    <p className="text-2xl font-bold font-mono text-indigo-700 tracking-[0.3em]">{createdInfo.pin}</p>
+                  </div>
+                  <button
+                    onClick={() => navigator.clipboard?.writeText(createdInfo.pin)}
+                    className="p-2 rounded-lg hover:bg-indigo-100 transition-colors"
+                    title="Copier PIN"
+                  >
+                    <Copy className="w-4 h-4 text-indigo-500" />
+                  </button>
+                </div>
+                <p className="text-[11px] text-amber-600 bg-amber-50 rounded-lg px-3 py-2 border border-amber-200">
+                  ⚠️ Notez ce PIN maintenant. Vous pourrez le réinitialiser depuis la fiche de l&apos;employé.
+                </p>
+              </div>
+
+              <Button onClick={onClose} className="w-full mt-2">Fermer</Button>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
@@ -163,7 +208,7 @@ export function NewEmployeeModal({ onClose, onSave }: NewEmployeeModalProps) {
                       <input type="tel" value={form.phone} onChange={set("phone")}
                         placeholder={t.forms.phonePh} className={inputClass(!!errors.phone)} />
                     </Field>
-                    <Field label={t.forms.email} error={errors.email} required>
+                    <Field label={`${t.forms.email} (optionnel)`} error={errors.email}>
                       <input type="email" value={form.email} onChange={set("email")}
                         placeholder={t.forms.emailPh} className={inputClass(!!errors.email)} />
                     </Field>
@@ -173,6 +218,36 @@ export function NewEmployeeModal({ onClose, onSave }: NewEmployeeModalProps) {
                     </Field>
                   </div>
                 </div>
+
+                {/* PIN personnalisé */}
+                <div>
+                  <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-widest mb-3">
+                    PIN de connexion
+                  </p>
+                  <Field label="PIN (4 chiffres)" error={errors.pin}>
+                    <div className="relative">
+                      <input
+                        type={showPin ? "text" : "password"}
+                        value={form.pin}
+                        onChange={set("pin")}
+                        maxLength={4}
+                        placeholder="Laisser vide = généré automatiquement"
+                        className={`${inputClass(!!errors.pin)} pr-10 font-mono tracking-widest`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPin(!showPin)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                      >
+                        {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </Field>
+                  <p className="text-[11px] text-[var(--text-muted)] mt-1">
+                    Si vide, un PIN aléatoire sera généré et affiché après la sauvegarde.
+                  </p>
+                </div>
+
               </div>
 
               <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[var(--border)] shrink-0">
@@ -191,19 +266,20 @@ function Field({ label, error, required, children, span }: {
   label: string; error?: string; required?: boolean; children: React.ReactNode; span?: number;
 }) {
   return (
-    <div className={span === 2 ? "col-span-2" : ""}>
-      <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5">
+    <div className={cn("flex flex-col gap-1.5", span === 2 && "col-span-2")}>
+      <label className="text-xs font-medium text-[var(--text-secondary)]">
         {label}{required && <span className="text-red-500 ml-0.5">*</span>}
       </label>
       {children}
-      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+      {error && <p className="text-[11px] text-red-500">{error}</p>}
     </div>
   );
 }
 
 function inputClass(hasError: boolean) {
   return cn(
-    "w-full border rounded-xl px-3 py-2.5 text-sm text-[var(--text-primary)] outline-none transition-colors bg-white placeholder:text-[var(--text-muted)]",
-    hasError ? "border-red-400 focus:border-red-500" : "border-[var(--border)] focus:border-[var(--brand)]"
+    "w-full px-3 py-2 rounded-lg border text-sm bg-white transition-colors",
+    "focus:outline-none focus:ring-2 focus:ring-[var(--brand)] focus:border-transparent",
+    hasError ? "border-red-300 bg-red-50" : "border-[var(--border)] hover:border-slate-300"
   );
 }
