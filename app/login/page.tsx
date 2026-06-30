@@ -266,32 +266,14 @@ export default function LoginPage() {
           )}
         </div>
 
-        {/* Demo credentials panel */}
-        <div className="mt-4 bg-white border border-[#e5e7eb] rounded-xl overflow-hidden">
-          <div className="px-4 py-2.5 border-b border-[#f3f4f6] flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#16a34a] animate-pulse" />
-            <p className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest">Comptes demo</p>
-            <p className="text-[10px] text-[#d1d5db] ml-auto">cliquer pour se connecter</p>
-          </div>
+        {/* Demo credentials panel — REMOVED for production */}
+        {false && (
+          <div className="mt-4 bg-white border border-[#e5e7eb] rounded-xl overflow-hidden">
           <div className="divide-y divide-[#f9fafb]">
-            {[
-              { name: "Grace Johnson",  role: "boss",       pin: "1234", emp: "EMP001", bg: "bg-[#f0fdf4]", text: "text-[#15803d]" },
-              { name: "Paul Mbarga",    role: "caissier",   pin: "2345", emp: "EMP002", bg: "bg-[#eff6ff]", text: "text-[#1d4ed8]" },
-              { name: "Esther Diallo",  role: "caissier",   pin: "3456", emp: "EMP003", bg: "bg-[#eff6ff]", text: "text-[#1d4ed8]" },
-              { name: "David Bouba",    role: "stockiste",  pin: "4567", emp: "EMP004", bg: "bg-[#fffbeb]", text: "text-[#92400e]" },
-              { name: "Rebecca Kameni", role: "comptable",  pin: "5678", emp: "EMP005", bg: "bg-[#f0fdf4]", text: "text-[#15803d]" },
-            ].map((demo) => (
+            {([] as { name: string; role: string; pin: string; emp: string; bg: string; text: string }[]).map((demo) => (
               <button
                 key={demo.emp}
-                onClick={() => {
-                  const found = cashiers.find((c) => c.employeeNumber === demo.emp);
-                  if (found) {
-                    setSelectedCashier(found);
-                    setPin("");
-                    setError("");
-                    setTimeout(() => handleLoginWithPin(demo.pin), 150);
-                  }
-                }}
+                onClick={() => {}}
                 className="w-full flex items-center gap-3 px-4 py-2 hover:bg-[#f9fafb] transition-colors text-left"
               >
                 <div className={`w-7 h-7 rounded-full ${demo.bg} flex items-center justify-center text-[11px] font-bold ${demo.text} shrink-0`}>
@@ -307,7 +289,8 @@ export default function LoginPage() {
               </button>
             ))}
           </div>
-        </div>
+          </div>
+        )}
 
         {/* Footer */}
         <p className="text-center text-[11px] text-[#d1d5db] mt-5 font-medium tracking-wide">
