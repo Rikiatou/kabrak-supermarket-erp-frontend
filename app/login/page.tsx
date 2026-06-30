@@ -18,6 +18,8 @@ export default function LoginPage() {
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [cashiersError, setCashiersError] = useState(false);
+  const [cashiersLoading, setCashiersLoading] = useState(false);
   const [attemptsLeft, setAttemptsLeft] = useState<number | null>(null);
   const [lockedUntil, setLockedUntil] = useState<number | null>(null); // timestamp ms
   const [lockRemaining, setLockRemaining] = useState(0); // secondes restantes
@@ -31,9 +33,15 @@ export default function LoginPage() {
   }, [authLoading, isAuthenticated, router, user]);
 
   // Charger la liste des caissiers
-  useEffect(() => {
-    authApi.listCashiers().then(setCashiers).catch(() => {});
-  }, []);
+  const loadCashiers = () => {
+    setCashiersLoading(true);
+    setCashiersError(false);
+    authApi.listCashiers()
+      .then((res) => { setCashiers(res); setCashiersError(false); })
+      .catch(() => { setCashiersError(true); })
+      .finally(() => setCashiersLoading(false));
+  };
+  useEffect(() => { loadCashiers(); }, []);
 
   // Compte à rebours si verrouillé
   useEffect(() => {
@@ -149,7 +157,20 @@ export default function LoginPage() {
                 </p>
               </div>
               <div className="px-2 pb-2 max-h-72 overflow-y-auto">
-                {cashiers.length === 0 ? (
+                {cashiersError ? (
+                  <div className="flex flex-col items-center py-10 gap-3">
+                    <AlertCircle className="w-5 h-5 text-red-400" />
+                    <p className="text-[12px] text-[#9ca3af] text-center">
+                      {t.login.connectionError || "Connection error"}
+                    </p>
+                    <button
+                      onClick={loadCashiers}
+                      className="px-4 py-1.5 rounded-lg bg-[#16a34a] text-white text-[12px] font-medium hover:bg-[#15803d] transition-colors"
+                    >
+                      {t.login.retry || "Retry"}
+                    </button>
+                  </div>
+                ) : cashiers.length === 0 ? (
                   <div className="flex flex-col items-center py-10 gap-2">
                     <Loader2 className="w-4 h-4 text-[#d1d5db] animate-spin" />
                     <p className="text-[12px] text-[#9ca3af]">{t.login.loading}</p>
