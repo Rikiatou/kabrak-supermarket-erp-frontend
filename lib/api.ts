@@ -31,7 +31,16 @@ async function fetchAPI<T>(
   let localUrl = PRIMARY_API_URL;
   if (typeof window !== "undefined") {
     const localOverride = localStorage.getItem("kabrak_api_url");
-    if (localOverride) localUrl = localOverride;
+    if (localOverride) {
+      // Sur le cloud (Vercel), ne pas utiliser un override localhost
+      // sauf si c'est une IP locale (192.168.x.x ou 10.x.x.x)
+      const hostname = window.location.hostname;
+      const isOnLocalNetwork = hostname === "localhost" || hostname.startsWith("192.168.") || hostname.startsWith("10.") || hostname.startsWith("172.");
+      const overrideIsLocal = localOverride.includes("localhost") || localOverride.includes("192.168.") || localOverride.includes("10.");
+      if (isOnLocalNetwork || !overrideIsLocal) {
+        localUrl = localOverride;
+      }
+    }
   }
 
   // Si on est sur le cloud, retester le local en arrière-plan périodiquement
@@ -143,6 +152,14 @@ async function fetchAPI<T>(
 // Tester si le serveur local est revenu (en arrière-plan, non-bloquant)
 async function testLocalServer(localUrl: string) {
   lastLocalCheckTime = Date.now();
+  // Sur le cloud, ne pas retester localhost
+  if (typeof window !== "undefined") {
+    const hostname = window.location.hostname;
+    const isOnCloud = hostname.includes("vercel") || (!hostname.startsWith("192.168.") && !hostname.startsWith("10.") && hostname !== "localhost");
+    if (isOnCloud && (localUrl.includes("localhost") || localUrl.includes("127.0.0.1"))) {
+      return; // pas la peine de tester localhost depuis Vercel
+    }
+  }
   try {
     const res = await fetch(`${localUrl}`, {
       signal: AbortSignal.timeout(LOCAL_TIMEOUT_MS),
