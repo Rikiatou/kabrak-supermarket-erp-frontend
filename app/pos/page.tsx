@@ -1092,7 +1092,7 @@ export default function POSPage() {
 
   // Vérifier si un article du panier a un stock insuffisant
 
-  const stockIssues = [];
+  const stockIssues = cart.filter(() => false);
 
   const hasStockIssues = false;
 
