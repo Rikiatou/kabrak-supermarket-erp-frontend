@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { useI18n } from "@/lib/i18n/context";
 import { useToast } from "@/components/ui/Toast";
-import { useProducts } from "@/lib/hooks/useApi";
+import { useServerProductSearch } from "@/lib/hooks/useApi";
 import { formatCurrency, cn } from "@/lib/utils";
 
 interface ScannedItem {
@@ -28,14 +28,15 @@ interface ScannedItem {
   stock: number;
   counted: number;
   difference: number;
+  costPrice: number;
   scannedAt: string;
 }
 
 export default function ScannerPage() {
   const { t } = useI18n();
   const { toast } = useToast();
-  const { products: apiProducts } = useProducts();
-  const products = apiProducts;
+  // Recherche server-side: cherche parmi TOUS les produits (18000+), pas seulement 50
+  const { results: searchResults, search: serverSearch, scanBarcode: serverScanBarcode } = useServerProductSearch();
 
   const [scanning, setScanning] = useState(false);
   const [scanned, setScanned] = useState<ScannedItem[]>([]);
@@ -76,11 +77,10 @@ export default function ScannerPage() {
     };
   }, []);
 
-  // Recherche manuelle par code-barres
-  const handleManualScan = () => {
-    const product = products.find(
-      (p) => p.barcode === manualSearch.trim() || p.sku.toLowerCase() === manualSearch.trim().toLowerCase()
-    );
+  // Recherche manuelle par code-barres — cherche côté serveur (barcode + SKU, tous les produits)
+  const handleManualScan = async () => {
+    if (!manualSearch.trim()) return;
+    const product = await serverScanBarcode(manualSearch.trim());
     if (product) {
       addScannedItem(product);
       setManualSearch("");
@@ -106,6 +106,7 @@ export default function ScannerPage() {
           stock: product.stock,
           counted: 1,
           difference: 1 - product.stock,
+          costPrice: product.costPrice || 0,
           scannedAt: new Date().toISOString(),
         },
         ...scanned,
@@ -126,13 +127,14 @@ export default function ScannerPage() {
 
   const totalScanned = scanned.length;
   const totalDiscrepancies = scanned.filter((s) => s.difference !== 0).length;
-  const totalValue = scanned.reduce((sum, s) => sum + Math.abs(s.difference) * (products.find(p => p.id === s.productId)?.costPrice || 0), 0);
+  const totalValue = scanned.reduce((sum, s) => sum + Math.abs(s.difference) * (s.costPrice || 0), 0);
 
-  const filteredProducts = manualSearch
-    ? products.filter(
-        (p) => p.name.toLowerCase().includes(manualSearch.toLowerCase()) || p.barcode.includes(manualSearch)
-      ).slice(0, 5)
-    : [];
+  // Recherche server-side déclenchée à chaque changement du champ manuel
+  useEffect(() => {
+    if (manualSearch.trim()) serverSearch(manualSearch);
+  }, [manualSearch, serverSearch]);
+
+  const filteredProducts = manualSearch.trim() ? searchResults.slice(0, 5) : [];
 
   return (
     <AppShell title={t.scanner.title} subtitle={t.scanner.subtitle}>

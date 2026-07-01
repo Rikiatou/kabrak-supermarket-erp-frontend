@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Gift,
   Plus,
@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/Badge";
 import { useI18n } from "@/lib/i18n/context";
 import { useToast } from "@/components/ui/Toast";
 import { useAuth } from "@/lib/auth/context";
-import { useProducts } from "@/lib/hooks/useApi";
+import { useServerProductSearch } from "@/lib/hooks/useApi";
 import { stockApi } from "@/lib/api";
 import { formatDate, cn } from "@/lib/utils";
 import type { ApiStockMovement } from "@/lib/api";
@@ -30,7 +30,8 @@ export default function CadeauxPage() {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const { products: apiProducts } = useProducts();
+  // Recherche server-side: cherche parmi TOUS les produits (18000+), pas seulement 50
+  const { results: searchResults, search: serverSearch, bestsellers } = useServerProductSearch();
 
   // Historique des cadeaux — chargé depuis les mouvements de stock
   const [giftMovements, setGiftMovements] = useState<ApiStockMovement[]>([]);
@@ -70,16 +71,19 @@ export default function CadeauxPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const filteredProducts = useMemo(() =>
-    apiProducts
-      .filter((p) =>
-        p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
-        (p.barcode && p.barcode.includes(productSearch))
-      )
-      .slice(0, 8),
-  [apiProducts, productSearch]);
+  // Recherche server-side déclenchée à chaque changement (query vide → bestsellers)
+  useEffect(() => {
+    serverSearch(productSearch);
+  }, [productSearch, serverSearch]);
 
-  const selectedProduct = apiProducts.find((p) => p.id === selectedProductId);
+  const filteredProducts = useMemo(() =>
+    (productSearch.trim() ? searchResults : bestsellers).slice(0, 8),
+  [searchResults, bestsellers, productSearch]);
+
+  // Chercher le produit sélectionné dans les résultats ou bestsellers
+  const selectedProduct = useMemo(() =>
+    [...searchResults, ...bestsellers].find((p) => p.id === selectedProductId),
+  [searchResults, bestsellers, selectedProductId]);
 
   const resetModal = () => {
     setProductSearch("");

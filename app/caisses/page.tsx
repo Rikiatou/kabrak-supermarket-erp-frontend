@@ -795,8 +795,8 @@ export default function CaissesPage() {
         </p>
       )}
 
-      {/* Z-Report History — Reprint past Z-reports */}
-      {isManager && (
+      {/* Z-Report History — Reprint past Z-reports (accessible à tous: manager ET caissiers) */}
+      {(
         <div className="mt-6">
           <button
             onClick={() => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Search,
   Plus,
@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/Button";
 import { useI18n } from "@/lib/i18n/context";
 import { useToast } from "@/components/ui/Toast";
 import {
-  useProducts,
+  useServerProductSearch,
   useStockAdjust,
   useReturns,
   useCreateReturn,
@@ -43,12 +43,17 @@ export default function PertesPage() {
   const { t } = useI18n();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { products: apiProducts, reload: reloadProducts } = useProducts();
+  // Recherche server-side: cherche parmi TOUS les produits (18000+), pas seulement 50
+  const { results: searchResults, search: serverSearch, bestsellers, refresh: reloadProducts } = useServerProductSearch();
   const { adjust, adjusting } = useStockAdjust();
   const { returns, reload: reloadReturns } = useReturns();
   const { create: createReturn, creating: creatingReturn } = useCreateReturn();
   const { transactions } = useRecentTransactions(50);
-  const products = apiProducts;
+  // Produits disponibles pour lookup (résultats recherche + bestsellers, dédupliqués)
+  const products = useMemo(() => {
+    const merged = [...searchResults, ...bestsellers];
+    return merged.filter((p, i, arr) => arr.findIndex((x) => x.id === p.id) === i);
+  }, [searchResults, bestsellers]);
 
   const [activeTab, setActiveTab] = useState<"losses" | "returns">("losses");
 
@@ -86,9 +91,13 @@ export default function PertesPage() {
   const [refundMethod, setRefundMethod] = useState("cash");
   const [clientName, setClientName] = useState("");
 
-  const filteredProducts = products
-    .filter((p) => p.name.toLowerCase().includes(search.toLowerCase()) || p.barcode.includes(search))
-    .slice(0, 10);
+  // Recherche server-side déclenchée à chaque changement (query vide → bestsellers)
+  useEffect(() => {
+    serverSearch(search);
+  }, [search, serverSearch]);
+
+  // Liste affichée = résultats server-side (ou bestsellers si pas de recherche)
+  const filteredProducts = (search.trim() ? searchResults : bestsellers).slice(0, 10);
 
   const totalLossValue = losses.reduce((s, l) => s + l.value, 0);
   const totalLossCount = losses.length;

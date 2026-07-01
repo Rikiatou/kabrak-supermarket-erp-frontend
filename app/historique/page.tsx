@@ -22,7 +22,7 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { useI18n } from "@/lib/i18n/context";
 import { useToast } from "@/components/ui/Toast";
-import { useProducts, useRecentTransactions } from "@/lib/hooks/useApi";
+import { useServerProductSearch, useRecentTransactions } from "@/lib/hooks/useApi";
 import { stockApi, returnsApi } from "@/lib/api";
 import type { ApiStockMovement, ApiTransaction, ApiTransactionItem } from "@/lib/api";
 import type { Product } from "@/lib/types";
@@ -207,7 +207,8 @@ export default function HistoriquePage() {
     return reason; // fallback: show as-is
   }
 
-  const { products, loading: loadingProducts } = useProducts();
+  // Recherche server-side: cherche parmi TOUS les produits (18000+), pas seulement 50
+  const { results: searchResults, search: serverSearch, bestsellers, loading: loadingProducts } = useServerProductSearch();
 
   const [search, setSearch] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -240,12 +241,19 @@ export default function HistoriquePage() {
       .finally(() => setLoadingMovements(false));
   };
 
-  // Filtered products list
-  const filteredProducts = products.filter((p) => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q) || p.category.toLowerCase().includes(q);
-  });
+  // Recherche server-side déclenchée à chaque changement (query vide → bestsellers)
+  useEffect(() => {
+    serverSearch(search);
+  }, [search, serverSearch]);
+
+  // Liste affichée = résultats server-side (ou bestsellers si pas de recherche)
+  const filteredProducts = search.trim() ? searchResults : (searchResults.length > 0 ? searchResults : bestsellers);
+
+  // Pour le sélecteur d'échange (retour): produits disponibles (résultats recherche + bestsellers, dédupliqués)
+  const products = useMemo(() => {
+    const merged = [...searchResults, ...bestsellers];
+    return merged.filter((p, i, arr) => arr.findIndex((x) => x.id === p.id) === i);
+  }, [searchResults, bestsellers]);
 
   // Filtered movements (type + date range)
   const filteredMovements = useMemo(() => {
