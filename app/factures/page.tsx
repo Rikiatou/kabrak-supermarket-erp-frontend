@@ -167,9 +167,16 @@ export default function FacturesPage() {
     }
   }, [scanSearch, serverSearch]);
 
-  // Re-focus scanner quand on clique n'importe où dans le modal (comportement scanner)
-  const refocusScanner = () => {
-    if (showModal) scanRef.current?.focus();
+  // Re-focus scanner quand on clique sur une zone vide du modal (pas sur un champ)
+  const refocusScanner = (e: React.MouseEvent) => {
+    if (!showModal) return;
+    const target = e.target as HTMLElement;
+    // Ne pas voler le focus si on clique sur un champ de saisie / select / bouton
+    const tag = target.tagName;
+    if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA" || tag === "BUTTON" || target.closest("button, input, select, textarea")) {
+      return;
+    }
+    scanRef.current?.focus();
   };
 
   const handleInvoiceScan = async (e: React.KeyboardEvent) => {
@@ -232,7 +239,8 @@ export default function FacturesPage() {
 
   // When a product is selected from dropdown, auto-fill the line
   const selectProduct = (idx: number, productId: string) => {
-    const product = products.find((p) => p.id === productId);
+    // Chercher d'abord dans les produits locaux, puis dans les résultats de recherche serveur
+    const product = products.find((p) => p.id === productId) || searchResults.find((p) => p.id === productId);
     if (!product) return;
     const newItems = [...items];
     newItems[idx] = {
@@ -951,7 +959,7 @@ export default function FacturesPage() {
       {/* Modal: Create invoice */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowModal(false)}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-5 space-y-4" onClick={(e) => { e.stopPropagation(); refocusScanner(); }}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-5 space-y-4" onClick={(e) => { e.stopPropagation(); refocusScanner(e); }}>
             <div className="flex items-center justify-between sticky top-0 bg-white pb-2 border-b border-[var(--border)]">
               <h3 className="text-sm font-bold text-[var(--text-primary)]">{t.factures.newInvoice}</h3>
               <button onClick={() => setShowModal(false)} className="p-1 hover:bg-slate-100 rounded-lg">
@@ -1068,7 +1076,8 @@ export default function FacturesPage() {
                         className="flex-1 px-3 py-2 border border-[var(--border)] rounded-lg text-sm outline-none focus:border-[var(--brand)] bg-white"
                       >
                         <option value="">— {t.common.search} {t.common.product} —</option>
-                        {products
+                        {[...products, ...searchResults, ...bestsellers]
+                          .filter((p, idx, arr) => arr.findIndex((x) => x.id === p.id) === idx)
                           .map((p) => (
                             <option key={p.id} value={p.id} disabled={p.stock <= 0}>
                               {p.name} ({p.sku}) — {formatCurrency(p.price)} · {t.stocks.stock}: {p.stock} {p.unit}

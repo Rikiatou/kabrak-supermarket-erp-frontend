@@ -30,7 +30,7 @@ import { NewProductModal } from "@/components/forms/NewProductModal";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { useSuppliers, usePurchaseOrders, useCreatePurchaseOrder, useProducts } from "@/lib/hooks/useApi";
+import { useSuppliers, usePurchaseOrders, useCreatePurchaseOrder, useProducts, useServerProductSearch } from "@/lib/hooks/useApi";
 import { useBarcodeScanner } from "@/lib/hooks/useBarcodeScanner";
 import { suppliersApi, purchaseOrdersApi, productsApi, batchesApi } from "@/lib/api";
 import { formatCurrency, cn } from "@/lib/utils";
@@ -87,6 +87,9 @@ export default function AchatsPage() {
 
   // Delivery note state
   const { products: allProducts } = useProducts();
+  const { results: prodSearchResults, search: prodServerSearch, scanBarcode: prodScanBarcode, bestsellers: prodBestsellers } = useServerProductSearch();
+  const [prodSearchInput, setProdSearchInput] = useState("");
+  const [activeSearchLine, setActiveSearchLine] = useState<number | null>(null);
   const [showDeliveryForm, setShowDeliveryForm] = useState(false);
   const [savingDelivery, setSavingDelivery] = useState(false);
   const [deliveryRef, setDeliveryRef] = useState("");
@@ -110,6 +113,7 @@ export default function AchatsPage() {
   }, [showDeliveryForm]);
   type DeliveryLine = {
     productId: string;
+    productLabel: string;    // nom affiché du produit sélectionné (recherche server-side)
     qty: number;
     unitPrice: number;       // prix d'achat (cost)
     sellPrice: number;       // prix de vente
@@ -122,13 +126,13 @@ export default function AchatsPage() {
     newProductUnit: string;
   };
   const [deliveryLines, setDeliveryLines] = useState<DeliveryLine[]>([
-    { productId: "", qty: 1, unitPrice: 0, sellPrice: 0, expiryDate: "", isNewProduct: false, newProductName: "", newProductBarcode: "", newProductCategory: "Grocery", newProductUnit: "pc" },
+    { productId: "", productLabel: "", qty: 1, unitPrice: 0, sellPrice: 0, expiryDate: "", isNewProduct: false, newProductName: "", newProductBarcode: "", newProductCategory: "Grocery", newProductUnit: "pc" },
   ]);
   const [printDelivery, setPrintDelivery] = useState<null | {
     ref: string; date: string; supplier: string; lines: Array<{ name: string; qty: number; unitPrice: number; total: number }>; grandTotal: number;
   }>(null);
 
-  const addDeliveryLine = () => setDeliveryLines((l) => [...l, { productId: "", qty: 1, unitPrice: 0, sellPrice: 0, expiryDate: "", isNewProduct: false, newProductName: "", newProductBarcode: "", newProductCategory: "Grocery", newProductUnit: "pc" }]);
+  const addDeliveryLine = () => setDeliveryLines((l) => [...l, { productId: "", productLabel: "", qty: 1, unitPrice: 0, sellPrice: 0, expiryDate: "", isNewProduct: false, newProductName: "", newProductBarcode: "", newProductCategory: "Grocery", newProductUnit: "pc" }]);
   const removeDeliveryLine = (i: number) => setDeliveryLines((l) => l.filter((_, idx) => idx !== i));
   const updateDeliveryLine = (i: number, field: keyof DeliveryLine, value: string | number | boolean) =>
     setDeliveryLines((l) => l.map((line, idx) => idx === i ? { ...line, [field]: value } : line));
@@ -138,8 +142,8 @@ export default function AchatsPage() {
   const handleScanProduct = useCallback(async (codeArg?: string) => {
     const code = (codeArg ?? scanInput).trim();
     if (!code) return;
-    // Chercher dans les produits déjà chargés
-    const found = allProducts.find((p) => p.barcode === code || p.sku.toLowerCase() === code.toLowerCase());
+    // Chercher via le backend (barcode + SKU, tous les produits)
+    const found = await prodScanBarcode(code);
     if (found) {
       // Vérifier si déjà dans les lignes
       const existingIdx = deliveryLines.findIndex((l) => l.productId === found.id);
@@ -147,7 +151,7 @@ export default function AchatsPage() {
         updateDeliveryLine(existingIdx, "qty", deliveryLines[existingIdx].qty + 1);
       } else {
         setDeliveryLines((l) => [...l, {
-          productId: found.id, qty: 1, unitPrice: found.costPrice || 0,
+          productId: found.id, productLabel: `${found.name} (${found.sku})`, qty: 1, unitPrice: found.costPrice || 0,
           sellPrice: found.price || 0, expiryDate: found.expiryDate ? found.expiryDate.split("T")[0] : "",
           isNewProduct: false, newProductName: "", newProductBarcode: "", newProductCategory: "Grocery", newProductUnit: "pc",
         }]);
@@ -161,7 +165,7 @@ export default function AchatsPage() {
       setShowNewProductModal(true);
       setScanInput("");
     }
-  }, [scanInput, allProducts, deliveryLines, toast]);
+  }, [scanInput, prodScanBarcode, deliveryLines, toast]);
 
   // Global barcode scanner — actif seulement quand le formulaire de livraison est ouvert
   useBarcodeScanner(
@@ -186,7 +190,7 @@ export default function AchatsPage() {
       });
       // Ajouter le produit créé à la liste du bordereau
       setDeliveryLines((l) => [...l, {
-        productId: created.id, qty: 1,
+        productId: created.id, productLabel: `${created.name} (${created.sku})`, qty: 1,
         unitPrice: created.costPrice || 0,
         sellPrice: created.price || 0,
         expiryDate: created.expiryDate ? created.expiryDate.split("T")[0] : "",
@@ -205,7 +209,7 @@ export default function AchatsPage() {
 
   const resetDeliveryForm = () => {
     setDeliveryRef(""); setDeliveryDate(new Date().toISOString().split("T")[0]);
-    setDeliverySupplierId(""); setDeliverySupplierName(""); setDeliveryLines([{ productId: "", qty: 1, unitPrice: 0, sellPrice: 0, expiryDate: "", isNewProduct: false, newProductName: "", newProductBarcode: "", newProductCategory: "Grocery", newProductUnit: "pc" }]);
+    setDeliverySupplierId(""); setDeliverySupplierName(""); setDeliveryLines([{ productId: "", productLabel: "", qty: 1, unitPrice: 0, sellPrice: 0, expiryDate: "", isNewProduct: false, newProductName: "", newProductBarcode: "", newProductCategory: "Grocery", newProductUnit: "pc" }]);
     setScanInput(""); setScanMode(false);
   };
 
@@ -759,24 +763,44 @@ export default function AchatsPage() {
                     const lineTotal = line.qty * line.unitPrice;
                     return (
                       <div key={i} className="border border-[var(--border)] rounded-lg p-2 space-y-1.5">
-                        {/* Ligne 1: Produit select + bouton nouveau produit */}
-                        <div className="grid grid-cols-[1fr_30px] gap-1.5 items-center">
-                            <select
-                              value={line.productId}
+                        {/* Ligne 1: Produit — recherche server-side (tous les produits) + bouton nouveau produit */}
+                        <div className="grid grid-cols-[1fr_30px] gap-1.5 items-center relative">
+                            <input
+                              type="text"
+                              value={activeSearchLine === i ? prodSearchInput : line.productLabel}
                               onChange={(e) => {
-                                const prod = allProducts.find((p) => p.id === e.target.value);
-                                updateDeliveryLine(i, "productId", e.target.value);
-                                if (prod) {
-                                  updateDeliveryLine(i, "unitPrice", prod.costPrice || 0);
-                                  updateDeliveryLine(i, "sellPrice", prod.price || 0);
-                                  if (prod.expiryDate) updateDeliveryLine(i, "expiryDate", prod.expiryDate.split("T")[0]);
-                                }
+                                setActiveSearchLine(i);
+                                setProdSearchInput(e.target.value);
+                                if (e.target.value.trim()) prodServerSearch(e.target.value);
                               }}
+                              onFocus={() => { setActiveSearchLine(i); setProdSearchInput(""); }}
+                              onBlur={() => setTimeout(() => setActiveSearchLine((cur) => (cur === i ? null : cur)), 150)}
+                              placeholder={t.achats.selectOption}
+                              autoComplete="off"
                               className="border border-[var(--border)] rounded-lg px-2 py-1.5 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--brand)] bg-white truncate"
-                            >
-                              <option value="">{t.achats.selectOption}</option>
-                              {allProducts.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.sku}) — Stock: {p.stock} {p.unit}</option>)}
-                            </select>
+                            />
+                            {activeSearchLine === i && prodSearchInput.trim() && prodSearchResults.length > 0 && (
+                              <div className="absolute top-full left-0 right-[36px] mt-1 z-20 bg-white border border-[var(--border)] rounded-lg shadow-md max-h-48 overflow-y-auto">
+                                {prodSearchResults.slice(0, 15).map((p) => (
+                                  <button
+                                    key={p.id}
+                                    type="button"
+                                    onClick={() => {
+                                      updateDeliveryLine(i, "productId", p.id);
+                                      updateDeliveryLine(i, "productLabel", `${p.name} (${p.sku})`);
+                                      updateDeliveryLine(i, "unitPrice", p.costPrice || 0);
+                                      updateDeliveryLine(i, "sellPrice", p.price || 0);
+                                      if (p.expiryDate) updateDeliveryLine(i, "expiryDate", p.expiryDate.split("T")[0]);
+                                      setActiveSearchLine(null);
+                                      setProdSearchInput("");
+                                    }}
+                                    className="w-full text-left px-2 py-1.5 text-xs hover:bg-slate-50 border-b border-[var(--border)] last:border-0 truncate"
+                                  >
+                                    {p.name} ({p.sku}) — Stock: {p.stock} {p.unit}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
                             <button
                               onClick={() => { setPendingBarcode(""); setShowNewProductModal(true); }}
                               title={t.achats.newProductHint}
