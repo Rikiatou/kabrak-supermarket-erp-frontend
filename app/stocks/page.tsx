@@ -23,7 +23,7 @@ import { formatCurrency, formatDate, cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/context";
 import { useToast } from "@/components/ui/Toast";
 import { NewProductModal } from "@/components/forms/NewProductModal";
-import { useProducts, useStockAlerts, useSetMarkdown, useRemoveMarkdown, useServerProductSearch } from "@/lib/hooks/useApi";
+import { useStockAlerts, useStockValue, useSetMarkdown, useRemoveMarkdown, useServerProductSearch } from "@/lib/hooks/useApi";
 import { useBarcodeScanner } from "@/lib/hooks/useBarcodeScanner";
 import { productsApi, stockApi, apiProductToFrontend, batchesApi } from "@/lib/api";
 import { getEffectivePrice, hasActiveMarkdown } from "@/lib/api";
@@ -63,9 +63,9 @@ function useStatusConfig(t: ReturnType<typeof useI18n>["t"]) {
 export default function StocksPage() {
   const { t } = useI18n();
   const { toast } = useToast();
-  const { products: apiProducts, reload: reloadProducts } = useProducts();
-  const { results: searchResults, search: serverSearch, scanBarcode: serverScanBarcode, bestsellers, bestsellersLoaded } = useServerProductSearch();
+  const { results: searchResults, search: serverSearch, scanBarcode: serverScanBarcode, loading: searchLoading, refresh: reloadProducts } = useServerProductSearch();
   const { alerts: stockAlertsData } = useStockAlerts();
+  const { value: stockValueData } = useStockValue();
   const CATEGORIES = [
     t.common.catAll,
     t.common.catGrocery,
@@ -76,7 +76,6 @@ export default function StocksPage() {
     t.common.catBakery,
     t.common.catFrozen,
   ];
-  const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState("");
   const [activeCategoryIdx, setActiveCategoryIdx] = useState(0);
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
@@ -91,11 +90,6 @@ export default function StocksPage() {
   const [markdownNote, setMarkdownNote] = useState("");
   const { setMarkdown, setting: settingMarkdown } = useSetMarkdown();
   const { removeMarkdown, removing: removingMarkdown } = useRemoveMarkdown();
-
-  // Utiliser les vrais produits du backend
-  useEffect(() => {
-    setProducts(apiProducts);
-  }, [apiProducts]);
 
   const [saving, setSaving] = useState(false);
 
@@ -132,17 +126,11 @@ export default function StocksPage() {
         minStock: data.minStock,
         unit: data.unit,
       });
-      // Ajouter le produit créé à la liste locale
-      const newProduct = apiProductToFrontend(created);
-      setProducts((prev) => [newProduct, ...prev]);
       toast(`${data.name} ${t.stocks.addedToStock}`, "success");
       reloadProducts();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : t.stocks.errorAdd;
       toast(msg, "warning");
-      // Fallback: ajouter en local au moins
-      const newProduct: Product = { ...data, id: `p${Date.now()}` };
-      setProducts((prev) => [newProduct, ...prev]);
     } finally {
       setSaving(false);
     }
@@ -178,26 +166,10 @@ export default function StocksPage() {
       markdownNote: markdownNote || undefined,
     });
     if (result) {
-      // Mettre à jour le produit dans la liste locale
-      setProducts((prev) =>
-        prev.map((p) =>
-          p.id === markdownProduct.id
-            ? { ...p, markdownPrice: price, markdownReason, markdownNote }
-            : p
-        )
-      );
       toast(`${t.stocks.markdownApplied} ${markdownProduct.name} → ${formatCurrency(price)}`, "success");
       reloadProducts();
       closeMarkdownModal();
     } else {
-      // Fallback local
-      setProducts((prev) =>
-        prev.map((p) =>
-          p.id === markdownProduct.id
-            ? { ...p, markdownPrice: price, markdownReason, markdownNote }
-            : p
-        )
-      );
       toast(t.stocks.markdownAppliedLocal, "warning");
       closeMarkdownModal();
     }
@@ -206,13 +178,6 @@ export default function StocksPage() {
   const handleRemoveMarkdown = async (product: Product) => {
     const result = await removeMarkdown(product.id);
     if (result) {
-      setProducts((prev) =>
-        prev.map((p) =>
-          p.id === product.id
-            ? { ...p, markdownPrice: null, markdownReason: null, markdownNote: null }
-            : p
-        )
-      );
       toast(`${t.stocks.markdownRemoved} ${product.name}`, "success");
       reloadProducts();
     }
@@ -227,16 +192,14 @@ export default function StocksPage() {
     }
   };
 
-  // Recherche server-side: utiliser les résultats du backend quand il y a une recherche
+  // SOURCE UNIQUE: recherche server-side. Query vide → le hook renvoie les bestsellers.
+  // Déclenchée à chaque changement de recherche/catégorie (et au montage).
   useEffect(() => {
     const activeCategory = CATEGORY_KEYS[activeCategoryIdx];
     serverSearch(search, activeCategory);
   }, [search, activeCategoryIdx, serverSearch]);
 
-  // Utiliser les résultats server-side si recherche, sinon les produits locaux
-  const sourceProducts = search.trim() ? searchResults : (bestsellers.length > 0 ? bestsellers : apiProducts);
-
-  const filtered = sourceProducts
+  const filtered = searchResults
     .filter((p) => {
       const activeCategory = CATEGORY_KEYS[activeCategoryIdx];
       const matchCat = activeCategoryIdx === 0 ||
@@ -258,20 +221,22 @@ export default function StocksPage() {
       return 0;
     });
 
-  const criticalCount = stockAlertsData?.summary.outOfStockCount ?? products.filter((p) => stockStatus(p) === "critical").length;
-  const lowCount = stockAlertsData?.summary.lowStockCount ?? products.filter((p) => stockStatus(p) === "low").length;
-  const expiringCount = stockAlertsData?.summary.expiringSoonCount ?? products.filter((p) => stockStatus(p) === "expiring").length;
+  // Compteurs = totaux BACKEND (corrects même avec 18977 produits), pas la page affichée
+  const totalProducts = stockValueData?.totalProducts ?? 0;
+  const criticalCount = stockAlertsData?.summary.outOfStockCount ?? 0;
+  const lowCount = stockAlertsData?.summary.lowStockCount ?? 0;
+  const expiringCount = stockAlertsData?.summary.expiringSoonCount ?? 0;
 
   const statusConfig = useStatusConfig(t);
 
   return (
-    <AppShell title={t.stocks.title} subtitle={`${filtered.length} ${t.stocks.totalRefs}`}>
+    <AppShell title={t.stocks.title} subtitle={`${totalProducts.toLocaleString("fr-CM")} ${t.stocks.totalRefs}`}>
       {/* Summary KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
         {[
           {
             label: t.stocks.totalRefs,
-            value: filtered.length,
+            value: totalProducts.toLocaleString("fr-CM"),
             icon: Package,
             iconBg: "bg-[var(--brand-light)]",
             iconColor: "text-[var(--brand)]",

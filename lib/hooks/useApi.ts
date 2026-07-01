@@ -174,7 +174,13 @@ export function useServerProductSearch() {
     }
   }, []);
 
-  return { results, loading, search, scanBarcode, bestsellers, bestsellersLoaded, loadBestsellers };
+  // Vider le cache et recharger (après création/modification de produit)
+  const refresh = useCallback(() => {
+    cacheRef.current.clear();
+    loadBestsellers();
+  }, [loadBestsellers]);
+
+  return { results, loading, search, scanBarcode, bestsellers, bestsellersLoaded, loadBestsellers, refresh };
 }
 
 // ========================================
