@@ -24,7 +24,7 @@ import { useI18n } from "@/lib/i18n/context";
 import { useToast } from "@/components/ui/Toast";
 import { formatCurrency, cn } from "@/lib/utils";
 import { exportToCSV } from "@/lib/export";
-import { useInvoices, useCreateInvoice, useUpdateInvoiceStatus, useAddPayment, useProducts } from "@/lib/hooks/useApi";
+import { useInvoices, useCreateInvoice, useUpdateInvoiceStatus, useAddPayment, useProducts, useServerProductSearch } from "@/lib/hooks/useApi";
 import type { ApiInvoicePayment } from "@/lib/api";
 import jsPDF from "jspdf";
 import QRCode from "qrcode";
@@ -101,6 +101,7 @@ export default function FacturesPage() {
   const { update: updateStatus } = useUpdateInvoiceStatus();
   const { addPayment, adding: addingPayment } = useAddPayment();
   const { products } = useProducts();
+  const { results: searchResults, search: serverSearch, scanBarcode: serverScanBarcode, bestsellers } = useServerProductSearch();
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
@@ -159,17 +160,23 @@ export default function FacturesPage() {
     }
   }, [showModal]);
 
+  // Recherche server-side quand on tape dans le champ scan
+  useEffect(() => {
+    if (scanSearch.trim()) {
+      serverSearch(scanSearch);
+    }
+  }, [scanSearch, serverSearch]);
+
   // Re-focus scanner quand on clique n'importe où dans le modal (comportement scanner)
   const refocusScanner = () => {
     if (showModal) scanRef.current?.focus();
   };
 
-  const handleInvoiceScan = (e: React.KeyboardEvent) => {
+  const handleInvoiceScan = async (e: React.KeyboardEvent) => {
     if (e.key !== "Enter" || !scanSearch.trim()) return;
     const code = scanSearch.trim();
-    const found = products.find(
-      (p) => p.barcode === code || p.sku?.toLowerCase() === code.toLowerCase()
-    );
+    // Chercher via le backend (pas dans les 50 produits locaux)
+    const found = await serverScanBarcode(code);
     if (found) {
       // Vérifier si le produit est déjà dans la facture
       const existingIdx = items.findIndex((i) => i.productId === found.id);
@@ -995,19 +1002,12 @@ export default function FacturesPage() {
                     </button>
                   )}
                 </div>
-                {/* Dropdown résultats recherche */}
-                {scanSearch && products.filter((p) =>
-                  p.name.toLowerCase().includes(scanSearch.toLowerCase()) ||
-                  p.barcode?.includes(scanSearch) ||
-                  p.sku?.toLowerCase().includes(scanSearch.toLowerCase())
-                ).length > 0 && (
+                {/* Dropdown résultats recherche — utilise la recherche backend */}
+                {scanSearch && (() => {
+                  const searchProds = scanSearch.trim() ? searchResults : [];
+                  return searchProds.length > 0 && (
                   <div className="mt-1 bg-white border border-[var(--border)] rounded-xl overflow-hidden shadow-md max-h-48 overflow-y-auto">
-                    {products
-                      .filter((p) =>
-                        p.name.toLowerCase().includes(scanSearch.toLowerCase()) ||
-                        p.barcode?.includes(scanSearch) ||
-                        p.sku?.toLowerCase().includes(scanSearch.toLowerCase())
-                      )
+                    {searchProds
                       .slice(0, 8)
                       .map((p) => (
                         <button
@@ -1044,7 +1044,8 @@ export default function FacturesPage() {
                         </button>
                       ))}
                   </div>
-                )}
+                  );
+                })()}
               </div>
 
               <div className="space-y-3">
@@ -1382,7 +1383,7 @@ export default function FacturesPage() {
                       className="w-full border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm outline-none focus:border-purple-400 bg-white"
                     >
                       <option value="">— Choisir un article —</option>
-                      {products.map((p) => (
+                      {(bestsellers.length > 0 ? bestsellers : products).map((p) => (
                         <option key={p.id} value={p.id}>{p.name} — {formatCurrency(p.price)}</option>
                       ))}
                     </select>
