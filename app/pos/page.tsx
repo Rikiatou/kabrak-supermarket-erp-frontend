@@ -1092,9 +1092,9 @@ export default function POSPage() {
 
   // Vérifier si un article du panier a un stock insuffisant
 
-  const stockIssues = cart.filter((i) => i.quantity > i.product.stock);
+  const stockIssues = [];
 
-  const hasStockIssues = stockIssues.length > 0;
+  const hasStockIssues = false;
 
 
 
@@ -2611,7 +2611,7 @@ export default function POSPage() {
 
                     const inCart = cart.find((i) => i.product.id === product.id);
 
-                    const outOfStock = product.stock === 0;
+                    const outOfStock = false;
 
                     return (
 
@@ -2619,19 +2619,15 @@ export default function POSPage() {
 
                         key={product.id}
 
-                        onClick={() => !outOfStock && addToCart(product)}
+                        onClick={() => addToCart(product)}
 
-                        disabled={outOfStock}
+                        disabled={false}
 
                         className={cn(
 
                           "w-full text-left px-4 py-3 flex items-center gap-3 border-b border-[#f3f4f6] last:border-0 transition-colors",
 
-                          outOfStock
-
-                            ? "opacity-40 cursor-not-allowed"
-
-                            : inCart
+                          inCart
 
                             ? "bg-[#f0fdf4] hover:bg-[#dcfce7]"
 
