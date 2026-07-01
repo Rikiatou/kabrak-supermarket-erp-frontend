@@ -147,11 +147,28 @@ export function useServerProductSearch() {
     }, 300);
   }, [bestsellers]);
 
-  // Scan barcode — exact match, pas de debounce
+  // Scan barcode — exact match, avec fallback sur SKU/recherche texte
   const scanBarcode = useCallback(async (barcode: string): Promise<Product | null> => {
+    const code = barcode.trim();
+    if (!code) return null;
+    // 1) Essai match barcode exact (le plus rapide)
     try {
-      const product = await productsApi.findByBarcode(barcode);
-      return apiProductToFrontend(product);
+      const product = await productsApi.findByBarcode(code);
+      if (product) return apiProductToFrontend(product);
+    } catch {
+      // pas trouvé par barcode → on continue
+    }
+    // 2) Fallback: recherche texte (cherche dans barcode, SKU, nom, description)
+    try {
+      const res = await productsApi.search({ q: code, page: 1, limit: 20 });
+      const products = res.data.map(apiProductToFrontend);
+      if (products.length === 0) return null;
+      // Priorité: match exact sur barcode ou SKU (insensible à la casse/espaces)
+      const norm = (s?: string | null) => (s || "").trim().toLowerCase();
+      const exact = products.find(
+        (p) => norm(p.barcode) === norm(code) || norm(p.sku) === norm(code)
+      );
+      return exact || products[0];
     } catch {
       return null;
     }
