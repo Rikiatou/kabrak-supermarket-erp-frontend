@@ -11,6 +11,7 @@ import {
   Clock,
   X,
   Calculator,
+  Printer,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Card } from "@/components/ui/Card";
@@ -488,6 +489,9 @@ export default function CaissesPage() {
   const [loadingZReport, setLoadingZReport] = useState(false);
   const [closeExpectedCash, setCloseExpectedCash] = useState<number>(0);
   const [loadingCloseSummary, setLoadingCloseSummary] = useState(false);
+  const [pastShifts, setPastShifts] = useState<ApiShift[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [reprintLoading, setReprintLoading] = useState<string | null>(null);
 
   // Map registerId -> active shift
   const shiftByRegister = useMemo(() => {
@@ -634,6 +638,29 @@ export default function CaissesPage() {
     }
   };
 
+  // Charger les shifts passés (fermés)
+  const loadPastShifts = async () => {
+    try {
+      const all = await shiftsApi.list();
+      setPastShifts(all.filter((s) => s.status === "closed").slice(0, 20));
+    } catch {
+      setPastShifts([]);
+    }
+  };
+
+  // Réimprimer un Z-report
+  const reprintZReport = async (shiftId: string) => {
+    setReprintLoading(shiftId);
+    try {
+      const report = await shiftsApi.zReport(shiftId);
+      setZReport(report);
+    } catch {
+      toast("Erreur: impossible de charger le Z-report", "warning");
+    } finally {
+      setReprintLoading(null);
+    }
+  };
+
   const kpis = [
     {
       label: t.caisses.openRegisters,
@@ -744,6 +771,68 @@ export default function CaissesPage() {
         <p className="text-xs text-[var(--text-muted)] text-center mt-6">
           {t.caisses.loadingRegisters}
         </p>
+      )}
+
+      {/* Z-Report History — Reprint past Z-reports */}
+      {isManager && (
+        <div className="mt-6">
+          <button
+            onClick={() => {
+              if (!showHistory) loadPastShifts();
+              setShowHistory(!showHistory);
+            }}
+            className="flex items-center gap-2 px-4 py-2.5 bg-[var(--brand-light)] text-[var(--brand)] rounded-xl font-semibold text-sm hover:opacity-80 transition-opacity"
+          >
+            <Printer className="w-4 h-4" />
+            {showHistory ? "Masquer l'historique" : "Réimprimer un Z-Report"}
+          </button>
+
+          {showHistory && (
+            <div className="mt-3 bg-white border border-[var(--border)] rounded-xl overflow-hidden">
+              {pastShifts.length === 0 ? (
+                <p className="px-4 py-6 text-center text-sm text-[var(--text-muted)]">Aucun shift fermé trouvé.</p>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50 border-b border-[var(--border)]">
+                    <tr>
+                      <th className="px-4 py-2 text-left font-semibold text-xs text-[var(--text-muted)] uppercase">Caisse</th>
+                      <th className="px-4 py-2 text-left font-semibold text-xs text-[var(--text-muted)] uppercase">Caissier</th>
+                      <th className="px-4 py-2 text-left font-semibold text-xs text-[var(--text-muted)] uppercase">Ouvert</th>
+                      <th className="px-4 py-2 text-left font-semibold text-xs text-[var(--text-muted)] uppercase">Fermé</th>
+                      <th className="px-4 py-2 text-right font-semibold text-xs text-[var(--text-muted)] uppercase">Total</th>
+                      <th className="px-4 py-2 text-center font-semibold text-xs text-[var(--text-muted)] uppercase">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pastShifts.map((s) => {
+                      const emp = employees.find((e) => e.id === s.employeeId);
+                      const reg = REGISTERS.find((r) => r.id === s.registerId);
+                      return (
+                        <tr key={s.id} className="border-b border-[var(--border)] last:border-0 hover:bg-slate-50">
+                          <td className="px-4 py-2.5">{reg?.name ?? s.registerId}</td>
+                          <td className="px-4 py-2.5">{emp ? `${emp.firstName} ${emp.lastName}` : s.employeeId}</td>
+                          <td className="px-4 py-2.5 text-xs text-[var(--text-muted)]">{s.openedAt ? new Date(s.openedAt).toLocaleString("fr-FR") : "—"}</td>
+                          <td className="px-4 py-2.5 text-xs text-[var(--text-muted)]">{s.closedAt ? new Date(s.closedAt).toLocaleString("fr-FR") : "—"}</td>
+                          <td className="px-4 py-2.5 text-right font-semibold tabular-nums">{formatCurrency(s.closingCash ?? 0)}</td>
+                          <td className="px-4 py-2.5 text-center">
+                            <button
+                              onClick={() => reprintZReport(s.id)}
+                              disabled={reprintLoading === s.id}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[var(--brand)] text-white rounded-lg text-xs font-semibold hover:opacity-80 disabled:opacity-50"
+                            >
+                              <Printer className="w-3.5 h-3.5" />
+                              {reprintLoading === s.id ? "..." : "Z-Report"}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
+        </div>
       )}
 
       {/* Open Shift Modal */}
