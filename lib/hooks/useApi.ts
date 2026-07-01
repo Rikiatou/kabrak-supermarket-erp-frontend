@@ -50,7 +50,7 @@ export function useProducts() {
     try {
       setLoading(true);
       setError(null);
-      const response = await productsApi.list(1, 1000); // Charger jusqu'à 1000 produits
+      const response = await productsApi.list(1, 20000); // Charger tous les produits
       setProducts(response.data.map(apiProductToFrontend));
     } catch (e: any) {
       setError(e.message);

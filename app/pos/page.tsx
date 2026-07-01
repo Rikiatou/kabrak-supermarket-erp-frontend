@@ -514,7 +514,7 @@ export default function POSPage() {
 
   const addToCart = useCallback((product: Product) => {
 
-    if (product.stock <= 0) return; // Bloquer si stock épuisé
+    // Stock non bloquant: les chiffres migrés ne sont pas fiables, on laisse vendre
 
     setCart((prev) => {
 
@@ -522,15 +522,11 @@ export default function POSPage() {
 
       if (existing) {
 
-        // Ne pas dépasser le stock disponible
-
-        if (existing.quantity >= product.stock) return prev;
-
         return prev.map((i) =>
 
           i.product.id === product.id
 
-            ? { ...i, quantity: Math.min(i.quantity + 1, product.stock) }
+            ? { ...i, quantity: i.quantity + 1 }
 
             : i
 
@@ -578,9 +574,9 @@ export default function POSPage() {
 
 
 
-      if (found && found.stock > 0) {
+      if (found) {
 
-        // Produit trouvé en stock ? ajouter au panier
+        // Produit trouvé ? ajouter au panier (stock non bloquant)
 
         addToCart(found);
 
@@ -593,18 +589,6 @@ export default function POSPage() {
         }
 
         setSearch("");
-
-      } else if (found && found.stock <= 0) {
-
-        // Produit trouvé mais rupture de stock ? laisser la recherche visible
-
-        if (beepRef.current) {
-
-          beepRef.current.currentTime = 0;
-
-          beepRef.current.play().catch(() => {});
-
-        }
 
       } else {
 
@@ -668,7 +652,7 @@ export default function POSPage() {
 
 
 
-      if (found && found.stock > 0) {
+      if (found) {
 
         addToCart(found);
 
@@ -683,18 +667,6 @@ export default function POSPage() {
         setScanResult({ code, status: "success" });
 
         // Garder le scanner ouvert pour scanner plusieurs articles (mode caisse)
-
-      } else if (found && found.stock <= 0) {
-
-        setScanResult({ code, status: "out_of_stock" });
-
-        if (beepRef.current) {
-
-          beepRef.current.currentTime = 0;
-
-          beepRef.current.play().catch(() => {});
-
-        }
 
       } else {
 
@@ -822,7 +794,7 @@ export default function POSPage() {
 
           i.product.id === productId
 
-            ? { ...i, quantity: Math.max(0, Math.min(i.quantity + delta, i.product.stock)) }
+            ? { ...i, quantity: Math.max(0, i.quantity + delta) }
 
             : i
 
@@ -2383,7 +2355,7 @@ export default function POSPage() {
 
                             <span className="w-9 text-center text-[17px] font-bold text-[#111827] tabular-nums">{item.quantity}</span>
 
-                            <button onClick={() => updateQty(item.product.id, 1)} disabled={item.quantity >= item.product.stock} className="w-9 h-9 rounded-lg bg-[#f3f4f6] hover:bg-[#e5e7eb] flex items-center justify-center transition-colors disabled:opacity-30">
+                            <button onClick={() => updateQty(item.product.id, 1)} className="w-9 h-9 rounded-lg bg-[#f3f4f6] hover:bg-[#e5e7eb] flex items-center justify-center transition-colors disabled:opacity-30">
 
                               <Plus className="w-4 h-4 text-[#374151]" />
 

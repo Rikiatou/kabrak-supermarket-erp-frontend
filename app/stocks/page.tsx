@@ -235,7 +235,10 @@ export default function StocksPage() {
         (p.sku && p.sku.toLowerCase().includes(search.toLowerCase())) ||
         (p.barcode && p.barcode.includes(search));
       const activeCategory = CATEGORY_KEYS[activeCategoryIdx];
-      const matchCat = activeCategoryIdx === 0 || p.category === activeCategory;
+      const matchCat = activeCategoryIdx === 0 ||
+        p.category === activeCategory ||
+        p.category?.toLowerCase().includes(activeCategory.toLowerCase()) ||
+        activeCategory.toLowerCase().includes(p.category?.toLowerCase() || "");
       const status = stockStatus(p);
       const matchStatus = filterStatus === "all" || status === filterStatus;
       return matchSearch && matchCat && matchStatus;

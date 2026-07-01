@@ -206,7 +206,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           )}
         </div>
         <p className="text-[10px] text-[var(--text-muted)] mt-2.5 text-center font-medium tracking-wide">
-          KABRAK ENG <span className="text-[var(--brand)]">v2.0</span>
+          &copy; {new Date().getFullYear()} KABRAK RETAIL — Developed by KABRAK ENG
         </p>
       </div>
     </aside>

@@ -138,10 +138,10 @@ export default function LoginPage() {
 
         {/* Header brand */}
         <div className="text-center mb-7">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[#16a34a] shadow-[0_4px_14px_rgba(22,163,74,.3)] mx-auto mb-4">
-            <span className="text-white font-bold text-[20px] tracking-tight">K</span>
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-white shadow-[0_4px_14px_rgba(22,163,74,.3)] mx-auto mb-4 overflow-hidden">
+            <img src="/kabrak-logo.jpeg" alt="KABRAK RETAIL" className="w-full h-full object-cover" />
           </div>
-          <h1 className="text-[22px] font-bold tracking-tight text-[#111827]">KABRAK ENG</h1>
+          <h1 className="text-[22px] font-bold tracking-tight text-[#111827]">KABRAK RETAIL</h1>
           <p className="text-[13px] text-[#9ca3af] mt-1">{t.login.subtitle}</p>
         </div>
 
@@ -315,7 +315,7 @@ export default function LoginPage() {
 
         {/* Footer */}
         <p className="text-center text-[11px] text-[#d1d5db] mt-5 font-medium tracking-wide">
-          KABRAK ENG <span className="text-[#16a34a]">v2.0</span>
+          &copy; {new Date().getFullYear()} KABRAK RETAIL — Developed by KABRAK ENG
         </p>
       </div>
     </div>
