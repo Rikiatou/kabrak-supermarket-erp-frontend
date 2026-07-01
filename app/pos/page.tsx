@@ -1649,7 +1649,7 @@ export default function POSPage() {
           @page { size: 80mm auto; margin: 0; }
           * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           html, body { width: 80mm; max-width: 80mm; margin: 0; padding: 0; }
-          body { padding: 2mm 2mm 4mm; font-family: 'Courier New', monospace; color: #000; font-size: 13px; line-height: 1.4; -webkit-print-color-adjust: exact; }
+          body { padding: 2mm 2mm 4mm; font-family: 'Courier New', monospace; color: #000; font-size: 13px; line-height: 1.4; -webkit-print-color-adjust: exact; font-weight: bold; }
           h1 { font-size: 16px; text-align: center; margin: 0 0 2px; font-weight: bold; }
           .center { text-align: center; }
           .dashed { border-top: 1px dashed #000; margin: 3px 0; }
@@ -1828,7 +1828,7 @@ export default function POSPage() {
           @page { size: 80mm auto; margin: 0; }
           * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           html, body { width: 80mm; max-width: 80mm; margin: 0; padding: 0; }
-          body { padding: 2mm 2mm 4mm; font-family: 'Courier New', monospace; color: #000; font-size: 13px; line-height: 1.4; -webkit-print-color-adjust: exact; }
+          body { padding: 2mm 2mm 4mm; font-family: 'Courier New', monospace; color: #000; font-size: 13px; line-height: 1.4; -webkit-print-color-adjust: exact; font-weight: bold; }
           h1 { font-size: 16px; text-align: center; margin: 0 0 2px; font-weight: bold; }
           .center { text-align: center; }
           .dashed { border-top: 1px dashed #000; margin: 3px 0; }

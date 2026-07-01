@@ -243,8 +243,9 @@ export default function StocksPage() {
         p.category === activeCategory ||
         p.category?.toLowerCase().includes(activeCategory.toLowerCase()) ||
         activeCategory.toLowerCase().includes(p.category?.toLowerCase() || "");
+      // Ignorer le filtre de statut quand on fait une recherche active
       const status = stockStatus(p);
-      const matchStatus = filterStatus === "all" || status === filterStatus;
+      const matchStatus = search.trim() ? true : (filterStatus === "all" || status === filterStatus);
       return matchCat && matchStatus;
     })
     .sort((a, b) => {
