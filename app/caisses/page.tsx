@@ -492,6 +492,9 @@ export default function CaissesPage() {
   const [pastShifts, setPastShifts] = useState<ApiShift[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [reprintLoading, setReprintLoading] = useState<string | null>(null);
+  // Filtres historique Z-report: par caissier et par date
+  const [histCashier, setHistCashier] = useState<string>("");
+  const [histDate, setHistDate] = useState<string>("");
 
   // Map registerId -> active shift
   const shiftByRegister = useMemo(() => {
@@ -638,15 +641,34 @@ export default function CaissesPage() {
     }
   };
 
-  // Charger les shifts passés (fermés)
+  // Charger les shifts passés (fermés) — triés du plus récent au plus ancien
   const loadPastShifts = async () => {
     try {
       const all = await shiftsApi.list();
-      setPastShifts(all.filter((s) => s.status === "closed").slice(0, 20));
+      const closed = all
+        .filter((s) => s.status === "closed")
+        .sort((a, b) => new Date(b.closedAt || b.openedAt).getTime() - new Date(a.closedAt || a.openedAt).getTime());
+      setPastShifts(closed);
     } catch {
       setPastShifts([]);
     }
   };
+
+  // Historique filtré par caissier et/ou par date
+  const filteredPastShifts = useMemo(() => {
+    return pastShifts.filter((s) => {
+      if (histCashier && s.employeeId !== histCashier) return false;
+      if (histDate) {
+        const ref = s.closedAt || s.openedAt;
+        if (!ref) return false;
+        // Comparer sur la date locale (yyyy-mm-dd)
+        const d = new Date(ref);
+        const localDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        if (localDate !== histDate) return false;
+      }
+      return true;
+    });
+  }, [pastShifts, histCashier, histDate]);
 
   // Réimprimer un Z-report
   const reprintZReport = async (shiftId: string) => {
@@ -789,7 +811,43 @@ export default function CaissesPage() {
 
           {showHistory && (
             <div className="mt-3 bg-white border border-[var(--border)] rounded-xl overflow-hidden">
-              {pastShifts.length === 0 ? (
+              {/* Filtres: par caissier + par date */}
+              <div className="flex flex-wrap items-end gap-3 px-4 py-3 border-b border-[var(--border)] bg-slate-50">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] font-semibold text-[var(--text-muted)] uppercase">Caissier</label>
+                  <select
+                    value={histCashier}
+                    onChange={(e) => setHistCashier(e.target.value)}
+                    className="bg-white border border-[var(--border)] rounded-lg px-3 py-1.5 text-sm outline-none focus:border-[var(--brand)]"
+                  >
+                    <option value="">Tous les caissiers</option>
+                    {cashiers.map((c) => (
+                      <option key={c.id} value={c.id}>{c.firstName} {c.lastName}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] font-semibold text-[var(--text-muted)] uppercase">Date</label>
+                  <input
+                    type="date"
+                    value={histDate}
+                    onChange={(e) => setHistDate(e.target.value)}
+                    className="bg-white border border-[var(--border)] rounded-lg px-3 py-1.5 text-sm outline-none focus:border-[var(--brand)]"
+                  />
+                </div>
+                {(histCashier || histDate) && (
+                  <button
+                    onClick={() => { setHistCashier(""); setHistDate(""); }}
+                    className="px-3 py-1.5 text-sm font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] underline"
+                  >
+                    Réinitialiser
+                  </button>
+                )}
+                <span className="ml-auto text-xs text-[var(--text-muted)] self-center">
+                  {filteredPastShifts.length} shift(s)
+                </span>
+              </div>
+              {filteredPastShifts.length === 0 ? (
                 <p className="px-4 py-6 text-center text-sm text-[var(--text-muted)]">Aucun shift fermé trouvé.</p>
               ) : (
                 <table className="w-full text-sm">
@@ -804,7 +862,7 @@ export default function CaissesPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {pastShifts.map((s) => {
+                    {filteredPastShifts.map((s) => {
                       const emp = employees.find((e) => e.id === s.employeeId);
                       const reg = REGISTERS.find((r) => r.id === s.registerId);
                       return (
