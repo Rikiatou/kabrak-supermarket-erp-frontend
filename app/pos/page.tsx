@@ -456,7 +456,7 @@ export default function POSPage() {
 
   // Détection du mode: server-side si beaucoup de produits, client-side sinon
 
-  const useServerSearch = products.length > 800 || (loading && bestsellersLoaded);
+  const useServerSearch = true;
 
 
 
@@ -1646,13 +1646,13 @@ export default function POSPage() {
 
         <style>
 
-          @page { size: 80mm 800mm; margin: 0; }
+          @page { size: 80mm auto; margin: 0; }
 
           * { -webkit-print-color-adjust: exact; }
 
           html, body { width: 80mm; margin: 0; padding: 0; }
 
-          body { padding: 4mm 4mm 8mm; font-family: 'Courier New', monospace; color: #000; font-size: 11px; line-height: 1.3; }
+          body { padding: 3mm 3mm 6mm; font-family: 'Courier New', monospace; color: #000; font-size: 12px; line-height: 1.35; }
 
           h1 { font-size: 14px; text-align: center; margin: 0 0 2px; }
 
@@ -1843,13 +1843,13 @@ export default function POSPage() {
 
         <style>
 
-          @page { size: 80mm 800mm; margin: 0; }
+          @page { size: 80mm auto; margin: 0; }
 
           * { -webkit-print-color-adjust: exact; }
 
           html, body { width: 80mm; margin: 0; padding: 0; }
 
-          body { padding: 4mm 4mm 8mm; font-family: 'Courier New', monospace; color: #000; font-size: 11px; line-height: 1.3; }
+          body { padding: 3mm 3mm 6mm; font-family: 'Courier New', monospace; color: #000; font-size: 12px; line-height: 1.35; }
 
           h1 { font-size: 14px; text-align: center; margin: 0 0 2px; }
 

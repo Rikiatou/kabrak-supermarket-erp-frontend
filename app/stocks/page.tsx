@@ -23,7 +23,7 @@ import { formatCurrency, formatDate, cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/context";
 import { useToast } from "@/components/ui/Toast";
 import { NewProductModal } from "@/components/forms/NewProductModal";
-import { useProducts, useStockAlerts, useSetMarkdown, useRemoveMarkdown } from "@/lib/hooks/useApi";
+import { useProducts, useStockAlerts, useSetMarkdown, useRemoveMarkdown, useServerProductSearch } from "@/lib/hooks/useApi";
 import { useBarcodeScanner } from "@/lib/hooks/useBarcodeScanner";
 import { productsApi, stockApi, apiProductToFrontend, batchesApi } from "@/lib/api";
 import { getEffectivePrice, hasActiveMarkdown } from "@/lib/api";
@@ -64,6 +64,7 @@ export default function StocksPage() {
   const { t } = useI18n();
   const { toast } = useToast();
   const { products: apiProducts, reload: reloadProducts } = useProducts();
+  const { results: searchResults, search: serverSearch, scanBarcode: serverScanBarcode, bestsellers, bestsellersLoaded } = useServerProductSearch();
   const { alerts: stockAlertsData } = useStockAlerts();
   const CATEGORIES = [
     t.common.catAll,
@@ -100,20 +101,19 @@ export default function StocksPage() {
 
   // Global barcode scanner — détecte automatiquement toute saisie de douchette
   // (pas besoin de cliquer un bouton — scan direct sur la page)
-  const handleGlobalScan = useCallback((code: string) => {
+  const handleGlobalScan = useCallback(async (code: string) => {
     // Ne pas interférer si un modal est déjà ouvert
     if (showNewProduct) return;
-    const existing = products.find(
-      (p) => p.barcode === code || p.sku?.toLowerCase() === code.toLowerCase()
-    );
-    if (existing) {
-      setSelectedProduct(existing);
-      toast(`${existing.name} — ${t.stocks.barcode}: ${code}`, "info");
+    // Chercher via le backend (pas dans les 50 produits locaux)
+    const found = await serverScanBarcode(code);
+    if (found) {
+      setSelectedProduct(found);
+      toast(`${found.name} — ${t.stocks.barcode}: ${code}`, "info");
     } else {
       setStockScanBarcode(code);
       setShowNewProduct(true);
     }
-  }, [products, showNewProduct, toast, t.stocks.barcode]);
+  }, [showNewProduct, toast, t.stocks.barcode, serverScanBarcode]);
 
   useBarcodeScanner(handleGlobalScan, showNewProduct);
 
@@ -227,13 +227,17 @@ export default function StocksPage() {
     }
   };
 
-  const filtered = products
+  // Recherche server-side: utiliser les résultats du backend quand il y a une recherche
+  useEffect(() => {
+    const activeCategory = CATEGORY_KEYS[activeCategoryIdx];
+    serverSearch(search, activeCategory);
+  }, [search, activeCategoryIdx, serverSearch]);
+
+  // Utiliser les résultats server-side si recherche, sinon les produits locaux
+  const sourceProducts = search.trim() ? searchResults : (bestsellers.length > 0 ? bestsellers : apiProducts);
+
+  const filtered = sourceProducts
     .filter((p) => {
-      const matchSearch =
-        !search ||
-        p.name.toLowerCase().includes(search.toLowerCase()) ||
-        (p.sku && p.sku.toLowerCase().includes(search.toLowerCase())) ||
-        (p.barcode && p.barcode.includes(search));
       const activeCategory = CATEGORY_KEYS[activeCategoryIdx];
       const matchCat = activeCategoryIdx === 0 ||
         p.category === activeCategory ||
@@ -241,7 +245,7 @@ export default function StocksPage() {
         activeCategory.toLowerCase().includes(p.category?.toLowerCase() || "");
       const status = stockStatus(p);
       const matchStatus = filterStatus === "all" || status === filterStatus;
-      return matchSearch && matchCat && matchStatus;
+      return matchCat && matchStatus;
     })
     .sort((a, b) => {
       let av: string | number = a[sortKey] as string | number;
@@ -260,13 +264,13 @@ export default function StocksPage() {
   const statusConfig = useStatusConfig(t);
 
   return (
-    <AppShell title={t.stocks.title} subtitle={`${products.length} ${t.stocks.totalRefs}`}>
+    <AppShell title={t.stocks.title} subtitle={`${filtered.length} ${t.stocks.totalRefs}`}>
       {/* Summary KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
         {[
           {
             label: t.stocks.totalRefs,
-            value: products.length,
+            value: filtered.length,
             icon: Package,
             iconBg: "bg-[var(--brand-light)]",
             iconColor: "text-[var(--brand)]",
