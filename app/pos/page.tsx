@@ -1600,11 +1600,11 @@ export default function POSPage() {
         const total = effPrice * item.quantity;
 
         return `<tr>
-          <td colspan="2" style="font-size:10px;padding-top:3px">
-            <div style="font-weight:bold">${barcode} ${name}</div>
-            <div style="display:flex;justify-content:space-between;padding-left:4px">
-              <span>${item.quantity}.00 @ ${effPrice.toLocaleString("fr-CM")}</span>
-              <span style="font-weight:bold">${total.toLocaleString("fr-CM")}</span>
+          <td colspan="2" style="padding-top:1px">
+            <div class="item-name">${barcode} ${name}</div>
+            <div style="display:flex;justify-content:space-between">
+              <span class="item-detail">${item.quantity}.00 @ ${effPrice.toLocaleString("fr-CM")}</span>
+              <span class="item-detail" style="font-weight:bold">${total.toLocaleString("fr-CM")}</span>
             </div>
           </td>
         </tr>`;
@@ -1644,21 +1644,24 @@ export default function POSPage() {
         <style>
 
           @page { size: 80mm auto; margin: 0; }
-          * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          * { -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; padding: 0; box-sizing: border-box; }
           html, body { width: 80mm; max-width: 80mm; margin: 0; padding: 0; }
-          body { padding: 2mm 2mm 4mm; font-family: 'Courier New', monospace; color: #000; font-size: 13px; line-height: 1.4; -webkit-print-color-adjust: exact; font-weight: bold; }
-          h1 { font-size: 16px; text-align: center; margin: 0 0 2px; font-weight: bold; }
+          body { padding: 1mm 2mm 2mm; font-family: 'Courier New', monospace; color: #000; font-size: 12px; line-height: 1.35; font-weight: bold; }
+          h1 { font-size: 15px; text-align: center; margin: 0; font-weight: bold; letter-spacing: 0.5px; }
           .center { text-align: center; }
-          .dashed { border-top: 1px dashed #000; margin: 3px 0; }
+          .dashed { text-align: center; font-size: 10px; letter-spacing: 1px; margin: 2px 0; overflow: hidden; white-space: nowrap; }
+          .dashed::before { content: "--------------------------------"; }
           table { width: 100%; border-collapse: collapse; }
-          td { padding: 1px 0; vertical-align: top; }
-          .total { font-size: 15px; font-weight: bold; }
+          td { padding: 0; vertical-align: top; }
+          .total { font-size: 14px; font-weight: bold; }
           .right { text-align: right; }
-          .small { font-size: 11px; }
+          .small { font-size: 10px; }
+          .xsmall { font-size: 9px; }
+          .item-name { font-size: 11px; font-weight: bold; }
+          .item-detail { font-size: 10px; }
           @media print {
-            html, body { width: 80mm; max-width: 80mm; padding: 2mm 2mm 4mm; }
+            html, body { width: 80mm; max-width: 80mm; padding: 1mm 2mm 2mm; }
             * { page-break-inside: avoid; break-inside: avoid; }
-            .no-break { page-break-inside: avoid; break-inside: avoid; }
           }
 
         </style>
@@ -1673,11 +1676,9 @@ export default function POSPage() {
 
         <p class="center small">TEL: ${storeInfo.phone.replace(/^Tel:\s*/i, "")}</p>
 
-        <br/>
+        <p class="center xsmall">${new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}).toUpperCase()} ${timeStr}</p>
 
-        <p class="center small">${new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}).toUpperCase()}&nbsp;&nbsp;${timeStr}</p>
-
-        <p class="center small">SALE #${receipt.id}&nbsp;&nbsp;S/P-${receipt.cashier}</p>
+        <p class="center xsmall">SALE #${receipt.id} S/P-${receipt.cashier}</p>
 
         <div class="dashed"></div>
 
@@ -1709,9 +1710,11 @@ export default function POSPage() {
 
         <div class="dashed"></div>
 
-        <p class="center small" style="margin-top:6px">goods sold are not refundable</p>
+        <p class="center small" style="margin-top:3px">goods sold are not refundable</p>
 
         <p class="center small">Thanks for patronizing us</p>
+
+        <p class="center xsmall" style="margin-top:2px">KABRAK ERP</p>
 
         <br/>
 
@@ -1823,19 +1826,21 @@ export default function POSPage() {
         <style>
 
           @page { size: 80mm auto; margin: 0; }
-          * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          * { -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; padding: 0; box-sizing: border-box; }
           html, body { width: 80mm; max-width: 80mm; margin: 0; padding: 0; }
-          body { padding: 2mm 2mm 4mm; font-family: 'Courier New', monospace; color: #000; font-size: 13px; line-height: 1.4; -webkit-print-color-adjust: exact; font-weight: bold; }
-          h1 { font-size: 16px; text-align: center; margin: 0 0 2px; font-weight: bold; }
+          body { padding: 1mm 2mm 2mm; font-family: 'Courier New', monospace; color: #000; font-size: 12px; line-height: 1.35; font-weight: bold; }
+          h1 { font-size: 15px; text-align: center; margin: 0; font-weight: bold; letter-spacing: 0.5px; }
           .center { text-align: center; }
-          .dashed { border-top: 1px dashed #000; margin: 3px 0; }
+          .dashed { text-align: center; font-size: 10px; letter-spacing: 1px; margin: 2px 0; overflow: hidden; white-space: nowrap; }
+          .dashed::before { content: "--------------------------------"; }
           table { width: 100%; border-collapse: collapse; }
-          td { padding: 1px 0; vertical-align: top; }
-          .total { font-size: 15px; font-weight: bold; }
+          td { padding: 0; vertical-align: top; }
+          .total { font-size: 14px; font-weight: bold; }
           .right { text-align: right; }
-          .small { font-size: 11px; }
+          .small { font-size: 10px; }
+          .xsmall { font-size: 9px; }
           @media print {
-            html, body { width: 80mm; max-width: 80mm; padding: 2mm 2mm 4mm; }
+            html, body { width: 80mm; max-width: 80mm; padding: 1mm 2mm 2mm; }
             * { page-break-inside: avoid; break-inside: avoid; }
           }
 
@@ -1851,11 +1856,9 @@ export default function POSPage() {
 
         <p class="center small">TEL: ${storeInfo.phone.replace(/^Tel:\s*/i, "")}</p>
 
-        <br/>
+        <p class="center xsmall">${new Date(tx.date).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}).toUpperCase()} ${new Date(tx.date).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})}</p>
 
-        <p class="center small">${new Date(tx.date).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}).toUpperCase()}&nbsp;&nbsp;${new Date(tx.date).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})}</p>
-
-        <p class="center small">SALE #${tx.transactionNumber}&nbsp;&nbsp;S/P-${user?.firstName || "CASHIER"}</p>
+        <p class="center xsmall">SALE #${tx.transactionNumber} S/P-${user?.firstName || "CASHIER"}</p>
 
         <div class="dashed"></div>
 
@@ -1885,11 +1888,13 @@ export default function POSPage() {
 
         <div class="dashed"></div>
 
-        <p class="center small" style="margin-top:6px">goods sold are not refundable</p>
+        <p class="center small" style="margin-top:3px">goods sold are not refundable</p>
 
         <p class="center small">Thanks for patronizing us</p>
 
-        <p class="center small">(REPRINT)</p>
+        <p class="center xsmall">(REPRINT)</p>
+
+        <p class="center xsmall">KABRAK ERP</p>
 
       </body>
 
