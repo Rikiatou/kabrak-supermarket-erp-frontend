@@ -1,16 +1,12 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { X, Package, CheckCircle2, ScanLine } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useI18n } from "@/lib/i18n/context";
 import { cn } from "@/lib/utils";
+import { productsApi } from "@/lib/api";
 import type { Product } from "@/lib/types";
-
-const CATEGORIES = [
-  "Grocery", "Beverages", "Dairy",
-  "Hygiene", "Butchery", "Bakery", "Frozen",
-];
 
 const UNITS = ["bottle", "can", "pack", "sack", "kg", "liter", "box", "bar", "jar", "unit"];
 
@@ -42,15 +38,11 @@ const empty: FormData = {
 export function NewProductModal({ onClose, onSave, prefillBarcode }: NewProductModalProps) {
   const { t } = useI18n();
 
-  const categoryLabels: Record<string, string> = {
-    Grocery: t.common.catGrocery,
-    Beverages: t.common.catDrinks,
-    Dairy: t.common.catDairy,
-    Hygiene: t.common.catHygiene,
-    Butchery: t.common.catButcher,
-    Bakery: t.common.catBakery,
-    Frozen: t.common.catFrozen,
-  };
+  // Catégories dynamiques chargées depuis le backend
+  const [dbCategories, setDbCategories] = useState<string[]>([]);
+  useEffect(() => {
+    productsApi.categories().then(cats => setDbCategories(cats.map(c => c.name))).catch(() => setDbCategories([]));
+  }, []);
 
   const unitLabels: Record<string, string> = {
     bottle: t.forms.unitBottle,
@@ -193,7 +185,7 @@ export function NewProductModal({ onClose, onSave, prefillBarcode }: NewProductM
                     <Field label={t.forms.category} error={errors.category} required span={2}>
                       <select value={form.category} onChange={set("category")} className={inputClass(!!errors.category)}>
                         <option value="">{t.forms.selectCategory}</option>
-                        {CATEGORIES.map((c) => <option key={c} value={c}>{categoryLabels[c]}</option>)}
+                        {dbCategories.map((c) => <option key={c} value={c}>{c}</option>)}
                       </select>
                     </Field>
                   </div>

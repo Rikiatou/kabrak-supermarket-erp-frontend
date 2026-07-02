@@ -114,9 +114,7 @@ declare global {
 
 const TAX_RATE = 0;
 
-// Stable backend category keys (match DB seed data) - order matches CATEGORIES labels
-
-const CATEGORY_KEYS = ["Tous", "Grocery", "Beverages", "Dairy", "Hygiene", "Butchery", "Bakery", "Frozen"];
+// Category keys are now dynamic, loaded from the DB (see below in component)
 
 
 
@@ -222,25 +220,14 @@ export default function POSPage() {
 
   const storeInfo = getStoreInfo(licenseConfig);
 
-  const CATEGORIES = [
+  // Catégories dynamiques chargées depuis le backend
+  const [dbCategories, setDbCategories] = useState<string[]>([]);
+  useEffect(() => {
+    productsApi.categories().then(cats => setDbCategories(cats.map(c => c.name))).catch(() => setDbCategories([]));
+  }, []);
 
-    t.common?.catAll || "Tous",
-
-    t.common?.catGrocery || "Grocery",
-
-    t.common?.catDrinks || "Beverages",
-
-    t.common?.catDairy || "Dairy",
-
-    t.common?.catHygiene || "Hygiene",
-
-    t.common?.catButcher || "Butchery",
-
-    t.common?.catBakery || "Bakery",
-
-    t.common?.catFrozen || "Frozen",
-
-  ];
+  const CATEGORIES = [t.common?.catAll || "Tous", ...dbCategories];
+  const CATEGORY_KEYS = ["Tous", ...dbCategories];
 
   const [cart, setCart] = useState<CartItem[]>([]);
 

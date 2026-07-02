@@ -33,17 +33,22 @@ import { ShoppingCart, Wallet, Clock, User } from "lucide-react";
 type MovementType = "in" | "out" | "adjustment";
 type TypeFilter = "all" | MovementType;
 
+// Couleurs générées dynamiquement par hash du nom de catégorie
+const CATEGORY_COLORS = [
+  "bg-green-400", "bg-blue-400", "bg-yellow-400", "bg-purple-400",
+  "bg-red-400", "bg-orange-400", "bg-cyan-400", "bg-pink-400",
+  "bg-indigo-400", "bg-teal-400", "bg-amber-400", "bg-lime-400",
+  "bg-emerald-400", "bg-fuchsia-400", "bg-violet-400", "bg-rose-400",
+];
+
 function getCategoryDot(category: string) {
-  const dots: Record<string, string> = {
-    Grocery: "bg-green-400",
-    Beverages: "bg-blue-400",
-    Dairy: "bg-yellow-400",
-    Hygiene: "bg-purple-400",
-    Butchery: "bg-red-400",
-    Bakery: "bg-orange-400",
-    Frozen: "bg-cyan-400",
-  };
-  return dots[category] ?? "bg-slate-400";
+  if (!category) return "bg-slate-400";
+  let hash = 0;
+  for (let i = 0; i < category.length; i++) {
+    hash = (hash << 5) - hash + category.charCodeAt(i);
+    hash |= 0;
+  }
+  return CATEGORY_COLORS[Math.abs(hash) % CATEGORY_COLORS.length];
 }
 
 // ── Tiny SVG sparkline for stock level over time ──────────────
