@@ -386,6 +386,10 @@ export const productsApi = {
   bestsellers: (limit = 200) =>
     fetchAPI<{ data: ApiProduct[]; total: number }>(`/products/bestsellers?limit=${limit}`),
 
+  // Catégories distinctes (avec compte de produits)
+  categories: () =>
+    fetchAPI<{ name: string; count: number }[]>(`/products/categories`),
+
   // Scan code-barres (caisse) — exact match, instantané
   findByBarcode: (barcode: string) =>
     fetchAPI<ApiProduct>(`/products/barcode/${barcode}`),

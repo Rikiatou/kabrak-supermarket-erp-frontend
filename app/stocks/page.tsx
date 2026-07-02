@@ -34,8 +34,7 @@ type SortKey = "name" | "stock" | "price" | "category";
 type SortDir = "asc" | "desc";
 type FilterStatus = "all" | "critical" | "low" | "ok" | "expiring";
 
-// Stable backend category keys (always French in DB) - order matches CATEGORIES labels
-const CATEGORY_KEYS = ["All", "Grocery", "Beverages", "Dairy", "Hygiene", "Butchery", "Bakery", "Frozen"];
+// CATEGORY_KEYS is now dynamic, loaded from the DB (see below in component)
 
 function stockStatus(product: Product): FilterStatus {
   if (product.stock === 0) return "critical";
@@ -66,16 +65,17 @@ export default function StocksPage() {
   const { results: searchResults, search: serverSearch, scanBarcode: serverScanBarcode, loading: searchLoading, refresh: reloadProducts } = useServerProductSearch();
   const { alerts: stockAlertsData } = useStockAlerts();
   const { value: stockValueData } = useStockValue();
-  const CATEGORIES = [
-    t.common.catAll,
-    t.common.catGrocery,
-    t.common.catDrinks,
-    t.common.catDairy,
-    t.common.catHygiene,
-    t.common.catButcher,
-    t.common.catBakery,
-    t.common.catFrozen,
-  ];
+
+  // Catégories dynamiques chargées depuis le backend
+  const [dbCategories, setDbCategories] = useState<{ name: string; count: number }[]>([]);
+  useEffect(() => {
+    productsApi.categories().then(setDbCategories).catch(() => setDbCategories([]));
+  }, []);
+
+  // "All" + catégories de la DB
+  const CATEGORIES = ["All", ...dbCategories.map(c => c.name)];
+  // CATEGORY_KEYS est maintenant identique à CATEGORIES (les noms de la DB)
+  const CATEGORY_KEYS = CATEGORIES;
   const [search, setSearch] = useState("");
   const [activeCategoryIdx, setActiveCategoryIdx] = useState(0);
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
