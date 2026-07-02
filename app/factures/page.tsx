@@ -700,12 +700,12 @@ export default function FacturesPage() {
             `).join("")}
           </table>
           <div class="dashed"></div>
+          <div class="small">Total facture: ${formatCurrency(invoice.total)}</div>
           <div class="total-box">
-            <div class="small">TOTAL</div>
-            <div class="total-amount">${formatCurrency(invoice.total)}</div>
+            <div class="small">MONTANT RECU</div>
+            <div class="total-amount">${formatCurrency(invoice.paidAmount)}</div>
           </div>
-          <div class="small">Paid: ${formatCurrency(invoice.paidAmount)}</div>
-          <div class="small">Balance: ${formatCurrency(invoice.balance)}</div>
+          ${invoice.balance > 0 ? `<div class="small" style="text-align:center;font-weight:bold">RESTE A PAYER: ${formatCurrency(invoice.balance)}</div>` : ""}
           <div class="dashed"></div>
           <div class="center small">goods sold are not refundable</div>
           <div class="center small">Thanks for patronizing us</div>
@@ -768,9 +768,9 @@ export default function FacturesPage() {
             <tbody>${itemsHtml}</tbody>
           </table>
           <table class="totals">
-            <tr class="total-row"><td>TOTAL</td><td style="text-align:right">${formatCurrency(invoice.total)}</td></tr>
-            <tr><td>Amount paid</td><td style="text-align:right;color:#16a34a;font-weight:bold">${formatCurrency(invoice.paidAmount)}</td></tr>
-            <tr><td>Balance due</td><td style="text-align:right;color:${invoice.balance > 0 ? '#dc2626' : '#16a34a'};font-weight:bold">${formatCurrency(invoice.balance)}</td></tr>
+            <tr><td>Total facture</td><td style="text-align:right">${formatCurrency(invoice.total)}</td></tr>
+            <tr class="total-row"><td>MONTANT RECU</td><td style="text-align:right">${formatCurrency(invoice.paidAmount)}</td></tr>
+            ${invoice.balance > 0 ? `<tr><td>Reste a payer</td><td style="text-align:right;color:#dc2626;font-weight:bold">${formatCurrency(invoice.balance)}</td></tr>` : ""}
             <tr><td colspan="2" style="text-align:right"><span class="status status-${invoice.status}">${invoice.status}</span></td></tr>
           </table>
           ${paymentsHtml}
