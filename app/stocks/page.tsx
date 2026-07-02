@@ -88,6 +88,14 @@ export default function StocksPage() {
   const [markdownPrice, setMarkdownPrice] = useState("");
   const [markdownReason, setMarkdownReason] = useState("near_expiry");
   const [markdownNote, setMarkdownNote] = useState("");
+  // Restock modal
+  const [restockProduct, setRestockProduct] = useState<Product | null>(null);
+  const [restockQty, setRestockQty] = useState("");
+  const [restockReason, setRestockReason] = useState("purchase");
+  const [restockNote, setRestockNote] = useState("");
+  // Edit modal
+  const [editProduct, setEditProduct] = useState<Product | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", price: "", costPrice: "", stock: "", minStock: "", category: "", barcode: "", sku: "", unit: "unit" });
   const { setMarkdown, setting: settingMarkdown } = useSetMarkdown();
   const { removeMarkdown, removing: removingMarkdown } = useRemoveMarkdown();
 
@@ -180,6 +188,83 @@ export default function StocksPage() {
     if (result) {
       toast(`${t.stocks.markdownRemoved} ${product.name}`, "success");
       reloadProducts();
+    }
+  };
+
+  // ── Restock handler ──
+  const openRestockModal = (product: Product) => {
+    setRestockProduct(product);
+    setRestockQty("");
+    setRestockReason("purchase");
+    setRestockNote("");
+  };
+  const closeRestockModal = () => {
+    setRestockProduct(null);
+    setRestockQty("");
+    setRestockNote("");
+  };
+  const handleRestock = async () => {
+    if (!restockProduct) return;
+    const qty = parseInt(restockQty);
+    if (!qty || qty <= 0) {
+      toast(t.stocks.markdownInvalidPrice || "Quantité invalide", "warning");
+      return;
+    }
+    try {
+      await stockApi.createMovement({
+        productId: restockProduct.id,
+        type: "in",
+        quantity: qty,
+        reason: restockReason,
+        notes: restockNote || undefined,
+      });
+      toast(`${t.stocks.restockAction || "Restock"}: ${restockProduct.name} +${qty}`, "success");
+      reloadProducts();
+      closeRestockModal();
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Erreur restock";
+      toast(msg, "warning");
+    }
+  };
+
+  // ── Edit product handler ──
+  const openEditModal = (product: Product) => {
+    setEditProduct(product);
+    setEditForm({
+      name: product.name,
+      price: String(product.price),
+      costPrice: String(product.costPrice),
+      stock: String(product.stock),
+      minStock: String(product.minStock),
+      category: product.category || "",
+      barcode: product.barcode || "",
+      sku: product.sku || "",
+      unit: product.unit || "unit",
+    });
+  };
+  const closeEditModal = () => {
+    setEditProduct(null);
+  };
+  const handleEditSave = async () => {
+    if (!editProduct) return;
+    try {
+      await productsApi.update(editProduct.id, {
+        name: editForm.name,
+        price: Number(editForm.price),
+        costPrice: Number(editForm.costPrice),
+        stock: Number(editForm.stock),
+        minStock: Number(editForm.minStock),
+        category: editForm.category,
+        barcode: editForm.barcode || undefined,
+        sku: editForm.sku || undefined,
+        unit: editForm.unit,
+      });
+      toast(`${editProduct.name} mis à jour`, "success");
+      reloadProducts();
+      closeEditModal();
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Erreur modification";
+      toast(msg, "warning");
     }
   };
 
@@ -493,7 +578,7 @@ export default function StocksPage() {
                           </button>
                         )}
                         <button
-                          onClick={(e) => { e.stopPropagation(); toast(`${t.stocks.restockAction} : ${product.name}`, "info"); }}
+                          onClick={(e) => { e.stopPropagation(); openRestockModal(product); }}
                           className="px-2.5 py-1 text-xs font-medium text-[var(--brand)] bg-[var(--brand-light)] rounded-lg hover:bg-blue-100 transition-colors"
                         >
                           {t.stocks.restock}
@@ -521,6 +606,8 @@ export default function StocksPage() {
         <ProductDetailPanel
           product={selectedProduct}
           onClose={() => setSelectedProduct(null)}
+          onRestock={openRestockModal}
+          onEdit={openEditModal}
         />
       )}
 
@@ -617,6 +704,158 @@ export default function StocksPage() {
           </div>
         </div>
       )}
+
+      {/* Restock modal */}
+      {restockProduct && (
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-[2px] z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="font-semibold text-lg text-[var(--text-primary)]">{t.stocks.restockAction}</h2>
+              <button onClick={closeRestockModal} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100">
+                <X className="w-4 h-4 text-[var(--text-secondary)]" />
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div className="bg-slate-50 rounded-xl p-3">
+                <p className="font-medium text-sm text-[var(--text-primary)]">{restockProduct.name}</p>
+                <p className="text-xs text-[var(--text-muted)]">{t.stocks.stock}: {restockProduct.stock} · {t.stocks.minStock}: {restockProduct.minStock}</p>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Quantité</label>
+                <input
+                  type="number"
+                  value={restockQty}
+                  onChange={(e) => setRestockQty(e.target.value)}
+                  placeholder="0"
+                  autoFocus
+                  className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Raison</label>
+                <select
+                  value={restockReason}
+                  onChange={(e) => setRestockReason(e.target.value)}
+                  className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]"
+                >
+                  <option value="purchase">Achat</option>
+                  <option value="return">Retour</option>
+                  <option value="adjustment">Ajustement</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">{t.stocks.noteOptional}</label>
+                <input
+                  value={restockNote}
+                  onChange={(e) => setRestockNote(e.target.value)}
+                  placeholder="..."
+                  className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="secondary" className="flex-1" onClick={closeRestockModal}>{t.common.cancel}</Button>
+              <Button className="flex-1" onClick={handleRestock} disabled={!restockQty}>
+                {t.stocks.restockAction}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit product modal */}
+      {editProduct && (
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-[2px] z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <h2 className="font-semibold text-lg text-[var(--text-primary)]">{t.common.edit}: {editProduct.name}</h2>
+              <button onClick={closeEditModal} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100">
+                <X className="w-4 h-4 text-[var(--text-secondary)]" />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2">
+                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">{t.stocks.product}</label>
+                <input
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">{t.stocks.salePrice}</label>
+                <input
+                  type="number"
+                  value={editForm.price}
+                  onChange={(e) => setEditForm({ ...editForm, price: e.target.value })}
+                  className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">{t.stocks.costPrice}</label>
+                <input
+                  type="number"
+                  value={editForm.costPrice}
+                  onChange={(e) => setEditForm({ ...editForm, costPrice: e.target.value })}
+                  className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">{t.stocks.stock}</label>
+                <input
+                  type="number"
+                  value={editForm.stock}
+                  onChange={(e) => setEditForm({ ...editForm, stock: e.target.value })}
+                  className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">{t.stocks.minStock}</label>
+                <input
+                  type="number"
+                  value={editForm.minStock}
+                  onChange={(e) => setEditForm({ ...editForm, minStock: e.target.value })}
+                  className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">{t.forms.category}</label>
+                <input
+                  value={editForm.category}
+                  onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
+                  list="edit-categories"
+                  className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]"
+                />
+                <datalist id="edit-categories">
+                  {dbCategories.map((c) => <option key={c.name} value={c.name} />)}
+                </datalist>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">{t.stocks.barcode}</label>
+                <input
+                  value={editForm.barcode}
+                  onChange={(e) => setEditForm({ ...editForm, barcode: e.target.value })}
+                  className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">SKU</label>
+                <input
+                  value={editForm.sku}
+                  onChange={(e) => setEditForm({ ...editForm, sku: e.target.value })}
+                  className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="secondary" className="flex-1" onClick={closeEditModal}>{t.common.cancel}</Button>
+              <Button className="flex-1" onClick={handleEditSave}>
+                {t.common.save || "Enregistrer"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }
@@ -624,9 +863,13 @@ export default function StocksPage() {
 function ProductDetailPanel({
   product,
   onClose,
+  onRestock,
+  onEdit,
 }: {
   product: Product;
   onClose: () => void;
+  onRestock: (product: Product) => void;
+  onEdit: (product: Product) => void;
 }) {
   const { t } = useI18n();
   const { toast } = useToast();
@@ -846,10 +1089,10 @@ function ProductDetailPanel({
         </div>
 
         <div className="p-4 border-t border-[var(--border)] flex gap-2">
-          <Button variant="secondary" className="flex-1" size="md" onClick={() => toast(t.stocks.stockDetail, "info")}>
+          <Button variant="secondary" className="flex-1" size="md" onClick={() => onEdit(product)}>
             {t.common.edit}
           </Button>
-          <Button className="flex-1" size="md" icon={<Plus className="w-4 h-4" />} onClick={() => toast(`${t.stocks.restockAction} : ${product.name}`, "success")}>
+          <Button className="flex-1" size="md" icon={<Plus className="w-4 h-4" />} onClick={() => onRestock(product)}>
             {t.stocks.restockAction}
           </Button>
         </div>

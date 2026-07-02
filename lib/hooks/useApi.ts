@@ -455,21 +455,21 @@ export function useStockAlerts() {
 // HOOK: useRecentTransactions
 // Transactions récentes (dashboard)
 // ========================================
-export function useRecentTransactions(limit: number = 10, cashierId?: string) {
+export function useRecentTransactions(limit: number = 10, cashierId?: string, startDate?: string, endDate?: string) {
   const [transactions, setTransactions] = useState<ApiTransaction[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await transactionsApi.list(1, limit, cashierId);
+      const response = await transactionsApi.list(1, limit, cashierId, startDate, endDate);
       setTransactions(response.data);
     } catch (e) {
       console.warn("Backend indisponible");
     } finally {
       setLoading(false);
     }
-  }, [limit, cashierId]);
+  }, [limit, cashierId, startDate, endDate]);
 
   useEffect(() => {
     load();

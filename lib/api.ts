@@ -481,11 +481,13 @@ export const transactionsApi = {
     }),
 
   // Historique
-  list: (page = 1, limit = 50, cashierId?: string) => {
+  list: (page = 1, limit = 50, cashierId?: string, startDate?: string, endDate?: string) => {
     const query = new URLSearchParams();
     query.set("page", String(page));
     query.set("limit", String(limit));
     if (cashierId) query.set("cashierId", cashierId);
+    if (startDate) query.set("startDate", startDate);
+    if (endDate) query.set("endDate", endDate);
     return fetchAPI<PaginatedResponse<ApiTransaction>>(`/transactions?${query}`);
   },
 

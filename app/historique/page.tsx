@@ -112,7 +112,16 @@ export default function HistoriquePage() {
   // Cashier voit seulement SES ventes; managers/boss voient tout
   const isCashier = user?.role === "cashier";
   const cashierIdFilter = isCashier ? (user?.id ?? undefined) : undefined;
-  const { transactions: mySales, loading: loadingSales } = useRecentTransactions(100, cashierIdFilter);
+
+  // Filtre par date — par défaut: 30 derniers jours
+  const [salesStartDate, setSalesStartDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return d.toISOString().slice(0, 10);
+  });
+  const [salesEndDate, setSalesEndDate] = useState(() => new Date().toISOString().slice(0, 10));
+
+  const { transactions: mySales, loading: loadingSales } = useRecentTransactions(200, cashierIdFilter, salesStartDate, salesEndDate);
 
   // Return modal state
   const [returnTx, setReturnTx] = useState<ApiTransaction | null>(null);
@@ -372,10 +381,30 @@ export default function HistoriquePage() {
       {activeTab === "sales" && (
         <Card padding="none">
           <div className="p-4 border-b border-[var(--border)]">
-            <h3 className="text-sm font-bold text-[var(--text-primary)]">{t.historique?.mySales || "Mes ventes"}</h3>
-            <p className="text-xs text-[var(--text-muted)] mt-0.5">
-              {mySales.length} {t.historique?.salesCount || "ventes récentes"}
-            </p>
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <h3 className="text-sm font-bold text-[var(--text-primary)]">{t.historique?.mySales || "Mes ventes"}</h3>
+                <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                  {mySales.length} {t.historique?.salesCount || "ventes"}
+                </p>
+              </div>
+              {/* Date range filter */}
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={salesStartDate}
+                  onChange={(e) => setSalesStartDate(e.target.value)}
+                  className="px-2 py-1.5 border border-[var(--border)] rounded-lg text-xs outline-none focus:border-[var(--brand)]"
+                />
+                <span className="text-xs text-[var(--text-muted)]">→</span>
+                <input
+                  type="date"
+                  value={salesEndDate}
+                  onChange={(e) => setSalesEndDate(e.target.value)}
+                  className="px-2 py-1.5 border border-[var(--border)] rounded-lg text-xs outline-none focus:border-[var(--brand)]"
+                />
+              </div>
+            </div>
           </div>
           {loadingSales ? (
             <div className="p-8 text-center text-sm text-[var(--text-muted)]">...</div>
