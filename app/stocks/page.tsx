@@ -193,22 +193,30 @@ export default function StocksPage() {
   };
 
   // SOURCE UNIQUE: recherche server-side. Query vide → le hook renvoie les bestsellers.
-  // Déclenchée à chaque changement de recherche/catégorie (et au montage).
+  // Déclenchée à chaque changement de recherche/catégorie/filtre statut (et au montage).
   useEffect(() => {
     const activeCategory = CATEGORY_KEYS[activeCategoryIdx];
-    serverSearch(search, activeCategory);
-  }, [search, activeCategoryIdx, serverSearch]);
+    // "all" et "expiring" ne sont pas gérés server-side → on envoie undefined
+    const serverStockStatus = (filterStatus === "critical" || filterStatus === "low" || filterStatus === "ok") ? filterStatus : undefined;
+    serverSearch(search, activeCategory, serverStockStatus);
+  }, [search, activeCategoryIdx, filterStatus, serverSearch]);
 
   const filtered = searchResults
     .filter((p) => {
+      // Le filtre catégorie est déjà fait server-side, mais on garde une sécurité locale
       const activeCategory = CATEGORY_KEYS[activeCategoryIdx];
       const matchCat = activeCategoryIdx === 0 ||
         p.category === activeCategory ||
         p.category?.toLowerCase().includes(activeCategory.toLowerCase()) ||
         activeCategory.toLowerCase().includes(p.category?.toLowerCase() || "");
-      // Ignorer le filtre de statut quand on fait une recherche active
+      // Filtre statut: "expiring" reste local (dépend de expiryDate), les autres sont server-side
       const status = stockStatus(p);
-      const matchStatus = search.trim() ? true : (filterStatus === "all" || status === filterStatus);
+      let matchStatus = true;
+      if (filterStatus === "expiring") {
+        matchStatus = status === "expiring";
+      } else if (filterStatus !== "all") {
+        matchStatus = status === filterStatus;
+      }
       return matchCat && matchStatus;
     })
     .sort((a, b) => {

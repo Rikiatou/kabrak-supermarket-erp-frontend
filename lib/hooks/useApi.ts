@@ -101,11 +101,11 @@ export function useServerProductSearch() {
   }, [loadBestsellers]);
 
   // Recherche avec debounce (300ms)
-  const search = useCallback((query: string, category?: string) => {
+  const search = useCallback((query: string, category?: string, stockStatus?: string) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
-    // Si query vide → afficher bestsellers du cache
-    if (!query.trim()) {
+    // Si query vide ET pas de filtre stock → afficher bestsellers du cache
+    if (!query.trim() && !stockStatus) {
       const cacheKey = category ? `cat:${category}` : "";
       if (cacheRef.current.has(cacheKey)) {
         setResults(cacheRef.current.get(cacheKey)!);
@@ -115,8 +115,9 @@ export function useServerProductSearch() {
       return;
     }
 
+    // Si filtre stock sans query → recherche server-side par stockStatus
     // Vérifier le cache
-    const cacheKey = `${query.trim()}:${category || ""}`;
+    const cacheKey = `${query.trim()}:${category || ""}:${stockStatus || ""}`;
     if (cacheRef.current.has(cacheKey)) {
       setResults(cacheRef.current.get(cacheKey)!);
       return;
@@ -126,8 +127,9 @@ export function useServerProductSearch() {
     debounceRef.current = setTimeout(async () => {
       try {
         const res = await productsApi.search({
-          q: query.trim(),
-          category: category && category !== "Tous" ? category : undefined,
+          q: query.trim() || undefined,
+          category: category && category !== "Tous" && category !== "All" ? category : undefined,
+          stockStatus: stockStatus || undefined,
           page: 1,
           limit: 80,
         });

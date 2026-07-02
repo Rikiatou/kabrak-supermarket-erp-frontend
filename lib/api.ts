@@ -372,10 +372,11 @@ export const productsApi = {
     ),
 
   // Recherche server-side (pour POS avec 3000+ produits)
-  search: (params: { q?: string; category?: string; page?: number; limit?: number }) => {
+  search: (params: { q?: string; category?: string; stockStatus?: string; page?: number; limit?: number }) => {
     const query = new URLSearchParams();
     if (params.q) query.set("q", params.q);
     if (params.category) query.set("category", params.category);
+    if (params.stockStatus) query.set("stockStatus", params.stockStatus);
     query.set("page", String(params.page || 1));
     query.set("limit", String(params.limit || 80));
     return fetchAPI<PaginatedResponse<ApiProduct>>(`/products/search?${query}`);
