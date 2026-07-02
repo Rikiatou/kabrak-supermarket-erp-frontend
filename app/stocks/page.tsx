@@ -67,9 +67,24 @@ export default function StocksPage() {
   const { value: stockValueData } = useStockValue();
 
   // Catégories dynamiques chargées depuis le backend
-  const [dbCategories, setDbCategories] = useState<{ name: string; count: number }[]>([]);
+  // Fallback: categories connues (apres normalisation)
+  const FALLBACK_CATS = [
+    { name: "GENERAL ITEMS", count: 0 }, { name: "COSMETICS", count: 0 },
+    { name: "FOOD STUFF", count: 0 }, { name: "BEVERAGES", count: 0 },
+    { name: "TOILETRIES", count: 0 }, { name: "CONFECTIONERY", count: 0 },
+    { name: "BREAKFAST ITEMS", count: 0 }, { name: "WINE & SPIRITS", count: 0 },
+    { name: "KITCHEN & DINING", count: 0 }, { name: "APPLIANCES", count: 0 },
+    { name: "CLEANING ITEMS", count: 0 }, { name: "BABY PRODUCTS", count: 0 },
+    { name: "PET FOOD", count: 0 }, { name: "FURNITURE", count: 0 },
+    { name: "FROZEN FOODS", count: 0 }, { name: "CAMERA & ACCESSORIES", count: 0 },
+    { name: "AUTOMOTIVE", count: 0 }, { name: "STATIONERY", count: 0 },
+    { name: "CIGARETTES & TOBACCO", count: 0 }, { name: "TOYS & GIFTS", count: 0 },
+  ];
+  const [dbCategories, setDbCategories] = useState<{ name: string; count: number }[]>(FALLBACK_CATS);
   useEffect(() => {
-    productsApi.categories().then(setDbCategories).catch(() => setDbCategories([]));
+    productsApi.categories()
+      .then(cats => { if (cats && cats.length > 0) setDbCategories(cats); })
+      .catch(() => setDbCategories(FALLBACK_CATS));
   }, []);
 
   // "All" + catégories de la DB

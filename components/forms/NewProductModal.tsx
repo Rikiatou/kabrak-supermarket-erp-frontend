@@ -39,9 +39,21 @@ export function NewProductModal({ onClose, onSave, prefillBarcode }: NewProductM
   const { t } = useI18n();
 
   // Catégories dynamiques chargées depuis le backend
-  const [dbCategories, setDbCategories] = useState<string[]>([]);
+  // Fallback: categories connues de la DB (apres normalisation)
+  const FALLBACK_CATEGORIES = [
+    "GENERAL ITEMS", "COSMETICS", "FOOD STUFF", "BEVERAGES", "TOILETRIES",
+    "CONFECTIONERY", "BREAKFAST ITEMS", "WINE & SPIRITS", "KITCHEN & DINING",
+    "APPLIANCES", "CLEANING ITEMS", "BABY PRODUCTS", "PET FOOD", "FURNITURE",
+    "FROZEN FOODS", "CAMERA & ACCESSORIES", "AUTOMOTIVE", "STATIONERY",
+    "CIGARETTES & TOBACCO", "TOYS & GIFTS",
+  ];
+  const [dbCategories, setDbCategories] = useState<string[]>(FALLBACK_CATEGORIES);
   useEffect(() => {
-    productsApi.categories().then(cats => setDbCategories(cats.map(c => c.name))).catch(() => setDbCategories([]));
+    productsApi.categories()
+      .then(cats => {
+        if (cats && cats.length > 0) setDbCategories(cats.map(c => c.name));
+      })
+      .catch(() => setDbCategories(FALLBACK_CATEGORIES));
   }, []);
 
   const unitLabels: Record<string, string> = {
