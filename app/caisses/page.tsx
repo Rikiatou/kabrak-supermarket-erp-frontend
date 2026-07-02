@@ -495,6 +495,7 @@ export default function CaissesPage() {
   // Filtres historique Z-report: par caissier et par date
   const [histCashier, setHistCashier] = useState<string>("");
   const [histDate, setHistDate] = useState<string>("");
+  const [dailyReportLoading, setDailyReportLoading] = useState(false);
 
   // Map registerId -> active shift
   const shiftByRegister = useMemo(() => {
@@ -683,6 +684,23 @@ export default function CaissesPage() {
     }
   };
 
+  // Z-Report journalier par caissier (sans dépendre des shifts)
+  const generateDailyZReport = async () => {
+    if (!histCashier || !histDate) {
+      toast("Sélectionnez un caissier et une date", "warning");
+      return;
+    }
+    setDailyReportLoading(true);
+    try {
+      const report = await shiftsApi.dailyZReport(histCashier, histDate);
+      setZReport(report);
+    } catch {
+      toast("Erreur: impossible de générer le Z-report journalier", "warning");
+    } finally {
+      setDailyReportLoading(false);
+    }
+  };
+
   const kpis = [
     {
       label: t.caisses.openRegisters,
@@ -843,6 +861,14 @@ export default function CaissesPage() {
                     Réinitialiser
                   </button>
                 )}
+                <button
+                  onClick={generateDailyZReport}
+                  disabled={!histCashier || !histDate || dailyReportLoading}
+                  className="px-4 py-1.5 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed"
+                  title="Génère un Z-Report pour ce caissier à cette date, indépendamment des shifts"
+                >
+                  {dailyReportLoading ? "..." : "Z-Report journalier"}
+                </button>
                 <span className="ml-auto text-xs text-[var(--text-muted)] self-center">
                   {filteredPastShifts.length} shift(s)
                 </span>

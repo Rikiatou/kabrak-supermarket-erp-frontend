@@ -776,6 +776,8 @@ export const shiftsApi = {
     fetchAPI<ApiShift>(`/shifts/${id}/close`, { method: "POST", body: JSON.stringify(data) }),
   byEmployee: (employeeId: string) => fetchAPI<ApiShift[]>(`/shifts/employee/${employeeId}`),
   zReport: (shiftId: string) => fetchAPI<ApiZReport>(`/shifts/${shiftId}/z-report`),
+  dailyZReport: (employeeId: string, date: string) =>
+    fetchAPI<ApiZReport>(`/shifts/daily-z-report?employeeId=${employeeId}&date=${date}`),
 };
 
 // ========================================
