@@ -61,36 +61,124 @@ export function ZReportReceipt({
   };
 
   const handlePrint = () => {
-    const printContent = document.getElementById("z-report-print");
-    if (!printContent) return;
-    const win = window.open("", "_blank", "width=400,height=600");
-    if (!win) return;
-    win.document.write(`
+    // Construire le HTML du Z-Report avec styles inline (compatible imprimante thermique 80mm)
+    const expectedCash = (report.openingCash ?? 0) + (report.cashReceived ?? report.receiptsByMethod?.cash ?? 0) - (report.changeGiven ?? 0);
+    const countedCash = report.closingCash ?? 0;
+    const diff = countedCash - expectedCash;
+
+    const row = (label: string, value: string, bold = false) =>
+      `<div style="display:flex;justify-content:space-between;padding:1px 0;${bold ? "font-weight:bold;" : ""}"><span>${label}</span><span>${value}</span></div>`;
+
+    const section = (title: string, rowsHtml: string) =>
+      `<div style="border-top:1px dashed #000;margin-top:4px;padding-top:4px">${title ? `<div style="font-weight:bold;text-transform:uppercase;font-size:10px;margin-bottom:2px">${title}</div>` : ""}${rowsHtml}</div>`;
+
+    let html = `
+      <div style="text-align:center;margin-bottom:4px">
+        <div style="font-size:16px;font-weight:bold;letter-spacing:2px">${z.title}</div>
+        <div style="font-size:11px">${z.closingReport}</div>
+      </div>
+      <div style="border-top:1px dashed #000;padding-top:4px">
+        ${row(z.station, report.registerName)}
+        ${row(z.operator, report.employeeName)}
+        ${row(z.opened, formatDateTime(report.openedAt))}
+        ${row(z.closed, formatDateTime(report.closedAt))}
+      </div>
+      <div style="border-top:1px dashed #000;margin-top:4px;padding-top:4px">
+        ${row(z.grossSales, formatCurrency(report.grossSales))}
+        ${row(z.returnsAndCredits, formatCurrency(report.returnsAndCredits))}
+        ${row(z.totalDiscount, "-" + formatCurrency(report.totalDiscount))}
+        ${report.totalTax > 0 ? row(z.totalTax, formatCurrency(report.totalTax)) : ""}
+        ${row(z.nonTaxableSales, formatCurrency(report.nonTaxableSales))}
+        <div style="border-top:1px solid #000;margin-top:2px;padding-top:2px">
+          ${row(z.netSales, formatCurrency(report.netSales), true)}
+        </div>
+      </div>
+      <div style="border-top:1px dashed #000;margin-top:4px;padding-top:4px">
+        <div style="font-weight:bold;text-transform:uppercase;font-size:10px;margin-bottom:2px">${z.receiptsByMethod}</div>
+        ${row(z.cash, formatCurrency(report.receiptsByMethod.cash))}
+        ${row(z.card, formatCurrency(report.receiptsByMethod.card))}
+        ${row(z.mobile, formatCurrency(report.receiptsByMethod.mobile))}
+        ${report.receiptsByMethod.split > 0 ? row(z.split, formatCurrency(report.receiptsByMethod.split)) : ""}
+        <div style="border-top:1px solid #000;margin-top:2px;padding-top:2px">
+          ${row(z.totalReceipts, formatCurrency(report.totalReceipts), true)}
+        </div>
+      </div>
+      <div style="border-top:1px dashed #000;margin-top:4px;padding-top:4px">
+        <div style="font-weight:bold;text-transform:uppercase;font-size:10px;margin-bottom:2px">${z.cashDrawerTotal}</div>
+        ${row(z.openingCash, formatCurrency(report.openingCash))}
+        <div style="border-top:1px solid #000;margin-top:2px;padding-top:2px">
+          ${row(z.cashDrawerTotal, formatCurrency(expectedCash), true)}
+        </div>
+      </div>`;
+
+    if (report.closingCash !== null) {
+      html += `
+      <div style="border-top:1px dashed #000;margin-top:4px;padding-top:4px">
+        <div style="font-weight:bold;text-transform:uppercase;font-size:10px;margin-bottom:2px">${t.caisses?.close || "CLOSE"}</div>
+        ${row(z.expectedCash, formatCurrency(expectedCash))}
+        ${row(z.closingCash, formatCurrency(countedCash), true)}
+        ${diff !== 0 ? row(z.difference, (diff > 0 ? "+" : "") + formatCurrency(diff), true) : ""}
+      </div>`;
+    }
+
+    html += `
+      <div style="border-top:1px dashed #000;margin-top:4px;padding-top:4px">
+        ${row(z.customerCount, String(report.customerCount))}
+        ${row(z.averageSale, formatCurrency(report.averageSale))}
+      </div>`;
+
+    if (report.notes) {
+      html += `
+      <div style="border-top:1px dashed #000;margin-top:4px;padding-top:4px">
+        <div style="font-weight:bold;text-transform:uppercase;font-size:10px;margin-bottom:2px">${z.notes}</div>
+        <div style="font-size:11px;white-space:pre-wrap">${report.notes}</div>
+      </div>`;
+    }
+
+    html += `<div style="text-align:center;margin-top:8px;font-size:10px">*** END OF REPORT ***</div><br/>`;
+
+    // Utiliser un iframe caché (évite les bloqueurs de popup, compatible --kiosk-printing)
+    const printFrame = document.createElement("iframe");
+    printFrame.style.position = "fixed";
+    printFrame.style.right = "0";
+    printFrame.style.bottom = "0";
+    printFrame.style.width = "0";
+    printFrame.style.height = "0";
+    printFrame.style.border = "0";
+    document.body.appendChild(printFrame);
+
+    const printDoc = printFrame.contentWindow?.document || printFrame.contentDocument;
+    if (!printDoc) {
+      if (printFrame.parentNode) document.body.removeChild(printFrame);
+      return;
+    }
+
+    printDoc.write(`
       <html>
         <head>
           <title>Z-Report ${report.registerName}</title>
           <style>
-            * { font-family: 'Courier New', monospace; font-size: 12px; }
-            body { padding: 16px; max-width: 380px; margin: 0 auto; }
-            h1 { font-size: 16px; text-align: center; margin: 0 0 4px; }
-            h2 { font-size: 14px; text-align: center; margin: 0 0 8px; }
-            .center { text-align: center; }
-            .row { display: flex; justify-content: space-between; padding: 2px 0; }
-            .section { border-top: 1px dashed #000; margin-top: 8px; padding-top: 8px; }
-            .bold { font-weight: bold; }
-            .large { font-size: 14px; }
-            .muted { color: #666; }
+            @page { size: 80mm auto; margin: 0; }
+            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            html, body { width: 80mm; max-width: 80mm; margin: 0; padding: 0; }
+            body { padding: 2mm 2mm 4mm; font-family: 'Courier New', monospace; color: #000; font-size: 12px; line-height: 1.4; font-weight: bold; }
+            @media print {
+              html, body { width: 80mm; max-width: 80mm; padding: 2mm 2mm 4mm; }
+              * { page-break-inside: avoid; break-inside: avoid; }
+            }
           </style>
         </head>
-        <body>${printContent.innerHTML}</body>
+        <body>${html}</body>
       </html>
     `);
-    win.document.close();
-    win.focus();
+    printDoc.close();
+    printFrame.contentWindow?.focus();
     setTimeout(() => {
-      win.print();
-      win.close();
-    }, 250);
+      printFrame.contentWindow?.print();
+      setTimeout(() => {
+        if (printFrame.parentNode) document.body.removeChild(printFrame);
+      }, 1000);
+    }, 500);
   };
 
   // Expected cash = opening + cash received - change given (calcul correct)
