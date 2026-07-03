@@ -60,17 +60,16 @@ export function ZReportReceipt({
     noNotes: "Aucune note",
   };
 
-  const handlePrint = () => {
-    // Construire le HTML du Z-Report avec styles inline (compatible imprimante thermique 80mm)
-    const expectedCash = (report.openingCash ?? 0) + (report.cashReceived ?? report.receiptsByMethod?.cash ?? 0) - (report.changeGiven ?? 0);
-    const countedCash = report.closingCash ?? 0;
-    const diff = countedCash - expectedCash;
+  // Calcul: Opening Cash + Cash Received - Change Given = Expected Cash in Drawer
+  const cashReceived = report.cashReceived ?? report.receiptsByMethod?.cash ?? 0;
+  const changeGiven = report.changeGiven ?? 0;
+  const expectedCash = (report.openingCash ?? 0) + cashReceived - changeGiven;
+  const countedCash = report.closingCash ?? 0;
+  const diff = countedCash - expectedCash;
 
+  const handlePrint = () => {
     const row = (label: string, value: string, bold = false) =>
       `<div style="display:flex;justify-content:space-between;padding:1px 0;${bold ? "font-weight:bold;" : ""}"><span>${label}</span><span>${value}</span></div>`;
-
-    const section = (title: string, rowsHtml: string) =>
-      `<div style="border-top:1px dashed #000;margin-top:4px;padding-top:4px">${title ? `<div style="font-weight:bold;text-transform:uppercase;font-size:10px;margin-bottom:2px">${title}</div>` : ""}${rowsHtml}</div>`;
 
     let html = `
       <div style="text-align:center;margin-bottom:4px">
@@ -85,10 +84,9 @@ export function ZReportReceipt({
       </div>
       <div style="border-top:1px dashed #000;margin-top:4px;padding-top:4px">
         ${row(z.grossSales, formatCurrency(report.grossSales))}
-        ${row(z.returnsAndCredits, formatCurrency(report.returnsAndCredits))}
-        ${row(z.totalDiscount, "-" + formatCurrency(report.totalDiscount))}
+        ${report.returnsAndCredits > 0 ? row(z.returnsAndCredits, "-" + formatCurrency(report.returnsAndCredits)) : ""}
+        ${report.totalDiscount > 0 ? row(z.totalDiscount, "-" + formatCurrency(report.totalDiscount)) : ""}
         ${report.totalTax > 0 ? row(z.totalTax, formatCurrency(report.totalTax)) : ""}
-        ${row(z.nonTaxableSales, formatCurrency(report.nonTaxableSales))}
         <div style="border-top:1px solid #000;margin-top:2px;padding-top:2px">
           ${row(z.netSales, formatCurrency(report.netSales), true)}
         </div>
@@ -96,8 +94,8 @@ export function ZReportReceipt({
       <div style="border-top:1px dashed #000;margin-top:4px;padding-top:4px">
         <div style="font-weight:bold;text-transform:uppercase;font-size:10px;margin-bottom:2px">${z.receiptsByMethod}</div>
         ${row(z.cash, formatCurrency(report.receiptsByMethod.cash))}
-        ${row(z.card, formatCurrency(report.receiptsByMethod.card))}
-        ${row(z.mobile, formatCurrency(report.receiptsByMethod.mobile))}
+        ${report.receiptsByMethod.card > 0 ? row(z.card, formatCurrency(report.receiptsByMethod.card)) : ""}
+        ${report.receiptsByMethod.mobile > 0 ? row(z.mobile, formatCurrency(report.receiptsByMethod.mobile)) : ""}
         ${report.receiptsByMethod.split > 0 ? row(z.split, formatCurrency(report.receiptsByMethod.split)) : ""}
         <div style="border-top:1px solid #000;margin-top:2px;padding-top:2px">
           ${row(z.totalReceipts, formatCurrency(report.totalReceipts), true)}
@@ -106,22 +104,14 @@ export function ZReportReceipt({
       <div style="border-top:1px dashed #000;margin-top:4px;padding-top:4px">
         <div style="font-weight:bold;text-transform:uppercase;font-size:10px;margin-bottom:2px">${z.cashDrawerTotal}</div>
         ${row(z.openingCash, formatCurrency(report.openingCash))}
+        ${row("+ " + z.cashReceived, formatCurrency(cashReceived))}
+        ${changeGiven > 0 ? row("- " + z.changeGiven, formatCurrency(changeGiven)) : ""}
         <div style="border-top:1px solid #000;margin-top:2px;padding-top:2px">
-          ${row(z.cashDrawerTotal, formatCurrency(expectedCash), true)}
+          ${row(z.expectedCash, formatCurrency(expectedCash), true)}
         </div>
-      </div>`;
-
-    if (report.closingCash !== null) {
-      html += `
-      <div style="border-top:1px dashed #000;margin-top:4px;padding-top:4px">
-        <div style="font-weight:bold;text-transform:uppercase;font-size:10px;margin-bottom:2px">${t.caisses?.close || "CLOSE"}</div>
-        ${row(z.expectedCash, formatCurrency(expectedCash))}
-        ${row(z.closingCash, formatCurrency(countedCash), true)}
-        ${diff !== 0 ? row(z.difference, (diff > 0 ? "+" : "") + formatCurrency(diff), true) : ""}
-      </div>`;
-    }
-
-    html += `
+        ${report.closingCash !== null ? row(z.closingCash, formatCurrency(countedCash), true) : ""}
+        ${report.closingCash !== null && diff !== 0 ? row(z.difference, (diff > 0 ? "+" : "") + formatCurrency(diff), true) : ""}
+      </div>
       <div style="border-top:1px dashed #000;margin-top:4px;padding-top:4px">
         ${row(z.customerCount, String(report.customerCount))}
         ${row(z.averageSale, formatCurrency(report.averageSale))}
@@ -135,9 +125,8 @@ export function ZReportReceipt({
       </div>`;
     }
 
-    html += `<div style="text-align:center;margin-top:8px;font-size:10px">*** END OF REPORT ***</div><br/>`;
+    html += `<div style="text-align:center;margin-top:8px;font-size:10px">*** END ***</div><br/>`;
 
-    // Utiliser un iframe caché (évite les bloqueurs de popup, compatible --kiosk-printing)
     const printFrame = document.createElement("iframe");
     printFrame.style.position = "fixed";
     printFrame.style.right = "0";
@@ -181,10 +170,6 @@ export function ZReportReceipt({
     }, 500);
   };
 
-  // Expected cash = opening + cash received - change given (calcul correct)
-  const expectedCash = (report.openingCash ?? 0) + (report.cashReceived ?? report.receiptsByMethod?.cash ?? 0) - (report.changeGiven ?? 0);
-  const countedCash = report.closingCash ?? 0;
-
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
@@ -203,7 +188,7 @@ export function ZReportReceipt({
           </div>
         </div>
 
-        {/* Printable area */}
+        {/* Report content */}
         <div id="z-report-print" className="p-5 space-y-4">
           {/* Title */}
           <div className="text-center">
@@ -231,30 +216,30 @@ export function ZReportReceipt({
             </div>
           </div>
 
-          {/* Sales summary */}
+          {/* Sales summary — compact */}
           <div className="border-t border-dashed border-[var(--border)] pt-3 space-y-1.5">
             <div className="flex justify-between text-sm">
               <span>{z.grossSales}</span>
               <span className="font-semibold tabular-nums">{formatCurrency(report.grossSales)}</span>
             </div>
-            <div className="flex justify-between text-sm">
-              <span>{z.returnsAndCredits}</span>
-              <span className="font-semibold tabular-nums">{formatCurrency(report.returnsAndCredits)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span>{z.totalDiscount}</span>
-              <span className="font-semibold tabular-nums text-red-600">-{formatCurrency(report.totalDiscount)}</span>
-            </div>
+            {report.returnsAndCredits > 0 && (
+              <div className="flex justify-between text-sm">
+                <span>{z.returnsAndCredits}</span>
+                <span className="font-semibold tabular-nums text-red-600">-{formatCurrency(report.returnsAndCredits)}</span>
+              </div>
+            )}
+            {report.totalDiscount > 0 && (
+              <div className="flex justify-between text-sm">
+                <span>{z.totalDiscount}</span>
+                <span className="font-semibold tabular-nums text-red-600">-{formatCurrency(report.totalDiscount)}</span>
+              </div>
+            )}
             {report.totalTax > 0 && (
               <div className="flex justify-between text-sm">
                 <span>{z.totalTax}</span>
                 <span className="font-semibold tabular-nums">{formatCurrency(report.totalTax)}</span>
               </div>
             )}
-            <div className="flex justify-between text-sm">
-              <span>{z.nonTaxableSales}</span>
-              <span className="font-semibold tabular-nums">{formatCurrency(report.nonTaxableSales)}</span>
-            </div>
             <div className="flex justify-between text-sm font-bold border-t border-[var(--border-subtle)] pt-1.5">
               <span>{z.netSales}</span>
               <span className="tabular-nums">{formatCurrency(report.netSales)}</span>
@@ -271,14 +256,18 @@ export function ZReportReceipt({
                 <span>{z.cash}</span>
                 <span className="font-semibold tabular-nums">{formatCurrency(report.receiptsByMethod.cash)}</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span>{z.card}</span>
-                <span className="font-semibold tabular-nums">{formatCurrency(report.receiptsByMethod.card)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>{z.mobile}</span>
-                <span className="font-semibold tabular-nums">{formatCurrency(report.receiptsByMethod.mobile)}</span>
-              </div>
+              {report.receiptsByMethod.card > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span>{z.card}</span>
+                  <span className="font-semibold tabular-nums">{formatCurrency(report.receiptsByMethod.card)}</span>
+                </div>
+              )}
+              {report.receiptsByMethod.mobile > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span>{z.mobile}</span>
+                  <span className="font-semibold tabular-nums">{formatCurrency(report.receiptsByMethod.mobile)}</span>
+                </div>
+              )}
               {report.receiptsByMethod.split > 0 && (
                 <div className="flex justify-between text-sm">
                   <span>{z.split}</span>
@@ -292,7 +281,7 @@ export function ZReportReceipt({
             </div>
           </div>
 
-          {/* Cash drawer */}
+          {/* Cash drawer — avec détail du calcul */}
           <div className="border-t border-dashed border-[var(--border)] pt-3 space-y-1.5">
             <p className="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)] mb-1">
               {z.cashDrawerTotal}
@@ -301,28 +290,37 @@ export function ZReportReceipt({
               <span>{z.openingCash}</span>
               <span className="tabular-nums">{formatCurrency(report.openingCash)}</span>
             </div>
+            <div className="flex justify-between text-sm">
+              <span>+ {z.cashReceived}</span>
+              <span className="tabular-nums">{formatCurrency(cashReceived)}</span>
+            </div>
+            {changeGiven > 0 && (
+              <div className="flex justify-between text-sm">
+                <span>- {z.changeGiven}</span>
+                <span className="tabular-nums">{formatCurrency(changeGiven)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-sm font-bold border-t border-[var(--border-subtle)] pt-1.5">
-              <span>{z.cashDrawerTotal}</span>
+              <span>= {z.expectedCash}</span>
               <span className="tabular-nums">{formatCurrency(expectedCash)}</span>
             </div>
+            {report.closingCash !== null && (
+              <>
+                <div className="flex justify-between text-sm font-bold pt-1">
+                  <span>{z.closingCash}</span>
+                  <span className="tabular-nums">{formatCurrency(countedCash)}</span>
+                </div>
+                {diff !== 0 && (
+                  <div className="flex justify-between text-sm font-bold">
+                    <span>{z.difference}</span>
+                    <span className={`tabular-nums ${diff > 0 ? "text-blue-600" : "text-red-600"}`}>
+                      {diff > 0 ? "+" : ""}{formatCurrency(diff)}
+                    </span>
+                  </div>
+                )}
+              </>
+            )}
           </div>
-
-          {/* Cash reconciliation — Expected + Counted only */}
-          {report.closingCash !== null && (
-            <div className="border-t border-dashed border-[var(--border)] pt-3 space-y-1.5">
-              <p className="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)] mb-1">
-                {t.caisses.close}
-              </p>
-              <div className="flex justify-between text-sm">
-                <span>{z.expectedCash}</span>
-                <span className="tabular-nums font-semibold">{formatCurrency(expectedCash)}</span>
-              </div>
-              <div className="flex justify-between text-sm font-bold border-t border-[var(--border-subtle)] pt-1.5">
-                <span>{z.closingCash}</span>
-                <span className="tabular-nums">{formatCurrency(countedCash)}</span>
-              </div>
-            </div>
-          )}
 
           {/* Stats */}
           <div className="border-t border-dashed border-[var(--border)] pt-3 space-y-1.5">
@@ -343,16 +341,6 @@ export function ZReportReceipt({
               <p className="text-xs text-[var(--text-secondary)]">{report.notes}</p>
             </div>
           )}
-
-          {/* Footer */}
-          <div className="border-t border-dashed border-[var(--border)] pt-3 text-center">
-            <p className="text-[10px] text-[var(--text-muted)]">
-              {report.customerCount} {z.customerCount.toLowerCase()} — {formatCurrency(report.netSales)}
-            </p>
-            <p className="text-[10px] text-[var(--text-muted)] mt-1">
-              {z.title} #{report.shiftId.slice(-6).toUpperCase()}
-            </p>
-          </div>
         </div>
       </div>
     </div>

@@ -1645,22 +1645,22 @@ export default function POSPage() {
 
           @page { size: 80mm auto; margin: 0; }
           * { -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; padding: 0; box-sizing: border-box; }
-          html, body { width: 80mm; max-width: 80mm; margin: 0; padding: 0; }
+          html, body { width: 80mm; max-width: 80mm; margin: 0; padding: 0; overflow: visible; }
           body { padding: 1mm 2mm 2mm; font-family: 'Courier New', monospace; color: #000; font-size: 12px; line-height: 1.35; font-weight: bold; }
           h1 { font-size: 15px; text-align: center; margin: 0; font-weight: bold; letter-spacing: 0.5px; }
           .center { text-align: center; }
           .dashed { text-align: center; font-size: 10px; letter-spacing: 1px; margin: 2px 0; overflow: hidden; white-space: nowrap; }
           .dashed::before { content: "--------------------------------"; }
-          table { width: 100%; border-collapse: collapse; }
-          td { padding: 0; vertical-align: top; }
-          .total { font-size: 14px; font-weight: bold; }
-          .right { text-align: right; }
-          .small { font-size: 10px; }
+          table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+          td { padding: 0; vertical-align: top; white-space: nowrap; overflow: visible; }
+          .total { font-size: 14px; font-weight: bold; white-space: nowrap; }
+          .right { text-align: right; white-space: nowrap; }
+          .small { font-size: 10px; white-space: nowrap; }
           .xsmall { font-size: 9px; }
-          .item-name { font-size: 11px; font-weight: bold; }
-          .item-detail { font-size: 10px; }
+          .item-name { font-size: 11px; font-weight: bold; white-space: normal; word-wrap: break-word; }
+          .item-detail { font-size: 10px; white-space: nowrap; }
           @media print {
-            html, body { width: 80mm; max-width: 80mm; padding: 1mm 2mm 2mm; }
+            html, body { width: 80mm; max-width: 80mm; padding: 1mm 2mm 2mm; overflow: visible; }
             * { page-break-inside: avoid; break-inside: avoid; }
           }
 
@@ -1827,20 +1827,20 @@ export default function POSPage() {
 
           @page { size: 80mm auto; margin: 0; }
           * { -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; padding: 0; box-sizing: border-box; }
-          html, body { width: 80mm; max-width: 80mm; margin: 0; padding: 0; }
+          html, body { width: 80mm; max-width: 80mm; margin: 0; padding: 0; overflow: visible; }
           body { padding: 1mm 2mm 2mm; font-family: 'Courier New', monospace; color: #000; font-size: 12px; line-height: 1.35; font-weight: bold; }
           h1 { font-size: 15px; text-align: center; margin: 0; font-weight: bold; letter-spacing: 0.5px; }
           .center { text-align: center; }
           .dashed { text-align: center; font-size: 10px; letter-spacing: 1px; margin: 2px 0; overflow: hidden; white-space: nowrap; }
           .dashed::before { content: "--------------------------------"; }
-          table { width: 100%; border-collapse: collapse; }
-          td { padding: 0; vertical-align: top; }
-          .total { font-size: 14px; font-weight: bold; }
-          .right { text-align: right; }
-          .small { font-size: 10px; }
+          table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+          td { padding: 0; vertical-align: top; white-space: nowrap; overflow: visible; }
+          .total { font-size: 14px; font-weight: bold; white-space: nowrap; }
+          .right { text-align: right; white-space: nowrap; }
+          .small { font-size: 10px; white-space: nowrap; }
           .xsmall { font-size: 9px; }
           @media print {
-            html, body { width: 80mm; max-width: 80mm; padding: 1mm 2mm 2mm; }
+            html, body { width: 80mm; max-width: 80mm; padding: 1mm 2mm 2mm; overflow: visible; }
             * { page-break-inside: avoid; break-inside: avoid; }
           }
 

@@ -72,7 +72,7 @@ export default function SettingsPage() {
 
       const token = typeof window !== "undefined" ? localStorage.getItem("kabrak_auth_token") : null;
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/licenses/${license.licenseKey}/upload-logo`,
+        `/api/licenses/${license.licenseKey}/upload-logo`,
         {
           method: "POST",
           headers: token ? { Authorization: `Bearer ${token}` } : {},

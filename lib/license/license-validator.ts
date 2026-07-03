@@ -12,7 +12,11 @@ const CONFIG_KEY = "kabrak_client_config";
 const STORES_KEY = "kabrak_stores";
 const LAST_CHECK_KEY = "kabrak_license_last_check";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+// Utiliser une URL relative /api pour passer par le proxy Next.js
+// (next.config.ts rewrites /api/* → http://localhost:3001/api/*)
+// Comme ça, peu importe l'IP du serveur (192.168.100.10 ou autre),
+// le navigateur appelle /api/... sur le même host que le frontend
+const API_URL = "/api";
 
 // ========================================
 // VALIDATEUR DE LICENCE (côté client)

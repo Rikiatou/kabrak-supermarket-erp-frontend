@@ -8,8 +8,9 @@
 // 4. Si local revient → bascule retour (retest toutes les 10s en arrière-plan)
 // 5. L'override localStorage (IP spécifique magasin) est toujours retesté
 
-// URL primaire (serveur local du magasin ou cloud selon déploiement)
-const PRIMARY_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+// URL primaire: relative "/api" passe par le proxy Next.js (next.config.ts rewrites /api/* → localhost:3001)
+// Comme ça, peu importe l'IP du serveur (192.168.100.10 ou autre), ça marche automatiquement
+const PRIMARY_API_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
 
 // URL de fallback (cloud) — utilisée si le serveur local ne répond pas
 const FALLBACK_API_URL = "https://kabrak-api-production.up.railway.app/api";
