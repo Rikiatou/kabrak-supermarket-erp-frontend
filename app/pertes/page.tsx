@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Search,
   Plus,
@@ -43,6 +44,7 @@ export default function PertesPage() {
   const { t } = useI18n();
   const { toast } = useToast();
   const { user } = useAuth();
+  const searchParams = useSearchParams();
   // Recherche server-side: cherche parmi TOUS les produits (18000+), pas seulement 50
   const { results: searchResults, search: serverSearch, bestsellers, refresh: reloadProducts } = useServerProductSearch();
   const { adjust, adjusting } = useStockAdjust();
@@ -55,7 +57,9 @@ export default function PertesPage() {
     return merged.filter((p, i, arr) => arr.findIndex((x) => x.id === p.id) === i);
   }, [searchResults, bestsellers]);
 
-  const [activeTab, setActiveTab] = useState<"losses" | "returns">("losses");
+  const [activeTab, setActiveTab] = useState<"losses" | "returns">(
+    searchParams?.get("tab") === "returns" ? "returns" : "losses"
+  );
 
   // Loss state
   const lossTypes = [
@@ -408,7 +412,7 @@ export default function PertesPage() {
                   <div>
                     <p className="text-xs text-[var(--text-muted)]">{t.pertes.stockRestocked}</p>
                     <p className="text-lg font-bold text-[var(--text-primary)] tabular-nums">
-                      {returns.reduce((s, r) => s + r.items.reduce((ss, it) => ss + it.quantity, 0), 0)}
+                      {returns.reduce((s: number, r: any) => s + r.items.reduce((ss: number, it: any) => ss + it.quantity, 0), 0)}
                     </p>
                   </div>
                 </div>
@@ -453,7 +457,7 @@ export default function PertesPage() {
                         </span>
                       </div>
                       <div className="flex flex-wrap gap-2 mb-2">
-                        {ret.items.map((it, i) => (
+                        {ret.items.map((it: any, i: number) => (
                           <span key={i} className="text-xs bg-[var(--surface)] px-2 py-1 rounded-lg">
                             {it.productName} ×{it.quantity} — {formatCurrency(it.total)}
                           </span>

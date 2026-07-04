@@ -1,0 +1,12 @@
+feat: scanner opens full product creation modal for unknown barcodes
+
+- When scanner finds unknown barcode → opens NewProductModal with barcode pre-filled
+- User creates product with ALL fields (name, category, price, cost, stock, expiry, etc.)
+- Product is created in backend → automatically added to delivery line
+- Button "+" next to product select also opens the same modal
+- Removed inline "new product" section — everything goes through the modal now
+- Simplified save logic (no more isNewProduct in delivery lines)
+
+Generated with [Devin](https://devin.ai)
+
+Co-Authored-By: Devin <158243242+devin-ai-integration[bot]@users.noreply.github.com>

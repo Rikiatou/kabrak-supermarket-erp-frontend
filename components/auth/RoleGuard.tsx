@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth/context";
 import { canAccess, ROLE_HOME, type Role } from "@/lib/auth/roles";
-import { useI18n } from "@/lib/i18n/context";
 import { ShieldAlert } from "lucide-react";
 
 interface RoleGuardProps {
@@ -12,33 +11,25 @@ interface RoleGuardProps {
 }
 
 /**
- * Guards all pages except /login.
- * - If not logged in -> redirect /login
- * - If logged in but insufficient role -> redirect to home page
+ * Protège toutes les pages sauf /login.
+ * - Si non connecté → redirect /login
+ * - Si connecté mais rôle insuffisant → redirect vers sa page d'accueil
  */
 export function RoleGuard({ children }: RoleGuardProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const [mounted, setMounted] = useState(false);
   const { user, loading } = useAuth();
-  const { t } = useI18n();
 
-  // Pages publiques = pas de guard
-  const PUBLIC_PAGES = ["/login", "/activate", "/pricing", "/proposition", "/"];
-  const isPublicPage = PUBLIC_PAGES.some(p => pathname === p || pathname.startsWith(p + "/"));
+  // Page login = pas de guard
+  const isLoginPage = pathname === "/login";
 
   // Vérifier l'accès (dérivé, pas de state)
   const hasAccess = user ? canAccess(user.role, pathname) : false;
   const home = user ? (ROLE_HOME[user.role as Role] || "/dashboard") : "/dashboard";
   const isDenied = user && !hasAccess && pathname === home; // Cas extrême: aucune page accessible
 
-  // ⚠️ TOUS les useEffect AVANT tout return conditionnel (règle des hooks)
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!mounted || loading || isPublicPage) return;
+    if (loading || isLoginPage) return;
 
     if (!user) {
       router.replace("/login");
@@ -48,14 +39,10 @@ export function RoleGuard({ children }: RoleGuardProps) {
     if (!hasAccess && !isDenied) {
       router.replace(home);
     }
-  }, [mounted, user, loading, isPublicPage, hasAccess, isDenied, home, router, pathname]);
+  }, [user, loading, isLoginPage, hasAccess, isDenied, home, router]);
 
-  if (!mounted) {
-    return <>{children}</>;
-  }
-
-  // Pages publiques = pas de guard
-  if (isPublicPage) {
+  // Page login = pas de guard
+  if (isLoginPage) {
     return <>{children}</>;
   }
 
@@ -65,7 +52,7 @@ export function RoleGuard({ children }: RoleGuardProps) {
       <div className="flex items-center justify-center h-screen bg-[var(--background)]">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-[var(--brand)] border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-[var(--text-muted)]">{t.roleGuard.loading}</p>
+          <p className="text-sm text-[var(--text-muted)]">Chargement...</p>
         </div>
       </div>
     );
@@ -85,10 +72,11 @@ export function RoleGuard({ children }: RoleGuardProps) {
             <ShieldAlert className="w-6 h-6 text-red-600" />
           </div>
           <h2 className="text-base font-bold text-[var(--text-primary)] mb-1">
-            {t.roleGuard.accessDenied}
+            Accès refusé
           </h2>
           <p className="text-sm text-[var(--text-muted)]">
-            {t.roleGuard.accessDeniedMsg}
+            Votre rôle ({user.role}) ne vous permet pas d&apos;accéder à cette page.
+            Contactez un administrateur.
           </p>
         </div>
       </div>

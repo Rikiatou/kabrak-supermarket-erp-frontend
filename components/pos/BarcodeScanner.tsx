@@ -63,7 +63,7 @@ export function BarcodeScanner({ onScan, onClose, result }: BarcodeScannerProps)
       } catch (e: any) {
         if (mounted) {
           setStarting(false);
-          setError(e?.message || "Cannot access camera");
+          setError(e?.message || "Impossible d'accéder à la caméra");
         }
       }
     })();
@@ -121,7 +121,7 @@ export function BarcodeScanner({ onScan, onClose, result }: BarcodeScannerProps)
         {starting && !error && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/50">
             <Loader2 className="w-8 h-8 text-white animate-spin" />
-            <p className="text-white text-sm">Starting camera...</p>
+            <p className="text-white text-sm">Activation de la caméra...</p>
           </div>
         )}
 
@@ -129,10 +129,10 @@ export function BarcodeScanner({ onScan, onClose, result }: BarcodeScannerProps)
         {error && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center">
             <AlertCircle className="w-12 h-12 text-red-400" />
-            <p className="text-white font-semibold">Camera unavailable</p>
+            <p className="text-white font-semibold">Caméra indisponible</p>
             <p className="text-white/60 text-sm max-w-xs">{error}</p>
             <p className="text-white/40 text-xs mt-2">
-              Check browser permissions and use HTTPS
+              Vérifiez les permissions du navigateur et utilisez HTTPS
             </p>
           </div>
         )}
@@ -150,8 +150,8 @@ export function BarcodeScanner({ onScan, onClose, result }: BarcodeScannerProps)
             {result.status === "success"
               ? "✓ " + result.code
               : result.status === "out_of_stock"
-              ? "Out of stock: " + result.code
-              : "Not found: " + result.code}
+              ? "Stock épuisé : " + result.code
+              : "Non trouvé : " + result.code}
           </div>
         )}
       </div>
@@ -159,7 +159,7 @@ export function BarcodeScanner({ onScan, onClose, result }: BarcodeScannerProps)
       {/* Footer */}
       <div className="p-4 bg-black/80 text-center">
         <p className="text-white/60 text-xs">
-          Point the camera at a barcode · EAN-13, EAN-8, UPC, Code128, QR
+          Pointez la caméra vers un code-barres · EAN-13, EAN-8, UPC, Code128, QR
         </p>
       </div>
     </div>

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
@@ -111,6 +111,21 @@ export default function AchatsPage() {
       setTimeout(() => scanInputRef.current?.focus(), 300);
     }
   }, [showDeliveryForm]);
+
+  // Escape key to close any open panel/modal
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (showNewProductModal) setShowNewProductModal(false);
+        else if (showDeliveryForm) { setShowDeliveryForm(false); resetDeliveryForm(); }
+        else if (showNewOrder) setShowNewOrder(false);
+        else if (showNewSupplier) setShowNewSupplier(false);
+        else if (selectedSupplier) setSelectedSupplier(null);
+      }
+    };
+    document.addEventListener("keydown", handleEsc);
+    return () => document.removeEventListener("keydown", handleEsc);
+  }, [showDeliveryForm, showNewOrder, showNewSupplier, selectedSupplier, showNewProductModal]);
   type DeliveryLine = {
     productId: string;
     productLabel: string;    // nom affiché du produit sélectionné (recherche server-side)
@@ -644,8 +659,8 @@ export default function AchatsPage() {
       {/* Delivery Note Form panel */}
       {showDeliveryForm && (
         <>
-          <div className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-40" onClick={() => setShowDeliveryForm(false)} />
-          <div className="fixed right-0 top-0 h-screen w-full sm:w-[540px] bg-white shadow-[var(--shadow-lg)] z-50 flex flex-col">
+          <div className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-40 lg:left-[252px]" onClick={() => setShowDeliveryForm(false)} />
+          <div className="fixed right-0 top-0 h-screen w-full sm:w-[540px] bg-white shadow-[var(--shadow-lg)] z-50 lg:left-[252px] flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
               <div className="flex items-center gap-3">
@@ -934,8 +949,8 @@ export default function AchatsPage() {
       {/* Supplier detail panel */}
       {selectedSupplier && (
         <>
-          <div className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-40" onClick={() => setSelectedSupplier(null)} />
-          <div className="fixed right-0 top-0 h-screen w-full sm:w-[380px] bg-white shadow-[var(--shadow-lg)] z-50 flex flex-col">
+          <div className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-40 lg:left-[252px]" onClick={() => setSelectedSupplier(null)} />
+          <div className="fixed right-0 top-0 h-screen w-full sm:w-[380px] bg-white shadow-[var(--shadow-lg)] z-50 lg:left-[252px] flex flex-col">
             <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
               <h2 className="font-semibold text-[var(--text-primary)]">{t.achats.supplierFile}</h2>
               <button

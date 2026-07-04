@@ -95,14 +95,13 @@ function formatDate(iso: string): string {
 
 // ---- Tooltip ----
 const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: { value: number; name: string }[]; label?: string }) => {
-  const { t } = useI18n();
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-white border border-[var(--border)] rounded-xl shadow-[var(--shadow)] px-3 py-2.5 text-xs min-w-[160px]">
       <p className="font-semibold text-[var(--text-primary)] mb-1.5">{label}</p>
       {payload.map((p) => (
         <div key={p.name} className="flex justify-between gap-4">
-          <span className="text-[var(--text-muted)]">{p.name === "revenue" ? t.comptabilite.revenue : p.name === "expenses" ? t.comptabilite.expenses : t.comptabilite.profit}</span>
+          <span className="text-[var(--text-muted)]">{p.name === "revenue" ? "Revenue" : p.name === "expenses" ? "Expenses" : "Profit"}</span>
           <span className="font-medium tabular-nums">{formatCurrency(p.value)}</span>
         </div>
       ))}
@@ -347,7 +346,7 @@ export default function ComptabilitePage() {
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-[var(--text-muted)] mb-1.5">{t.comptabilite.endDate}</label>
+          <label className="block text-xs font-medium text-[var(--text-muted)] mb-1.5">Date de fin</label>
           <input
             type="date"
             value={endDate}
@@ -356,7 +355,7 @@ export default function ComptabilitePage() {
           />
         </div>
         {(plLoading || monthlyLoading || breakdownLoading || expensesLoading) && (
-          <span className="text-xs text-[var(--text-muted)] pb-2.5">{t.common.loading}</span>
+          <span className="text-xs text-[var(--text-muted)] pb-2.5">Loading...</span>
         )}
       </div>
 
@@ -364,28 +363,28 @@ export default function ComptabilitePage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
         {[
           {
-            label: t.comptabilite.totalRevenue,
+            label: "Revenus totaux",
             value: totalRevenue,
             delta: revenueDelta,
             icon: <TrendingUp className="w-5 h-5 text-[var(--brand)]" />,
             iconBg: "bg-[var(--brand-light)]",
           },
           {
-            label: t.comptabilite.totalExpenses,
+            label: "Total expenses",
             value: totalExpenses,
             delta: 0,
             icon: <TrendingDown className="w-5 h-5 text-red-500" />,
             iconBg: "bg-[var(--danger-light)]",
           },
           {
-            label: t.comptabilite.netProfitLabel,
+            label: "Profit net",
             value: netProfit,
             delta: profitDelta,
             icon: <TrendingUp className="w-5 h-5 text-emerald-600" />,
             iconBg: "bg-[var(--success-light)]",
           },
           {
-            label: t.comptabilite.netMargin,
+            label: "Marge nette %",
             value: marginRate,
             delta: 0,
             isPercent: true,
@@ -464,8 +463,8 @@ export default function ComptabilitePage() {
       {/* Recent Expenses Table */}
       <Card padding="md">
         <CardHeader
-          title={t.comptabilite.recentExpenses}
-          subtitle={`${expenses.length} ${t.comptabilite.entries}`}
+          title="Recent expenses"
+          subtitle={`${expenses.length} entries`}
           action={
             <Button variant="primary" size="sm" onClick={() => setModalOpen(true)}>
               <Plus className="w-4 h-4 mr-1.5" />
@@ -477,13 +476,13 @@ export default function ComptabilitePage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs text-[var(--text-muted)] border-b border-[var(--border)]">
-                <th className="px-5 py-3 font-medium">{t.comptabilite.colDate}</th>
-                <th className="px-5 py-3 font-medium">{t.comptabilite.colCategory}</th>
-                <th className="px-5 py-3 font-medium">{t.comptabilite.colDescription}</th>
-                <th className="px-5 py-3 font-medium">{t.comptabilite.colSupplier}</th>
-                <th className="px-5 py-3 font-medium">{t.comptabilite.colPayment}</th>
-                <th className="px-5 py-3 font-medium text-right">{t.comptabilite.colAmount}</th>
-                <th className="px-5 py-3 font-medium">{t.comptabilite.colStatus}</th>
+                <th className="px-5 py-3 font-medium">Date</th>
+                <th className="px-5 py-3 font-medium">Category</th>
+                <th className="px-5 py-3 font-medium">Description</th>
+                <th className="px-5 py-3 font-medium">Fournisseur</th>
+                <th className="px-5 py-3 font-medium">Paiement</th>
+                <th className="px-5 py-3 font-medium text-right">Amount</th>
+                <th className="px-5 py-3 font-medium">Statut</th>
               </tr>
             </thead>
             <tbody>

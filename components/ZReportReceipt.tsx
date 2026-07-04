@@ -42,6 +42,7 @@ export function ZReportReceipt({
     cash: "Espèces",
     card: "Carte",
     mobile: "Mobile Money",
+    orange: "Orange Money",
     split: "Paiement mixte",
     totalReceipts: "Total encaissements",
     changeGiven: "Monnaie rendue",
@@ -84,9 +85,8 @@ export function ZReportReceipt({
       </div>
       <div style="border-top:1px dashed #000;margin-top:4px;padding-top:4px">
         ${row(z.grossSales, formatCurrency(report.grossSales))}
-        ${report.returnsAndCredits > 0 ? row(z.returnsAndCredits, "-" + formatCurrency(report.returnsAndCredits)) : ""}
-        ${report.totalDiscount > 0 ? row(z.totalDiscount, "-" + formatCurrency(report.totalDiscount)) : ""}
-        ${report.totalTax > 0 ? row(z.totalTax, formatCurrency(report.totalTax)) : ""}
+        ${report.returnsAndCredits > 0 ? row("- " + z.returnsAndCredits, formatCurrency(report.returnsAndCredits)) : ""}
+        ${(report.invoicePayments?.total || 0) > 0 ? row("+ Avances factures", formatCurrency(report.invoicePayments!.total)) : ""}
         <div style="border-top:1px solid #000;margin-top:2px;padding-top:2px">
           ${row(z.netSales, formatCurrency(report.netSales), true)}
         </div>
@@ -96,6 +96,7 @@ export function ZReportReceipt({
         ${row(z.cash, formatCurrency(report.receiptsByMethod.cash))}
         ${report.receiptsByMethod.card > 0 ? row(z.card, formatCurrency(report.receiptsByMethod.card)) : ""}
         ${report.receiptsByMethod.mobile > 0 ? row(z.mobile, formatCurrency(report.receiptsByMethod.mobile)) : ""}
+        ${(report.receiptsByMethod as any).orange > 0 ? row(z.orange || "Orange Money", formatCurrency((report.receiptsByMethod as any).orange)) : ""}
         ${report.receiptsByMethod.split > 0 ? row(z.split, formatCurrency(report.receiptsByMethod.split)) : ""}
         <div style="border-top:1px solid #000;margin-top:2px;padding-top:2px">
           ${row(z.totalReceipts, formatCurrency(report.totalReceipts), true)}
@@ -114,7 +115,6 @@ export function ZReportReceipt({
       </div>
       <div style="border-top:1px dashed #000;margin-top:4px;padding-top:4px">
         ${row(z.customerCount, String(report.customerCount))}
-        ${row(z.averageSale, formatCurrency(report.averageSale))}
       </div>`;
 
     if (report.notes) {
@@ -223,21 +223,15 @@ export function ZReportReceipt({
               <span className="font-semibold tabular-nums">{formatCurrency(report.grossSales)}</span>
             </div>
             {report.returnsAndCredits > 0 && (
-              <div className="flex justify-between text-sm">
-                <span>{z.returnsAndCredits}</span>
-                <span className="font-semibold tabular-nums text-red-600">-{formatCurrency(report.returnsAndCredits)}</span>
+              <div className="flex justify-between text-sm text-red-600">
+                <span>- {z.returnsAndCredits}</span>
+                <span className="tabular-nums">{formatCurrency(report.returnsAndCredits)}</span>
               </div>
             )}
-            {report.totalDiscount > 0 && (
-              <div className="flex justify-between text-sm">
-                <span>{z.totalDiscount}</span>
-                <span className="font-semibold tabular-nums text-red-600">-{formatCurrency(report.totalDiscount)}</span>
-              </div>
-            )}
-            {report.totalTax > 0 && (
-              <div className="flex justify-between text-sm">
-                <span>{z.totalTax}</span>
-                <span className="font-semibold tabular-nums">{formatCurrency(report.totalTax)}</span>
+            {(report.invoicePayments?.total || 0) > 0 && (
+              <div className="flex justify-between text-sm text-green-600">
+                <span>+ Avances factures</span>
+                <span className="tabular-nums">{formatCurrency(report.invoicePayments!.total)}</span>
               </div>
             )}
             <div className="flex justify-between text-sm font-bold border-t border-[var(--border-subtle)] pt-1.5">
@@ -266,6 +260,12 @@ export function ZReportReceipt({
                 <div className="flex justify-between text-sm">
                   <span>{z.mobile}</span>
                   <span className="font-semibold tabular-nums">{formatCurrency(report.receiptsByMethod.mobile)}</span>
+                </div>
+              )}
+              {(report.receiptsByMethod as any).orange > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span>{z.orange || "Orange Money"}</span>
+                  <span className="font-semibold tabular-nums">{formatCurrency((report.receiptsByMethod as any).orange)}</span>
                 </div>
               )}
               {report.receiptsByMethod.split > 0 && (
@@ -327,10 +327,6 @@ export function ZReportReceipt({
             <div className="flex justify-between text-sm">
               <span>{z.customerCount}</span>
               <span className="font-semibold tabular-nums">{report.customerCount}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span>{z.averageSale}</span>
-              <span className="font-semibold tabular-nums">{formatCurrency(report.averageSale)}</span>
             </div>
           </div>
 

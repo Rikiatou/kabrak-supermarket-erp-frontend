@@ -427,6 +427,7 @@ const ROLE_MODULES: Record<Role, string[]> = {
   boss:       ["dashboard","pos","stocks","import","achats","factures","employes","caisses","planning","clients","pertes","cadeaux","scanner","comptabilite","rapports","ia","historique","settings"],
   manager:    ["dashboard","pos","stocks","import","achats","factures","employes","caisses","planning","clients","pertes","cadeaux","scanner","comptabilite","rapports","ia","historique"],
   accountant: ["dashboard","pos","stocks","achats","factures","caisses","planning","clients","pertes","cadeaux","scanner","comptabilite","rapports","historique"],
+  supervisor: ["dashboard","pos","stocks","achats","factures","caisses","planning","clients","pertes","scanner","rapports"],
   cashier:    ["dashboard","pos","caisses","scanner","clients","historique","factures","cadeaux"],
   stockist:   ["dashboard","stocks","import","achats","pertes","scanner","historique","factures"],
 };
@@ -435,11 +436,12 @@ const ROLE_LABELS: Record<Role, { fr: string; en: string; color: string }> = {
   boss:       { fr: "Patron / Boss", en: "Owner / Boss", color: "bg-amber-100 text-amber-800 border-amber-300" },
   manager:    { fr: "Manager", en: "Manager", color: "bg-blue-100 text-blue-800 border-blue-300" },
   accountant: { fr: "Comptable", en: "Accountant", color: "bg-teal-100 text-teal-800 border-teal-300" },
+  supervisor: { fr: "Superviseur", en: "Supervisor", color: "bg-purple-100 text-purple-800 border-purple-300" },
   cashier:    { fr: "Caissier / Caissière", en: "Cashier", color: "bg-emerald-100 text-emerald-800 border-emerald-300" },
   stockist:   { fr: "Magasinier / Stockiste", en: "Stockist", color: "bg-orange-100 text-orange-800 border-orange-300" },
 };
 
-const ROLES: Role[] = ["boss", "manager", "accountant", "cashier", "stockist"];
+const ROLES: Role[] = ["boss", "manager", "accountant", "supervisor", "cashier", "stockist"];
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -501,6 +503,7 @@ export default function GuidePage() {
             {activeRole === "boss" && (L === "fr" ? "Accès complet à tous les modules. Peut configurer le magasin, gérer les employés et voir toutes les données." : "Full access to all modules. Can configure the store, manage employees, and view all data.")}
             {activeRole === "manager" && (L === "fr" ? "Accès à presque tout sauf les Paramètres système. Gère les opérations quotidiennes et l'équipe." : "Access to almost everything except system Settings. Manages daily operations and the team.")}
             {activeRole === "accountant" && (L === "fr" ? "Focus sur la finance et les opérations. Accès à la comptabilité, factures, rapports et suivi des stocks." : "Finance and operations focus. Access to accounting, invoices, reports, and stock tracking.")}
+            {activeRole === "supervisor" && (L === "fr" ? "Supervise les opérations quotidiennes. Accès aux ventes, stocks, rapports et gestion de caisse." : "Supervises daily operations. Access to sales, stock, reports, and cash register management.")}
             {activeRole === "cashier" && (L === "fr" ? "Travaille principalement en caisse. Voit ses propres ventes, peut facturer et scanner les produits." : "Works mainly at the checkout. Views own sales, can invoice and scan products.")}
             {activeRole === "stockist" && (L === "fr" ? "Gère les marchandises et les réceptions. Accès aux stocks, achats, pertes et scanner." : "Manages goods and deliveries. Access to stock, purchases, losses, and scanner.")}
           </p>

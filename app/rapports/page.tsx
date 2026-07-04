@@ -128,14 +128,13 @@ function toISODate(d: Date): string {
 }
 
 const RevenueTooltip = ({ active, payload, label }: { active?: boolean; payload?: { value: number; name: string }[]; label?: string }) => {
-  const { t } = useI18n();
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-white border border-[var(--border)] rounded-xl shadow-[var(--shadow)] px-3 py-2.5 text-xs min-w-[160px]">
       <p className="font-semibold text-[var(--text-primary)] mb-1.5">{label}</p>
       {payload.map((p) => (
         <div key={p.name} className="flex justify-between gap-4">
-          <span className="text-[var(--text-muted)]">{p.name === "revenue" ? t.rapports.revenue : p.name}</span>
+          <span className="text-[var(--text-muted)]">{p.name === "revenue" ? "Revenue" : p.name}</span>
           <span className="font-medium tabular-nums">{formatCurrency(p.value)}</span>
         </div>
       ))}
@@ -185,21 +184,6 @@ export default function RapportsPage() {
   const inventoryData = inventory ?? mockInventory;
   const discounts = discountsData ?? mockDiscounts;
 
-  // Translate day abbreviations in byDay data for chart display
-  const dayAbbrMap: Record<string, string> = {
-    Mon: t.common.days.mon,
-    Tue: t.common.days.tue,
-    Wed: t.common.days.wed,
-    Thu: t.common.days.thu,
-    Fri: t.common.days.fri,
-    Sat: t.common.days.sat,
-    Sun: t.common.days.sun,
-  };
-  const chartByDay = (sales.byDay ?? []).map((d: { date: string; revenue: number; transactions: number }) => ({
-    ...d,
-    date: dayAbbrMap[d.date] ?? d.date,
-  }));
-
   const marginPct = profitData.marginRate ?? (profitData.totalRevenue > 0 ? (profitData.grossProfit / profitData.totalRevenue) * 100 : 0);
 
   const kpis = [
@@ -211,18 +195,18 @@ export default function RapportsPage() {
       sublabel: `${startDate} → ${endDate}`,
     },
     {
-      label: t.rapports.transactions,
+      label: "Transactions",
       value: (sales.transactionsCount ?? 0).toLocaleString(),
       icon: ShoppingCart,
       delta: +11.7,
-      sublabel: t.rapports.forThePeriod,
+      sublabel: "for the period",
     },
     {
       label: t.rapports.avgBasket,
       value: formatCurrency(sales.avgBasket),
       icon: TrendingUp,
       delta: +3.2,
-      sublabel: t.rapports.perTransaction,
+      sublabel: "per transaction",
     },
     {
       label: t.rapports.grossProfit,
@@ -236,7 +220,7 @@ export default function RapportsPage() {
       value: `${(marginPct ?? 0).toFixed(1)}%`,
       icon: Percent,
       delta: marginPct >= 30 ? +2.4 : -1.2,
-      sublabel: t.rapports.grossMargin,
+      sublabel: "gross margin",
     },
     {
       label: t.rapports.totalDiscounts,
@@ -353,13 +337,13 @@ export default function RapportsPage() {
               <div className="h-full flex items-center justify-center text-sm text-[var(--text-muted)]">{t.common.loading}</div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartByDay} margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
+                <LineChart data={sales.byDay} margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
                   <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={false} />
                   <YAxis tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={false} tickFormatter={(v) => `${(v / 1_000_000).toFixed(1)}M`} />
                   <Tooltip content={<RevenueTooltip />} />
                   <Legend />
-                  <Line type="monotone" dataKey="revenue" name={t.rapports.revenueLabel} stroke="#2563eb" strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                  <Line type="monotone" dataKey="revenue" name="CA" stroke="#2563eb" strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 5 }} />
                 </LineChart>
               </ResponsiveContainer>
             )}
@@ -410,7 +394,7 @@ export default function RapportsPage() {
                 <YAxis tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={false} tickFormatter={(v) => `${(v / 1_000_000).toFixed(1)}M`} />
                 <Tooltip cursor={{ fill: "#f1f5f9" }} formatter={(v: unknown) => formatCurrency(Number(v))} />
                 <Legend />
-                <Bar dataKey="revenue" name={t.rapports.revenueLabel} fill="#2563eb" radius={[6, 6, 0, 0]} maxBarSize={50} />
+                <Bar dataKey="revenue" name="CA" fill="#2563eb" radius={[6, 6, 0, 0]} maxBarSize={50} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -583,7 +567,7 @@ export default function RapportsPage() {
         </div>
 
         {loadingDiscounts ? (
-          <div className="px-4 pb-4 text-xs text-[var(--text-muted)]">{t.common.loading}</div>
+          <div className="px-4 pb-4 text-xs text-[var(--text-muted)]">Loading…</div>
         ) : (discounts.transactionsCount ?? 0) === 0 ? (
           <div className="px-4 pb-4 text-xs text-[var(--text-muted)]">{t.rapports.noDiscounts}</div>
         ) : (

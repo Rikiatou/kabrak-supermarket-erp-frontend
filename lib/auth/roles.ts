@@ -2,10 +2,10 @@
 // RBAC — Permissions par rôle
 // ========================================
 
-export type Role = "boss" | "manager" | "accountant" | "cashier" | "stockist";
+export type Role = "boss" | "manager" | "supervisor" | "cashier" | "stockist" | "accountant";
 
 // Routes accessibles par chaque rôle
-// boss = tout, les autres = sous-ensemble
+// manager = tout, les autres = sous-ensemble
 export const ROLE_PERMISSIONS: Record<Role, string[]> = {
   boss: [
     "/dashboard",
@@ -19,16 +19,15 @@ export const ROLE_PERMISSIONS: Record<Role, string[]> = {
     "/planning",
     "/clients",
     "/pertes",
-    "/cadeaux",
     "/scanner",
     "/comptabilite",
     "/rapports",
     "/ia",
     "/historique",
     "/settings",
-    "/guide",
+    "/cadeaux",
+    "/returns",
   ],
-  // Manager: same as boss minus /settings (cannot touch license/store config)
   manager: [
     "/dashboard",
     "/pos",
@@ -41,13 +40,38 @@ export const ROLE_PERMISSIONS: Record<Role, string[]> = {
     "/planning",
     "/clients",
     "/pertes",
-    "/cadeaux",
     "/scanner",
     "/comptabilite",
     "/rapports",
     "/ia",
-    "/historique",
-    "/guide",
+  ],
+  supervisor: [
+    "/dashboard",
+    "/pos",
+    "/stocks",
+    "/achats",
+    "/factures",
+    "/caisses",
+    "/planning",
+    "/clients",
+    "/pertes",
+    "/scanner",
+    "/rapports",
+  ],
+  cashier: [
+    "/dashboard",
+    "/pos",
+    "/caisses",
+    "/scanner",
+    "/clients",
+  ],
+  stockist: [
+    "/dashboard",
+    "/stocks",
+    "/import",
+    "/achats",
+    "/pertes",
+    "/scanner",
   ],
   accountant: [
     "/dashboard",
@@ -59,35 +83,10 @@ export const ROLE_PERMISSIONS: Record<Role, string[]> = {
     "/planning",
     "/clients",
     "/pertes",
-    "/cadeaux",
     "/scanner",
     "/comptabilite",
     "/rapports",
     "/historique",
-    "/guide",
-  ],
-  cashier: [
-    "/dashboard",
-    "/pos",
-    "/caisses",
-    "/scanner",
-    "/clients",
-    "/historique",
-    "/factures",
-    "/cadeaux",
-    "/pertes",
-    "/guide",
-  ],
-  stockist: [
-    "/dashboard",
-    "/stocks",
-    "/import",
-    "/achats",
-    "/pertes",
-    "/scanner",
-    "/historique",
-    "/factures",
-    "/guide",
   ],
 };
 
@@ -95,9 +94,10 @@ export const ROLE_PERMISSIONS: Record<Role, string[]> = {
 export const ROLE_HOME: Record<Role, string> = {
   boss: "/dashboard",
   manager: "/dashboard",
-  accountant: "/dashboard",
+  supervisor: "/dashboard",
   cashier: "/pos",
   stockist: "/stocks",
+  accountant: "/dashboard",
 };
 
 // Vérifier si un rôle peut accéder à une route

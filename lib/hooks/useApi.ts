@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   productsApi,
   transactionsApi,
@@ -17,6 +17,8 @@ import {
   aiApi,
   invoicesApi,
   notificationsApi,
+  returnsApi,
+  batchesApi,
   apiProductToFrontend,
   type ApiProduct,
   type ApiTransaction,
@@ -32,8 +34,6 @@ import {
   type ApiInvoice,
   type ApiNotification,
   type ApiNotificationSummary,
-  type ApiReturn,
-  returnsApi,
 } from "@/lib/api";
 import type { Product } from "@/lib/types";
 
@@ -50,12 +50,12 @@ export function useProducts() {
     try {
       setLoading(true);
       setError(null);
-      const response = await productsApi.list(1, 50); // Charger 50 produits seulement
+      const response = await productsApi.list(1, 1000); // Charger jusqu'à 1000 produits
       setProducts(response.data.map(apiProductToFrontend));
     } catch (e: any) {
       setError(e.message);
-      console.warn("Backend indisponible, impossible de charger les produits");
-      setProducts([]);
+      // Fallback: ne pas planter si le backend est down
+      console.warn("Backend indisponible, utilisation des données mock");
     } finally {
       setLoading(false);
     }
@@ -69,120 +69,90 @@ export function useProducts() {
 }
 
 // ========================================
+// HOOK: useProductSearch
+// Recherche de produits (pour la caisse)
+// ========================================
+export function useProductSearch() {
+  const [results, setResults] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const search = useCallback(async (query: string, category?: string) => {
+    if (!query || query.length < 1) {
+      setResults([]);
+      return;
+    }
+    try {
+      setLoading(true);
+      const response = await productsApi.search({ q: query, category, limit: 50 });
+      setResults(response.data.map(apiProductToFrontend));
+    } catch (e) {
+      console.warn("Erreur recherche:", e);
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { results, loading, search };
+}
+
+// ========================================
 // HOOK: useServerProductSearch
-// Recherche server-side avec debounce + cache local
-// Pour POS avec 3000+ produits
+// Recherche server-side parmi TOUS les produits (18000+)
+// Retourne: results, search, scanBarcode, bestsellers, loading, refresh
 // ========================================
 export function useServerProductSearch() {
   const [results, setResults] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(false);
   const [bestsellers, setBestsellers] = useState<Product[]>([]);
-  const [bestsellersLoaded, setBestsellersLoaded] = useState(false);
-  const cacheRef = useRef<Map<string, Product[]>>(new Map());
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  // Charger les bestsellers au démarrage (cache local)
-  const loadBestsellers = useCallback(async () => {
+  const search = useCallback(async (query: string, category?: string) => {
+    if (!query || query.length < 1) {
+      setResults([]);
+      return;
+    }
     try {
-      const res = await productsApi.bestsellers(200);
-      const products = res.data.map(apiProductToFrontend);
-      setBestsellers(products);
-      // Mettre en cache
-      cacheRef.current.set("", products);
-    } catch {
-      setBestsellers([]);
+      setLoading(true);
+      const response = await productsApi.search({ q: query, category, limit: 100 });
+      setResults(response.data.map(apiProductToFrontend));
+    } catch (e) {
+      console.warn("Erreur recherche server-side:", e);
+      setResults([]);
     } finally {
-      setBestsellersLoaded(true);
+      setLoading(false);
+    }
+  }, []);
+
+  const scanBarcode = useCallback(async (barcode: string): Promise<Product | null> => {
+    if (!barcode) return null;
+    try {
+      setLoading(true);
+      const product = await productsApi.findByBarcode(barcode);
+      return apiProductToFrontend(product);
+    } catch (e) {
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const refresh = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await productsApi.list(1, 50);
+      setBestsellers(response.data.map(apiProductToFrontend));
+    } catch (e) {
+      console.warn("Erreur refresh products:", e);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    loadBestsellers();
-  }, [loadBestsellers]);
+    refresh();
+  }, [refresh]);
 
-  // Recherche avec debounce (300ms)
-  const search = useCallback((query: string, category?: string, stockStatus?: string) => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-
-    // Si query vide ET pas de filtre stock → afficher bestsellers du cache
-    if (!query.trim() && !stockStatus) {
-      const cacheKey = category ? `cat:${category}` : "";
-      if (cacheRef.current.has(cacheKey)) {
-        setResults(cacheRef.current.get(cacheKey)!);
-        return;
-      }
-      setResults(bestsellers);
-      return;
-    }
-
-    // Si filtre stock sans query → recherche server-side par stockStatus
-    // Vérifier le cache
-    const cacheKey = `${query.trim()}:${category || ""}:${stockStatus || ""}`;
-    if (cacheRef.current.has(cacheKey)) {
-      setResults(cacheRef.current.get(cacheKey)!);
-      return;
-    }
-
-    setLoading(true);
-    debounceRef.current = setTimeout(async () => {
-      try {
-        const res = await productsApi.search({
-          q: query.trim() || undefined,
-          category: category && category !== "Tous" && category !== "All" ? category : undefined,
-          stockStatus: stockStatus || undefined,
-          page: 1,
-          limit: 80,
-        });
-        const products = res.data.map(apiProductToFrontend);
-        // Mettre en cache (max 100 entrées)
-        if (cacheRef.current.size > 100) {
-          const firstKey = cacheRef.current.keys().next().value;
-          if (firstKey) cacheRef.current.delete(firstKey);
-        }
-        cacheRef.current.set(cacheKey, products);
-        setResults(products);
-      } catch {
-        setResults([]);
-      } finally {
-        setLoading(false);
-      }
-    }, 300);
-  }, [bestsellers]);
-
-  // Scan barcode — exact match, avec fallback sur SKU/recherche texte
-  const scanBarcode = useCallback(async (barcode: string): Promise<Product | null> => {
-    const code = barcode.trim();
-    if (!code) return null;
-    // 1) Essai match barcode exact (le plus rapide)
-    try {
-      const product = await productsApi.findByBarcode(code);
-      if (product) return apiProductToFrontend(product);
-    } catch {
-      // pas trouvé par barcode → on continue
-    }
-    // 2) Fallback: recherche texte (cherche dans barcode, SKU, nom, description)
-    try {
-      const res = await productsApi.search({ q: code, page: 1, limit: 20 });
-      const products = res.data.map(apiProductToFrontend);
-      if (products.length === 0) return null;
-      // Priorité: match exact sur barcode ou SKU (insensible à la casse/espaces)
-      const norm = (s?: string | null) => (s || "").trim().toLowerCase();
-      const exact = products.find(
-        (p) => norm(p.barcode) === norm(code) || norm(p.sku) === norm(code)
-      );
-      return exact || products[0];
-    } catch {
-      return null;
-    }
-  }, []);
-
-  // Vider le cache et recharger (après création/modification de produit)
-  const refresh = useCallback(() => {
-    cacheRef.current.clear();
-    loadBestsellers();
-  }, [loadBestsellers]);
-
-  return { results, loading, search, scanBarcode, bestsellers, bestsellersLoaded, loadBestsellers, refresh };
+  return { results, bestsellers, loading, search, scanBarcode, refresh };
 }
 
 // ========================================
@@ -271,70 +241,6 @@ export function useWeekTrend() {
 
   useEffect(() => {
     transactionsApi.weekTrend()
-      .then(setData)
-      .catch(() => {});
-  }, []);
-
-  return { data };
-}
-
-// ========================================
-// HOOK: useMonthlyGoal
-// Objectif mensuel (dashboard)
-// ========================================
-export function useMonthlyGoal() {
-  const [data, setData] = useState<{ current: number; goal: number; progress: number; transactions: number; remaining: number } | null>(null);
-
-  useEffect(() => {
-    transactionsApi.monthlyGoal()
-      .then(setData)
-      .catch(() => {});
-  }, []);
-
-  return { data };
-}
-
-// ========================================
-// HOOK: useMonthlyTopProducts
-// Top produits vendus ce mois (dashboard)
-// ========================================
-export function useMonthlyTopProducts(limit?: number) {
-  const [data, setData] = useState<Array<{ productId: string; productName: string; sku: string; quantity: number; revenue: number }>>([]);
-
-  useEffect(() => {
-    transactionsApi.topProducts(limit)
-      .then(setData)
-      .catch(() => {});
-  }, [limit]);
-
-  return { data };
-}
-
-// ========================================
-// HOOK: useAverageBasket
-// Panier moyen (dashboard)
-// ========================================
-export function useAverageBasket() {
-  const [data, setData] = useState<{ average: number; total: number; transactions: number } | null>(null);
-
-  useEffect(() => {
-    transactionsApi.averageBasket()
-      .then(setData)
-      .catch(() => {});
-  }, []);
-
-  return { data };
-}
-
-// ========================================
-// HOOK: useUnpaidInvoices
-// Factures impayées (dashboard)
-// ========================================
-export function useUnpaidInvoices() {
-  const [data, setData] = useState<{ totalUnpaid: number; count: number; partial: { amount: number; count: number }; overdue: { amount: number; count: number } } | null>(null);
-
-  useEffect(() => {
-    invoicesApi.unpaidStats()
       .then(setData)
       .catch(() => {});
   }, []);
@@ -481,6 +387,53 @@ export function useRecentTransactions(limit: number = 10, cashierId?: string, st
 }
 
 // ========================================
+// HOOK: useReturns
+// Liste des retours produits
+// ========================================
+export function useReturns() {
+  const [returns, setReturns] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const reload = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await returnsApi.list();
+      setReturns(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.warn("Erreur chargement retours:", e);
+      setReturns([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    reload();
+  }, [reload]);
+
+  return { returns, loading, reload };
+}
+
+// ========================================
+// HOOK: useCreateReturn
+// Créer un retour produit
+// ========================================
+export function useCreateReturn() {
+  const [creating, setCreating] = useState(false);
+
+  const create = useCallback(async (data: any) => {
+    try {
+      setCreating(true);
+      return await returnsApi.create(data);
+    } finally {
+      setCreating(false);
+    }
+  }, []);
+
+  return { create, creating };
+}
+
+// ========================================
 // HOOK: useCreateTransaction
 // Créer une vente (POS)
 // ========================================
@@ -613,48 +566,6 @@ export function useStockAdjust() {
 }
 
 // ========================================
-// HOOKS: Returns (Retours produits)
-// ========================================
-export function useReturns() {
-  const [returns, setReturns] = useState<ApiReturn[]>([]);
-  const [loading, setLoading] = useState(true);
-  const load = useCallback(() => {
-    setLoading(true);
-    returnsApi.list()
-      .then(setReturns)
-      .catch(() => setReturns([]))
-      .finally(() => setLoading(false));
-  }, []);
-  useEffect(() => { load(); }, [load]);
-  return { returns, loading, reload: load };
-}
-
-export function useCreateReturn() {
-  const [creating, setCreating] = useState(false);
-  const create = async (data: Parameters<typeof returnsApi.create>[0]) => {
-    setCreating(true);
-    try {
-      return await returnsApi.create(data);
-    } finally {
-      setCreating(false);
-    }
-  };
-  return { create, creating };
-}
-
-export function useReturnStats() {
-  const [stats, setStats] = useState<{ total: number; totalAmount: number; byReason: Record<string, number> } | null>(null);
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    returnsApi.stats()
-      .then(setStats)
-      .catch(() => setStats(null))
-      .finally(() => setLoading(false));
-  }, []);
-  return { stats, loading };
-}
-
-// ========================================
 // HOOK: useSalesByHour (graphique dashboard)
 // ========================================
 export function useSalesByHour() {
@@ -723,8 +634,7 @@ export function useSuppliers() {
       const result = await suppliersApi.list();
       setSuppliers(result);
     } catch (e) {
-      console.warn("Backend indisponible, impossible de charger les fournisseurs");
-      setSuppliers([]);
+      console.warn("Backend indisponible");
     } finally {
       setLoading(false);
     }
@@ -750,8 +660,7 @@ export function useEmployees() {
       const result = await employeesApi.list();
       setEmployees(result);
     } catch (e) {
-      console.warn("Backend indisponible, impossible de charger les employés");
-      setEmployees([]);
+      console.warn("Backend indisponible");
     } finally {
       setLoading(false);
     }
@@ -808,12 +717,7 @@ export function useCreatePurchaseOrder() {
     try { return await purchaseOrdersApi.create(data); }
     finally { setCreating(false); }
   };
-  const createDirect = async (data: Parameters<typeof purchaseOrdersApi.createDirect>[0]) => {
-    setCreating(true);
-    try { return await purchaseOrdersApi.createDirect(data); }
-    finally { setCreating(false); }
-  };
-  return { create, createDirect, creating };
+  return { create, creating };
 }
 
 // ========================================
@@ -912,9 +816,6 @@ export function useSalesByDay(startDate: string, endDate: string) {
 export function useInventoryValuation() {
   return useApi(() => reportsApi.inventoryValuation(), []);
 }
-export function useDiscountsReport(startDate: string, endDate: string) {
-  return useApi(() => reportsApi.discounts(startDate, endDate), [startDate, endDate]);
-}
 
 // ========================================
 // HOOKS: Accounting (Comptabilité)
@@ -955,6 +856,16 @@ export function useSalesInsights() {
 }
 export function useMarkdownSuggestions() {
   return useApi(() => aiApi.markdownSuggestions(), []);
+}
+
+// ========================================
+// HOOKS: REPORTS (RAPPORTS) — additional hooks
+// (useSalesReport, useSalesByCategory, useSalesByEmployee, useTopProducts,
+//  useProfitAnalysis, useInventoryValuation already defined above via useApi)
+// ========================================
+export function useDiscountsReport(startDate: string, endDate: string) {
+  // Pas d'endpoint dédié aux remises — on dérive du sales report
+  return useApi(() => reportsApi.sales(startDate, endDate), [startDate, endDate]);
 }
 
 // ========================================

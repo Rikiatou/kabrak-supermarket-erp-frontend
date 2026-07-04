@@ -1,8 +1,8 @@
-// KABRAK Service Worker — v3
-// Strategy: only cache genuine static assets.
+// KABRAK Service Worker — v4
+// Strategy: network-first for JS/CSS (always get latest), cache-first for fonts/images.
 // NEVER intercept: API calls, Next.js RSC payloads, page navigation, cross-origin requests.
 
-const CACHE_NAME = "kabrak-v3";
+const CACHE_NAME = "kabrak-v4";
 
 // Only files with these extensions get cached
 const CACHEABLE_EXT = [".js", ".css", ".woff", ".woff2", ".ttf", ".otf", ".svg", ".png", ".ico", ".webp", ".jpg", ".jpeg"];
@@ -44,20 +44,37 @@ self.addEventListener("fetch", (event) => {
   const ext = "." + url.pathname.split(".").pop().toLowerCase();
   if (!CACHEABLE_EXT.includes(ext)) return;
 
-  // 5. Cache-first for static assets
-  event.respondWith(
-    caches.match(request).then(
-      (cached) =>
-        cached ||
-        fetch(request)
-          .then((response) => {
-            if (response.ok) {
-              const clone = response.clone();
-              caches.open(CACHE_NAME).then((c) => c.put(request, clone));
-            }
-            return response;
-          })
-          .catch(() => new Response("", { status: 503 }))
-    )
-  );
+  // 5. Network-first for JS/CSS (always get latest build), cache-first for fonts/images
+  const isJsOrCss = ext === ".js" || ext === ".css";
+  if (isJsOrCss) {
+    // Network-first: try network, fall back to cache
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((c) => c.put(request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(request).then((cached) => cached || new Response("", { status: 503 })))
+    );
+  } else {
+    // Cache-first for fonts, images, etc.
+    event.respondWith(
+      caches.match(request).then(
+        (cached) =>
+          cached ||
+          fetch(request)
+            .then((response) => {
+              if (response.ok) {
+                const clone = response.clone();
+                caches.open(CACHE_NAME).then((c) => c.put(request, clone));
+              }
+              return response;
+            })
+            .catch(() => new Response("", { status: 503 }))
+      )
+    );
+  }
 });

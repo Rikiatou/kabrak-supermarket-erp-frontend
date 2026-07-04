@@ -1,36 +1,33 @@
-import type { Metadata, Viewport } from "next";
+import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
 import { I18nProvider } from "@/lib/i18n/context";
 import { ToastProvider } from "@/components/ui/Toast";
 import { AuthProvider } from "@/lib/auth/context";
 import { RoleGuard } from "@/components/auth/RoleGuard";
-import { LangAttribute } from "@/components/layout/LangAttribute";
-import { LicenseProvider } from "@/lib/license/context";
-import { LicenseGate } from "@/lib/license/LicenseGate";
 import "./globals.css";
 
-// System font fallback (no internet needed)
-const inter = { variable: "--font-inter" };
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
 
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
-  themeColor: "#16a34a",
-};
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
 
 export const metadata: Metadata = {
   title: {
-    template: "%s — KABRAK RETAIL",
-    default: "KABRAK RETAIL — Retail Management",
+    template: "%s — KABRAK ERP",
+    default: "KABRAK Market Pro",
   },
-  description: "KABRAK RETAIL — Solution de gestion retail: POS, stock, factures, rapports",
-  applicationName: "KABRAK RETAIL",
+  description: "ERP Supermarché - Gestion complète caisse, stock, ventes",
+  applicationName: "KABRAK Market Pro",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
-    title: "KABRAK RETAIL",
+    statusBarStyle: "black-translucent",
+    title: "KABRAK Pro",
   },
   formatDetection: {
     telephone: false,
@@ -45,10 +42,10 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
-      className={`${inter.variable} h-full`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full`}
     >
       <body className="h-full bg-[var(--background)]">
-          <I18nProvider><LangAttribute /><ToastProvider><LicenseProvider><LicenseGate><AuthProvider><RoleGuard>{children}</RoleGuard></AuthProvider></LicenseGate></LicenseProvider></ToastProvider></I18nProvider>
+          <I18nProvider><ToastProvider><AuthProvider><RoleGuard>{children}</RoleGuard></AuthProvider></ToastProvider></I18nProvider>
           <script
             dangerouslySetInnerHTML={{
               __html: `if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').catch(()=>{})})}`,

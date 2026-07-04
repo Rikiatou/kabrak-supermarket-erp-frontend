@@ -33,6 +33,7 @@ const roleColors: Record<Employee["role"], string> = {
   manager: "bg-violet-100 text-violet-700",
   cashier: "bg-blue-100 text-blue-700",
   stockist: "bg-amber-100 text-amber-700",
+  supervisor: "bg-teal-100 text-teal-700",
   accountant: "bg-emerald-100 text-emerald-700",
 };
 
@@ -434,10 +435,10 @@ function EmployeeDetailPanel({
   return (
     <>
       <div
-        className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-40"
+        className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-40 lg:left-[252px]"
         onClick={onClose}
       />
-      <div className="fixed right-0 top-0 h-screen w-[380px] bg-white shadow-[var(--shadow-lg)] z-50 flex flex-col">
+      <div className="fixed right-0 top-0 h-screen w-[380px] bg-white shadow-[var(--shadow-lg)] z-50 lg:left-[252px] flex flex-col">
         <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
           <h2 className="font-semibold text-[var(--text-primary)]">{t.employes.employeeFile}</h2>
           <button

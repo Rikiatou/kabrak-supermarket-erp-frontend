@@ -16,6 +16,7 @@ import {
   Calendar,
   RotateCcw,
   X,
+  Printer,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Card } from "@/components/ui/Card";
@@ -28,6 +29,8 @@ import type { ApiStockMovement, ApiTransaction, ApiTransactionItem } from "@/lib
 import type { Product } from "@/lib/types";
 import { formatCurrency, formatDate, formatTime, cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth/context";
+import { useLicense } from "@/lib/license/context";
+import { reprintTicket } from "@/lib/utils/printReceipt";
 import { ShoppingCart, Wallet, Clock, User } from "lucide-react";
 
 type MovementType = "in" | "out" | "adjustment";
@@ -107,7 +110,9 @@ export default function HistoriquePage() {
   const { t } = useI18n();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { config } = useLicense();
   const [activeTab, setActiveTab] = useState<"stock" | "sales">("stock");
+  const [reprinting, setReprinting] = useState<string | null>(null);
 
   // Cashier voit seulement SES ventes; managers/boss voient tout
   const isCashier = user?.role === "cashier";
@@ -184,6 +189,28 @@ export default function HistoriquePage() {
     } finally {
       setSubmittingReturn(false);
     }
+  };
+
+  const handleReprint = async (tx: ApiTransaction) => {
+    setReprinting(tx.id);
+    let fullTx = tx;
+    if (!tx.items || tx.items.length === 0) {
+      try {
+        const { transactionsApi } = await import("@/lib/api");
+        fullTx = await transactionsApi.get(tx.id);
+      } catch {
+        toast("Erreur: détails introuvables", "warning");
+        setReprinting(null);
+        return;
+      }
+    }
+    const cashierName = fullTx.cashier
+      ? `${fullTx.cashier.firstName} ${fullTx.cashier.lastName}`
+      : user?.firstName || "CASHIER";
+    const ok = reprintTicket(fullTx, { config, cashierName });
+    if (ok) toast("Ticket envoyé à l'imprimante", "success");
+    else toast("Erreur impression — réessayer", "warning");
+    setTimeout(() => setReprinting(null), 1500);
   };
 
   // MOVEMENT_CONFIG inside component so it reads t live
@@ -446,13 +473,23 @@ export default function HistoriquePage() {
                     {tx.discount > 0 && (
                       <div className="text-xs text-red-500 tabular-nums">-{formatCurrency(tx.discount)}</div>
                     )}
-                    <button
-                      onClick={() => openReturnModal(tx)}
-                      className="flex items-center gap-1 text-[10px] font-medium text-orange-600 bg-orange-50 hover:bg-orange-100 px-2 py-0.5 rounded-md transition-colors"
-                    >
-                      <RotateCcw className="w-3 h-3" />
-                      {t.historique.returnProduct}
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleReprint(tx)}
+                        disabled={reprinting === tx.id}
+                        className="flex items-center gap-1 text-[10px] font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded-md transition-colors disabled:opacity-50"
+                      >
+                        <Printer className="w-3 h-3" />
+                        {reprinting === tx.id ? "..." : "Réimprimer"}
+                      </button>
+                      <button
+                        onClick={() => openReturnModal(tx)}
+                        className="flex items-center gap-1 text-[10px] font-medium text-orange-600 bg-orange-50 hover:bg-orange-100 px-2 py-0.5 rounded-md transition-colors"
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                        {t.historique.returnProduct}
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
