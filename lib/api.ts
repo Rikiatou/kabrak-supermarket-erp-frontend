@@ -1,16 +1,16 @@
-// Client API pour connecter le frontend Next.js au backend NestJS
+﻿// Client API pour connecter le frontend Next.js au backend NestJS
 // Backend: http://localhost:3000/api
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
 
-// Helper pour les requêtes
+// Helper pour les requÃªtes
 async function fetchAPI<T>(
   endpoint: string,
   options?: RequestInit
 ): Promise<T> {
   const url = `${API_URL}${endpoint}`;
 
-  // Récupérer le token d'auth depuis localStorage
+  // RÃ©cupÃ©rer le token d'auth depuis localStorage
   let token: string | null = null;
   if (typeof window !== "undefined") {
     token = localStorage.getItem("kabrak_auth_token");
@@ -40,7 +40,7 @@ async function fetchAPI<T>(
 }
 
 // ========================================
-// TYPES (alignés avec le backend Prisma)
+// TYPES (alignÃ©s avec le backend Prisma)
 // ========================================
 export interface ApiProduct {
   id: string;
@@ -218,13 +218,13 @@ export const authApi = {
 // API PRODUCTS
 // ========================================
 export const productsApi = {
-  // Liste paginée
+  // Liste paginÃ©e
   list: (page = 1, limit = 100) =>
     fetchAPI<PaginatedResponse<ApiProduct>>(
       `/products?page=${page}&limit=${limit}`
     ),
 
-  // Catégories
+  // CatÃ©gories
   categories: () =>
     fetchAPI<Array<{ id: string; name: string }>>(`/products/categories`),
 
@@ -242,10 +242,10 @@ export const productsApi = {
   findByBarcode: (barcode: string) =>
     fetchAPI<ApiProduct>(`/products/barcode/${barcode}`),
 
-  // Détail
+  // DÃ©tail
   get: (id: string) => fetchAPI<ApiProduct>(`/products/${id}`),
 
-  // Créer
+  // CrÃ©er
   create: (data: Partial<ApiProduct>) =>
     fetchAPI<ApiProduct>(`/products`, {
       method: "POST",
@@ -302,7 +302,7 @@ export const productsApi = {
 // API TRANSACTIONS (VENTES)
 // ========================================
 export const transactionsApi = {
-  // Créer une vente
+  // CrÃ©er une vente
   create: (data: {
     cashierId: string;
     registerId?: string;
@@ -339,7 +339,7 @@ export const transactionsApi = {
     return fetchAPI<PaginatedResponse<ApiTransaction>>(`/transactions?${query}`);
   },
 
-  // Détail
+  // DÃ©tail
   get: (id: string) => fetchAPI<ApiTransaction>(`/transactions/${id}`),
 
   // Stats du jour
@@ -372,7 +372,7 @@ export const transactionsApi = {
       `/transactions/stats/by-hour`
     ),
 
-  // Marge par catégorie (graphique dashboard)
+  // Marge par catÃ©gorie (graphique dashboard)
   marginByCategory: () =>
     fetchAPI<Array<{ category: string; revenue: number; margin: number; marginRate: number }>>(
       `/transactions/stats/margin-by-category`
@@ -399,7 +399,7 @@ export const stockApi = {
     return fetchAPI<PaginatedResponse<ApiStockMovement>>(`/stock/movements?${query}`);
   },
 
-  // Créer mouvement
+  // CrÃ©er mouvement
   createMovement: (data: {
     productId: string;
     type: string;
@@ -477,7 +477,7 @@ export const suppliersApi = {
 };
 
 // ========================================
-// API EMPLOYEES (EMPLOYÉS)
+// API EMPLOYEES (EMPLOYÃ‰S)
 // ========================================
 export const employeesApi = {
   list: () => fetchAPI<ApiEmployee[]>(`/employees`),
@@ -521,9 +521,10 @@ export interface ApiPurchaseOrder {
 }
 
 export const purchaseOrdersApi = {
-  list: (status?: string) =>
-    fetchAPI<ApiPurchaseOrder[]>(`/purchase-orders${status ? `?status=${status}` : ""}`),
-  get: (id: string) => fetchAPI<ApiPurchaseOrder>(`/purchase-orders/${id}`),
+  list: async (status?: string): Promise<ApiPurchaseOrder[]> => {
+    const res = await fetchAPI<{ data: ApiPurchaseOrder[]; total: number } | ApiPurchaseOrder[]>(`/purchase-orders${status ? `?status=${status}` : ""}`);
+    return Array.isArray(res) ? res : (res?.data ?? []);
+  },
   create: (data: { supplierId: string; expectedDate: string; notes?: string; items: Array<{ productId: string; quantity: number; unitCost: number }> }) =>
     fetchAPI<ApiPurchaseOrder>(`/purchase-orders`, { method: "POST", body: JSON.stringify(data) }),
   createDirect: (data: {
@@ -641,7 +642,7 @@ export const schedulesApi = {
 };
 
 // ========================================
-// API CUSTOMERS (CLIENTS FIDÉLITÉ)
+// API CUSTOMERS (CLIENTS FIDÃ‰LITÃ‰)
 // ========================================
 // Note: ApiCustomer is already defined above in the TYPES section.
 export interface ApiLoyaltyHistory {
@@ -748,7 +749,7 @@ export const returnsApi = {
 };
 
 // ========================================
-// API BATCHES (LOTS DE STOCK / PÉREMPTION)
+// API BATCHES (LOTS DE STOCK / PÃ‰REMPTION)
 // ========================================
 export const batchesApi = {
   list: (productId?: string) =>
@@ -760,7 +761,7 @@ export const batchesApi = {
 };
 
 // ========================================
-// API ACCOUNTING (COMPTABILITÉ)
+// API ACCOUNTING (COMPTABILITÃ‰)
 // ========================================
 export interface ApiExpense {
   id: string;
@@ -985,16 +986,16 @@ export function apiProductToFrontend(p: ApiProduct): Product {
 // Prix effectif d'un produit (markdown si actif, sinon prix normal)
 export function getEffectivePrice(p: Pick<Product, "price" | "markdownPrice" | "markdownExpiresAt">): number {
   if (p.markdownPrice != null && p.markdownPrice > 0) {
-    // Vérifier si le markdown n'a pas expiré
+    // VÃ©rifier si le markdown n'a pas expirÃ©
     if (p.markdownExpiresAt && new Date(p.markdownExpiresAt) < new Date()) {
-      return p.price; // Markdown expiré → prix normal
+      return p.price; // Markdown expirÃ© â†’ prix normal
     }
     return p.markdownPrice;
   }
   return p.price;
 }
 
-// Vérifier si un produit a un markdown actif
+// VÃ©rifier si un produit a un markdown actif
 export function hasActiveMarkdown(p: Pick<Product, "markdownPrice" | "markdownExpiresAt">): boolean {
   if (p.markdownPrice == null || p.markdownPrice <= 0) return false;
   if (p.markdownExpiresAt && new Date(p.markdownExpiresAt) < new Date()) return false;

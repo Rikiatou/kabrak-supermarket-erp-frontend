@@ -327,7 +327,7 @@ export default function AchatsPage() {
   };
 
   // Convertir les suppliers API au format frontend
-  const suppliers: Supplier[] = apiSuppliers.map((s) => ({
+  const suppliers: Supplier[] = (apiSuppliers ?? []).map((s) => ({
     id: s.id,
     name: s.name,
     contact: s.contact,
