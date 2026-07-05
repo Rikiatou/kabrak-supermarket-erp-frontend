@@ -1,7 +1,7 @@
 {
-  "name": "KABRAK Market Pro",
+  "name": "KABRAK RETAIL",
   "short_name": "KABRAK",
-  "description": "Supermarket ERP - Complete management",
+  "description": "KABRAK RETAIL — Solution de gestion retail",
   "start_url": "/dashboard",
   "display": "standalone",
   "orientation": "portrait",

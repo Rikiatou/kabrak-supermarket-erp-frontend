@@ -2,9 +2,9 @@ import type { ClientConfig } from "@/lib/license/types";
 
 // Info statique par défaut (fallback si pas de licence/config)
 export const STORE_INFO = {
-  name: "EASY SHOP LIMBE",
-  address: "5 NAMBEKE STREET",
-  phone: "Tel: 233332600",
+  name: "KABRAK RETAIL",
+  address: "Limbe, Cameroun",
+  phone: "Tel: +237 6XX XXX XXX",
   receiptFooter: "goods sold are not refundable\nThanks for patronizing us",
   logoUrl: null as string | null,
 };

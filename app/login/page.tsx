@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -17,7 +17,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Rediriger si déjà connecté
+  // Rediriger si dÃ©jÃ  connectÃ©
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
       const role = user?.role as Role;
@@ -32,7 +32,7 @@ export default function LoginPage() {
 
   const handleLogin = async () => {
     if (!selectedCashier || !pin) {
-      setError("Veuillez sélectionner un employé et entrer votre PIN");
+      setError("Veuillez sÃ©lectionner un employÃ© et entrer votre PIN");
       return;
     }
 
@@ -94,11 +94,11 @@ export default function LoginPage() {
 
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-6">
-          {/* Étape 1: Sélection employé */}
+          {/* Ã‰tape 1: SÃ©lection employÃ© */}
           {!selectedCashier && (
             <>
               <h2 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
-                <User className="w-4 h-4" /> Sélectionnez votre profil
+                <User className="w-4 h-4" /> SÃ©lectionnez votre profil
               </h2>
               <div className="space-y-2 max-h-80 overflow-y-auto">
                 {cashiers.length === 0 ? (
@@ -121,7 +121,7 @@ export default function LoginPage() {
                           {cashier.firstName} {cashier.lastName}
                         </p>
                         <p className="text-xs text-slate-500 capitalize">
-                          {cashier.role} · {cashier.department}
+                          {cashier.role} Â· {cashier.department}
                         </p>
                       </div>
                     </button>
@@ -131,10 +131,10 @@ export default function LoginPage() {
             </>
           )}
 
-          {/* Étape 2: PIN */}
+          {/* Ã‰tape 2: PIN */}
           {selectedCashier && (
             <>
-              {/* Profil sélectionné */}
+              {/* Profil sÃ©lectionnÃ© */}
               <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl mb-4">
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center text-white text-base font-bold">
                   {selectedCashier.firstName.charAt(0)}
@@ -170,7 +170,7 @@ export default function LoginPage() {
                         : "border-slate-200 text-slate-300"
                     }`}
                   >
-                    {pin.length > i ? "●" : "–"}
+                    {pin.length > i ? "â—" : "â€“"}
                   </div>
                 ))}
               </div>
@@ -182,7 +182,7 @@ export default function LoginPage() {
                 </div>
               )}
 
-              {/* Pavé numérique */}
+              {/* PavÃ© numÃ©rique */}
               <div className="grid grid-cols-3 gap-2">
                 {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((d) => (
                   <button
@@ -199,7 +199,7 @@ export default function LoginPage() {
                   disabled={loading || !pin}
                   className="h-14 rounded-xl bg-slate-50 hover:bg-slate-100 active:scale-95 transition-all text-sm font-medium text-slate-500 disabled:opacity-50"
                 >
-                  ⌫
+                  âŒ«
                 </button>
                 <button
                   onClick={() => handlePinClick("0")}
@@ -225,14 +225,6 @@ export default function LoginPage() {
               )}
             </>
           )}
-        </div>
-
-        {/* Comptes de test */}
-        <div className="mt-4 bg-blue-50 rounded-xl p-3 text-xs text-blue-700">
-          <p className="font-semibold mb-1">Comptes de test:</p>
-          <p>Manager: EMP001 / PIN: 1234</p>
-          <p>Caissier: EMP002 / PIN: 2345</p>
-          <p>Caissière: EMP003 / PIN: 3456</p>
         </div>
       </div>
     </div>
