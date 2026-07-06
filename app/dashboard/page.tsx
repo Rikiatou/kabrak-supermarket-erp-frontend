@@ -9,6 +9,14 @@ import {
   AlertTriangle,
   ArrowRight,
   Calendar,
+  ShoppingCart,
+  Truck,
+  FileText,
+  BarChart3,
+  Cpu,
+  History,
+  PackagePlus,
+  Zap,
 } from "lucide-react";
 import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
@@ -20,6 +28,7 @@ import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { useI18n } from "@/lib/i18n/context";
+import { useAuth } from "@/lib/auth/context";
 import {
   useTodayStats,
   useYesterdayStats,
@@ -28,6 +37,11 @@ import {
   useStockAlerts,
   useStockValue,
   useEmployees,
+  useMonthlyGoal,
+  useMonthlyTopProducts,
+  useAverageBasket,
+  useUnpaidInvoices,
+  useActiveShifts,
 } from "@/lib/hooks/useApi";
 
 export default function DashboardPage() {
@@ -39,6 +53,50 @@ export default function DashboardPage() {
   const { alerts: stockAlertsData } = useStockAlerts();
   const { value: stockValue } = useStockValue();
   const { employees } = useEmployees();
+  const { data: activeShifts } = useActiveShifts();
+  const openCashiersCount = Array.isArray(activeShifts) ? activeShifts.filter((s: { status: string }) => s.status === "open").length : 0;
+  const { data: monthlyGoal } = useMonthlyGoal();
+  const { data: topProducts } = useMonthlyTopProducts(5);
+  const { data: averageBasket } = useAverageBasket();
+  const { data: unpaidInvoices } = useUnpaidInvoices();
+  const { user } = useAuth();
+  const dashCashierId = user?.role === "cashier" ? (user?.id ?? undefined) : undefined;
+
+  const roleShortcuts: Record<string, { label: string; href: string; icon: React.ElementType; color: string }[]> = {
+    boss: [
+      { label: t.dashboard.shortcutNewSale, href: "/pos", icon: ShoppingCart, color: "bg-blue-50 text-blue-700 border-blue-100" },
+      { label: t.dashboard.shortcutReceiveDelivery, href: "/achats", icon: Truck, color: "bg-emerald-50 text-emerald-700 border-emerald-100" },
+      { label: t.dashboard.shortcutReports, href: "/rapports", icon: BarChart3, color: "bg-violet-50 text-violet-700 border-violet-100" },
+      { label: t.dashboard.shortcutAiInsights, href: "/ia", icon: Cpu, color: "bg-amber-50 text-amber-700 border-amber-100" },
+      { label: t.dashboard.shortcutProductHistory, href: "/historique", icon: History, color: "bg-slate-50 text-slate-700 border-slate-200" },
+      { label: t.dashboard.shortcutInvoices, href: "/factures", icon: FileText, color: "bg-rose-50 text-rose-700 border-rose-100" },
+    ],
+    manager: [
+      { label: t.dashboard.shortcutNewSale, href: "/pos", icon: ShoppingCart, color: "bg-blue-50 text-blue-700 border-blue-100" },
+      { label: t.dashboard.shortcutReceiveDelivery, href: "/achats", icon: Truck, color: "bg-emerald-50 text-emerald-700 border-emerald-100" },
+      { label: t.dashboard.shortcutReports, href: "/rapports", icon: BarChart3, color: "bg-violet-50 text-violet-700 border-violet-100" },
+      { label: t.dashboard.shortcutAiInsights, href: "/ia", icon: Cpu, color: "bg-amber-50 text-amber-700 border-amber-100" },
+      { label: t.dashboard.shortcutProductHistory, href: "/historique", icon: History, color: "bg-slate-50 text-slate-700 border-slate-200" },
+      { label: t.dashboard.shortcutInvoices, href: "/factures", icon: FileText, color: "bg-rose-50 text-rose-700 border-rose-100" },
+    ],
+    cashier: [
+      { label: t.dashboard.shortcutNewSale, href: "/pos", icon: ShoppingCart, color: "bg-blue-50 text-blue-700 border-blue-100" },
+      { label: t.dashboard.shortcutClients, href: "/clients", icon: Users, color: "bg-emerald-50 text-emerald-700 border-emerald-100" },
+      { label: t.dashboard.shortcutRegister, href: "/caisses", icon: Zap, color: "bg-amber-50 text-amber-700 border-amber-100" },
+    ],
+    accountant: [
+      { label: t.dashboard.shortcutInvoices, href: "/factures", icon: FileText, color: "bg-blue-50 text-blue-700 border-blue-100" },
+      { label: t.dashboard.shortcutAccounting, href: "/comptabilite", icon: BarChart3, color: "bg-violet-50 text-violet-700 border-violet-100" },
+      { label: t.dashboard.shortcutReports, href: "/rapports", icon: BarChart3, color: "bg-emerald-50 text-emerald-700 border-emerald-100" },
+    ],
+    stockist: [
+      { label: t.dashboard.shortcutReceiveDelivery, href: "/achats", icon: Truck, color: "bg-emerald-50 text-emerald-700 border-emerald-100" },
+      { label: t.dashboard.shortcutStocks, href: "/stocks", icon: PackagePlus, color: "bg-blue-50 text-blue-700 border-blue-100" },
+      { label: t.dashboard.shortcutLosses, href: "/pertes", icon: AlertTriangle, color: "bg-red-50 text-red-700 border-red-100" },
+      { label: t.dashboard.shortcutScanner, href: "/scanner", icon: Package, color: "bg-amber-50 text-amber-700 border-amber-100" },
+    ],
+  };
+  const shortcuts = roleShortcuts[user?.role ?? ""] ?? [];
 
   // Données réelles du backend (fallback sur mock si indisponible)
   const revenue = todayStats?.revenue ?? 0;
@@ -66,7 +124,7 @@ export default function DashboardPage() {
 
   // Tendance 7 jours — trouver le max pour le graphique
   const maxRevenue = Math.max(...weekTrend.map((d) => d.revenue), 1);
-  const todayLabel = weekTrend[weekTrend.length - 1]?.label || "Auj";
+  const todayLabel = weekTrend[weekTrend.length - 1]?.label || t.common.today;
 
   // Employés actifs aujourd'hui
   const activeEmployees = employees.filter((e) => e.status === "active").slice(0, 6);
@@ -76,42 +134,68 @@ export default function DashboardPage() {
       title={t.dashboard.title}
       subtitle={t.dashboard.subtitle}
     >
+      {/* Hero greeting */}
+      <div className="mb-6">
+        <h2 className="text-[22px] font-bold text-[var(--text-primary)] tracking-tight">
+          {t.dashboard.greeting}, {user?.firstName || t.dashboard.defaultName}
+        </h2>
+        <p className="text-[13px] text-[var(--text-muted)] mt-0.5">
+          {t.dashboard.subtitle}
+        </p>
+      </div>
+
       {/* Status bar */}
-      <div className="flex items-center gap-3 mb-6 flex-wrap">
-        <div className="flex items-center gap-2 bg-[var(--success-light)] text-emerald-700 text-xs font-medium px-3 py-1.5 rounded-full">
-          <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-          {t.dashboard.cashierOpen} — 3 {t.dashboard.activeCashiers}
+      <div className="flex items-center gap-2 mb-5 flex-wrap">
+        <div className="flex items-center gap-2 bg-[var(--success-light)] text-[var(--success)] text-[11px] font-semibold px-3 py-1.5 rounded-md">
+          <span className="w-1.5 h-1.5 bg-[var(--success)] rounded-full animate-pulse" />
+          {t.dashboard.cashierOpen} — {openCashiersCount} {t.dashboard.activeCashiers}
         </div>
         {criticalAlerts > 0 && (
-          <div className="flex items-center gap-2 bg-[var(--danger-light)] text-red-700 text-xs font-medium px-3 py-1.5 rounded-full">
+          <div className="flex items-center gap-2 bg-[var(--danger-light)] text-[var(--danger)] text-[11px] font-semibold px-3 py-1.5 rounded-md">
             <AlertTriangle className="w-3.5 h-3.5" />
             {criticalAlerts} {t.dashboard.criticalOutOfStock}
           </div>
         )}
         {expiringAlerts > 0 && (
-          <div className="flex items-center gap-2 bg-[var(--warning-light)] text-amber-700 text-xs font-medium px-3 py-1.5 rounded-full">
+          <div className="flex items-center gap-2 bg-[var(--warning-light)] text-[var(--warning)] text-[11px] font-semibold px-3 py-1.5 rounded-md">
             <AlertTriangle className="w-3.5 h-3.5" />
             {expiringAlerts} {t.dashboard.expiringSoon}
           </div>
         )}
       </div>
 
+      {/* Role-based quick shortcuts */}
+      {shortcuts.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-5">
+          {shortcuts.map((s) => (
+            <Link
+              key={s.href + s.label}
+              href={s.href}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-[12px] font-semibold transition-all hover:opacity-80 active:scale-95 ${s.color}`}
+            >
+              <s.icon className="w-3.5 h-3.5" />
+              {s.label}
+            </Link>
+          ))}
+        </div>
+      )}
+
       {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <KpiCard
           label={t.dashboard.caRevenue}
           value={revenue}
           previous={yesterdayRevenue}
           format="currency"
-          icon={revenueChange >= 0 ? <TrendingUp className="w-5 h-5 text-[var(--brand)]" /> : <TrendingDown className="w-5 h-5 text-red-500" />}
+          icon={revenueChange >= 0 ? <TrendingUp className="w-5 h-5 text-[var(--brand)]" /> : <TrendingDown className="w-5 h-5 text-[var(--danger)]" />}
           iconBg="bg-[var(--brand-light)]"
         />
         <KpiCard
-          label={t.dashboard.grossProfit}
-          value={grossProfit}
-          previous={Math.round(grossProfit * 0.85)}
+          label={t.dashboard.avgBasket}
+          value={averageBasket?.average ?? 0}
+          previous={0}
           format="currency"
-          icon={<TrendingUp className="w-5 h-5 text-emerald-600" />}
+          icon={<ShoppingBag className="w-5 h-5 text-[var(--success)]" />}
           iconBg="bg-[var(--success-light)]"
         />
         <KpiCard
@@ -119,33 +203,33 @@ export default function DashboardPage() {
           value={transactionsCount}
           previous={yesterdayTransactions}
           format="number"
-          icon={<ShoppingBag className="w-5 h-5 text-indigo-600" />}
+          icon={<ShoppingBag className="w-5 h-5 text-[var(--info)]" />}
           iconBg="bg-[var(--info-light)]"
         />
         <KpiCard
-          label={t.dashboard.stockAlerts}
-          value={stockAlertsCount}
+          label={t.dashboard.unpaidInvoices}
+          value={unpaidInvoices?.totalUnpaid ?? 0}
           previous={0}
-          format="number"
-          icon={<Package className="w-5 h-5 text-amber-600" />}
-          iconBg="bg-[var(--warning-light)]"
+          format="currency"
+          icon={<AlertTriangle className="w-5 h-5 text-[var(--danger)]" />}
+          iconBg="bg-[var(--danger-light)]"
         />
       </div>
 
       {/* Indicateurs de changement vs hier */}
       {(revenueChange !== 0 || txnChange !== 0) && (
         <div className="flex items-center gap-4 mb-4 text-xs">
-          <span className="text-[var(--text-muted)]">vs hier:</span>
+          <span className="text-[var(--text-muted)]">{t.dashboard.vsYesterdayLabel}</span>
           {revenueChange !== 0 && (
             <span className={`flex items-center gap-1 font-medium ${revenueChange >= 0 ? "text-emerald-600" : "text-red-600"}`}>
               {revenueChange >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-              CA {revenueChange >= 0 ? "+" : ""}{revenueChange}%
+              {t.dashboard.revenueLabel} {revenueChange >= 0 ? "+" : ""}{revenueChange}%
             </span>
           )}
           {txnChange !== 0 && (
             <span className={`flex items-center gap-1 font-medium ${txnChange >= 0 ? "text-emerald-600" : "text-red-600"}`}>
               {txnChange >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-              Transactions {txnChange >= 0 ? "+" : ""}{txnChange}%
+              {t.dashboard.transactionsLabel} {txnChange >= 0 ? "+" : ""}{txnChange}%
             </span>
           )}
         </div>
@@ -155,8 +239,8 @@ export default function DashboardPage() {
       {weekTrend.length > 0 && (
         <Card className="mb-6" padding="md">
           <CardHeader
-            title="Tendance des ventes (7 derniers jours)"
-            subtitle="Comparaison du chiffre d'affaires par jour"
+            title={t.dashboard.salesTrend}
+            subtitle={t.dashboard.salesTrendSub}
             action={
               <span className="text-xs text-[var(--text-muted)] flex items-center gap-1">
                 <Calendar className="w-3 h-3" />
@@ -171,19 +255,19 @@ export default function DashboardPage() {
               return (
                 <div key={day.date} className="flex-1 flex flex-col items-center gap-1.5">
                   <span className="text-[10px] font-medium text-[var(--text-muted)] tabular-nums">
-                    {day.revenue > 0 ? `${(day.revenue / 1000).toFixed(0)}k` : ""}
+                    {(day.revenue ?? 0) > 0 ? `${((day.revenue ?? 0) / 1000).toFixed(0)}k` : ""}
                   </span>
                   <div className="w-full flex items-end justify-center h-24">
                     <div
-                      className={`w-full max-w-[40px] rounded-t-lg transition-all hover:opacity-80 ${
+                      className={`w-full max-w-[40px] rounded-t-md transition-all hover:opacity-80 ${
                         isToday
-                          ? "bg-gradient-to-t from-[var(--brand)] to-blue-400"
+                          ? "bg-gradient-to-t from-[var(--brand)] to-[var(--brand-mid)]"
                           : day.revenue > 0
-                            ? "bg-gradient-to-t from-blue-300 to-blue-200"
+                            ? "bg-gradient-to-t from-[var(--brand-mid)] to-[var(--brand-light)]"
                             : "bg-slate-100"
                       }`}
                       style={{ height: `${Math.max(heightPct, 2)}%` }}
-                      title={`${day.label}: ${day.revenue.toLocaleString("fr-FR")} FCFA (${day.transactions} txns)`}
+                      title={`${day.label}: ${(day.revenue ?? 0).toLocaleString()} ${t.common.currency} (${day.transactions ?? 0} ${t.common.txnsAbbr})`}
                     />
                   </div>
                   <span className={`text-[10px] ${isToday ? "font-bold text-[var(--brand)]" : "text-[var(--text-muted)]"}`}>
@@ -195,6 +279,71 @@ export default function DashboardPage() {
           </div>
         </Card>
       )}
+
+      {/* Objectif mensuel + Top produits */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        {/* Objectif mensuel */}
+        {monthlyGoal && (
+          <Card padding="md">
+            <CardHeader
+              title={t.dashboard.monthlyGoal}
+              subtitle={`${monthlyGoal.transactions} ${t.dashboard.monthlyGoalSub}`}
+            />
+            <div className="mt-4">
+              <div className="flex items-end justify-between mb-2">
+                <span className="text-2xl font-bold text-[var(--brand)]">
+                  {((monthlyGoal.current ?? 0) / 1000).toFixed(0)}k FCFA
+                </span>
+                <span className="text-sm text-[var(--text-muted)]">
+                  / {((monthlyGoal.goal ?? 0) / 1000).toFixed(0)}k
+                </span>
+              </div>
+              <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-[var(--brand)] to-blue-400 transition-all duration-500"
+                  style={{ width: `${Math.min(monthlyGoal.progress, 100)}%` }}
+                />
+              </div>
+              <div className="flex items-center justify-between mt-2 text-xs">
+                <span className={`font-medium ${monthlyGoal.progress >= 100 ? "text-emerald-600" : "text-[var(--brand)]"}`}>
+                  {monthlyGoal.progress}% {t.dashboard.monthlyGoalProgress}
+                </span>
+                <span className="text-[var(--text-muted)]">
+                  {t.dashboard.monthlyGoalRemaining} {((monthlyGoal.remaining ?? 0) / 1000).toFixed(0)}k FCFA
+                </span>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* Top 5 produits */}
+        {topProducts.length > 0 && (
+          <Card padding="md">
+            <CardHeader
+              title={t.dashboard.top5Products}
+              subtitle={t.dashboard.top5Sub}
+            />
+            <div className="mt-4 space-y-3">
+              {topProducts.map((product, i) => (
+                <div key={product.productId} className="flex items-center gap-3">
+                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[var(--brand-light)] text-[var(--brand)] text-xs font-bold flex items-center justify-center">
+                    {i + 1}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{product.productName}</p>
+                    <p className="text-xs text-[var(--text-muted)]">{product.quantity} {t.dashboard.sold}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-[var(--brand)]">
+                      {((product.revenue ?? 0) / 1000).toFixed(1)}k
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+      </div>
 
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-6">
@@ -251,7 +400,7 @@ export default function DashboardPage() {
               </Link>
             }
           />
-          <RecentTransactions />
+          <RecentTransactions cashierId={dashCashierId} />
         </Card>
       </div>
 
@@ -274,7 +423,7 @@ export default function DashboardPage() {
 
           <div className="flex items-center gap-3 mt-4 flex-wrap">
             {activeEmployees.length === 0 ? (
-              <p className="text-xs text-[var(--text-muted)]">Aucun employé actif</p>
+              <p className="text-xs text-[var(--text-muted)]">{t.dashboard.noActiveEmployees}</p>
             ) : (
               activeEmployees.map((emp) => {
                 const colors: Record<string, string> = {
@@ -284,10 +433,12 @@ export default function DashboardPage() {
                   stockist: "from-amber-400 to-orange-600",
                 };
                 const roleLabels: Record<string, string> = {
-                  manager: "Manager",
-                  supervisor: "Superviseur",
-                  cashier: "Caissier",
-                  stockist: "Stockiste",
+                  boss: t.dashboard.roleBoss,
+                  manager: t.dashboard.roleManager,
+                  supervisor: t.dashboard.roleSupervisor,
+                  cashier: t.dashboard.roleCashier,
+                  stockist: t.dashboard.roleStockist,
+                  accountant: t.dashboard.roleAccountant,
                 };
                 return (
                   <div key={emp.id} className="flex items-center gap-2">

@@ -1,19 +1,68 @@
-﻿// Client API pour connecter le frontend Next.js au backend NestJS
-// Backend: http://localhost:3000/api
+// Client API pour connecter le frontend Next.js au backend NestJS
+// Architecture hybride: serveur local (primaire) + cloud (fallback)
+//
+// Logique de bascule:
+// 1. Local est TOUJOURS prioritaire (le magasin a du courant)
+// 2. Si local ne rÃƒÂ©pond pas Ã¢â€ â€™ bascule sur cloud (immÃƒÂ©diat, pas d'attente)
+// 3. Si internet coupe Ã¢â€ â€™ reste sur local (pas de bascule)
+// 4. Si local revient Ã¢â€ â€™ bascule retour (retest toutes les 10s en arriÃƒÂ¨re-plan)
+// 5. L'override localStorage (IP spÃƒÂ©cifique magasin) est toujours retestÃƒÂ©
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+// URL primaire: relative "/api" passe par le proxy Next.js (next.config.ts rewrites /api/* Ã¢â€ â€™ localhost:3001)
+// Comme ÃƒÂ§a, peu importe l'IP du serveur (192.168.100.10 ou autre), ÃƒÂ§a marche automatiquement
+const PRIMARY_API_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
 
-// Helper pour les requÃªtes
+// URL de fallback (cloud) Ã¢â‚¬â€ utilisÃƒÂ©e si le serveur local ne rÃƒÂ©pond pas
+const FALLBACK_API_URL = "https://kabrak-api-production.up.railway.app/api";
+
+// Ãƒâ€°tat de la connexion
+let activeApiUrl = PRIMARY_API_URL;
+let lastFailoverTime = 0;
+let localAvailable = true; // optimiste: on suppose local OK au dÃƒÂ©part
+let lastLocalCheckTime = 0;
+const LOCAL_CHECK_INTERVAL_MS = 10000; // retester local toutes les 10s
+const LOCAL_TIMEOUT_MS = 2000; // 2s pour tester local (pas 5s)
+
+// Helper pour les requÃƒÂªtes avec bascule automatique
 async function fetchAPI<T>(
   endpoint: string,
   options?: RequestInit
 ): Promise<T> {
-  const url = `${API_URL}${endpoint}`;
+  // DÃƒÂ©terminer l'URL locale (override localStorage ou PRIMARY_API_URL)
+  let localUrl = PRIMARY_API_URL;
+  if (typeof window !== "undefined") {
+    const localOverride = localStorage.getItem("kabrak_api_url");
+    if (localOverride) {
+      // Sur le cloud (Vercel), ne pas utiliser un override localhost
+      // sauf si c'est une IP locale (192.168.x.x ou 10.x.x.x)
+      const hostname = window.location.hostname;
+      const isOnLocalNetwork = hostname === "localhost" || hostname.startsWith("192.168.") || hostname.startsWith("10.") || hostname.startsWith("172.");
+      const overrideIsLocal = localOverride.includes("localhost") || localOverride.includes("192.168.") || localOverride.includes("10.");
+      if (isOnLocalNetwork || !overrideIsLocal) {
+        localUrl = localOverride;
+      }
+    }
+  }
 
-  // RÃ©cupÃ©rer le token d'auth depuis localStorage
+  // Si on est sur le cloud, retester le local en arriÃƒÂ¨re-plan pÃƒÂ©riodiquement
+  if (!localAvailable && Date.now() - lastLocalCheckTime > LOCAL_CHECK_INTERVAL_MS) {
+    testLocalServer(localUrl);
+  }
+
+  // Choisir l'URL: si local disponible Ã¢â€ â€™ local, sinon Ã¢â€ â€™ cloud
+  let baseUrl = localAvailable ? localUrl : FALLBACK_API_URL;
+
+  const url = `${baseUrl}${endpoint}`;
+
+  // RÃƒÂ©cupÃƒÂ©rer le token d'auth depuis localStorage
   let token: string | null = null;
+  let licenseKey: string | null = null;
   if (typeof window !== "undefined") {
     token = localStorage.getItem("kabrak_auth_token");
+    try {
+      const licData = localStorage.getItem("kabrak_license_data");
+      if (licData) { licenseKey = JSON.parse(licData)?.licenseKey || null; }
+    } catch {}
   }
 
   const headers: Record<string, string> = {
@@ -21,15 +70,77 @@ async function fetchAPI<T>(
     ...(options?.headers as Record<string, string>),
   };
 
-  // Ajouter le token d'auth si disponible
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const res = await fetch(url, {
-    ...options,
-    headers,
-  });
+  if (licenseKey) {
+    headers["x-license-key"] = licenseKey;
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      ...options,
+      headers,
+      signal: AbortSignal.timeout(localAvailable ? 5000 : 10000),
+    });
+  } catch (err) {
+    // Le serveur local ne rÃƒÂ©pond pas Ã¢â‚¬â€ basculer vers le cloud
+    if (localAvailable) {
+      console.warn("Serveur local injoignable, bascule vers le cloudÃ¢â‚¬Â¦");
+      localAvailable = false;
+      lastFailoverTime = Date.now();
+      // RÃƒÂ©essayer avec le cloud
+      const cloudUrl = `${FALLBACK_API_URL}${endpoint}`;
+      try {
+        res = await fetch(cloudUrl, {
+          ...options,
+          headers,
+          signal: AbortSignal.timeout(10000),
+        });
+      } catch (cloudErr) {
+        // Le cloud ne rÃƒÂ©pond pas non plus Ã¢â‚¬â€ essayer local quand mÃƒÂªme
+        // (cas: internet coupÃƒÂ© mais serveur local OK)
+        localAvailable = true;
+        throw cloudErr;
+      }
+    } else {
+      // On ÃƒÂ©tait dÃƒÂ©jÃƒÂ  sur le cloud et il a ÃƒÂ©chouÃƒÂ© Ã¢â‚¬â€ essayer local (peut-ÃƒÂªtre revenu)
+      const localFullUrl = `${localUrl}${endpoint}`;
+      try {
+        res = await fetch(localFullUrl, {
+          ...options,
+          headers,
+          signal: AbortSignal.timeout(5000),
+        });
+        // Si local rÃƒÂ©pond, marquer comme disponible
+        localAvailable = true;
+        console.log("Serveur local de nouveau disponible Ã¢â‚¬â€ bascule retour");
+      } catch {
+        throw err; // ni local ni cloud ne rÃƒÂ©pondent
+      }
+    }
+  }
+
+  if (res.status === 401 && typeof window !== "undefined") {
+    // Token invalide ou expirÃƒÂ© Ã¢â‚¬â€ nettoyer et rediriger vers login
+    localStorage.removeItem("kabrak_auth_token");
+    localStorage.removeItem("kabrak_auth_user");
+    if (!window.location.pathname.startsWith("/login")) {
+      window.location.href = "/login";
+    }
+    throw new Error("Session expirÃƒÂ©e");
+  }
+
+  if (res.status === 402 && typeof window !== "undefined") {
+    // Licence expiree cote backend Ã¢â‚¬â€ rediriger vers activation
+    const error = await res.json().catch(() => ({ message: "Licence expirÃƒÂ©e" }));
+    if (!window.location.pathname.startsWith("/activate")) {
+      window.location.href = "/activate?expired=1";
+    }
+    throw new Error(error.message || "Licence expirÃƒÂ©e");
+  }
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({ message: "Erreur API" }));
@@ -39,8 +150,45 @@ async function fetchAPI<T>(
   return res.json();
 }
 
+// Tester si le serveur local est revenu (en arriÃƒÂ¨re-plan, non-bloquant)
+async function testLocalServer(localUrl: string) {
+  lastLocalCheckTime = Date.now();
+  // Sur le cloud, ne pas retester localhost
+  if (typeof window !== "undefined") {
+    const hostname = window.location.hostname;
+    const isOnCloud = hostname.includes("vercel") || (!hostname.startsWith("192.168.") && !hostname.startsWith("10.") && hostname !== "localhost");
+    if (isOnCloud && (localUrl.includes("localhost") || localUrl.includes("127.0.0.1"))) {
+      return; // pas la peine de tester localhost depuis Vercel
+    }
+  }
+  try {
+    const res = await fetch(`${localUrl}`, {
+      signal: AbortSignal.timeout(LOCAL_TIMEOUT_MS),
+    });
+    if (res.ok) {
+      console.log("Serveur local de nouveau disponible Ã¢â‚¬â€ bascule retour");
+      localAvailable = true;
+    }
+  } catch {
+    // Toujours down Ã¢â‚¬â€ rester sur le cloud
+  }
+}
+
+// Exporter l'ÃƒÂ©tat de la connexion pour le UI
+export function getServerStatus(): { isLocal: boolean; url: string } {
+  let localUrl = PRIMARY_API_URL;
+  if (typeof window !== "undefined") {
+    const override = localStorage.getItem("kabrak_api_url");
+    if (override) localUrl = override;
+  }
+  return {
+    isLocal: localAvailable,
+    url: localAvailable ? localUrl : FALLBACK_API_URL,
+  };
+}
+
 // ========================================
-// TYPES (alignÃ©s avec le backend Prisma)
+// TYPES (alignÃƒÂ©s avec le backend Prisma)
 // ========================================
 export interface ApiProduct {
   id: string;
@@ -165,7 +313,7 @@ export interface ApiStockMovement {
   reference?: string;
   notes?: string;
   createdBy?: string;
-  employee?: { id: string; firstName: string; lastName: string; role?: string };
+  employee?: { id: string; firstName: string; lastName: string; role: string };
   syncStatus: string;
   createdAt: string;
   product?: ApiProduct;
@@ -218,34 +366,39 @@ export const authApi = {
 // API PRODUCTS
 // ========================================
 export const productsApi = {
-  // Liste paginÃ©e
+  // Liste paginÃƒÂ©e
   list: (page = 1, limit = 100) =>
     fetchAPI<PaginatedResponse<ApiProduct>>(
       `/products?page=${page}&limit=${limit}`
     ),
 
-  // CatÃ©gories
-  categories: () =>
-    fetchAPI<Array<{ id: string; name: string }>>(`/products/categories`),
-
-  // Recherche
-  search: (params: { q?: string; category?: string; page?: number; limit?: number }) => {
+  // Recherche server-side (pour POS avec 3000+ produits)
+  search: (params: { q?: string; category?: string; stockStatus?: string; page?: number; limit?: number }) => {
     const query = new URLSearchParams();
     if (params.q) query.set("q", params.q);
     if (params.category) query.set("category", params.category);
+    if (params.stockStatus) query.set("stockStatus", params.stockStatus);
     query.set("page", String(params.page || 1));
-    query.set("limit", String(params.limit || 100));
+    query.set("limit", String(params.limit || 80));
     return fetchAPI<PaginatedResponse<ApiProduct>>(`/products/search?${query}`);
   },
 
-  // Scan code-barres (caisse)
+  // Top ventes Ã¢â‚¬â€ pour cache local au dÃƒÂ©marrage du POS
+  bestsellers: (limit = 200) =>
+    fetchAPI<{ data: ApiProduct[]; total: number }>(`/products/bestsellers?limit=${limit}`),
+
+  // CatÃƒÂ©gories distinctes (avec compte de produits)
+  categories: () =>
+    fetchAPI<{ name: string; count: number }[]>(`/products/categories`),
+
+  // Scan code-barres (caisse) Ã¢â‚¬â€ exact match, instantanÃƒÂ©
   findByBarcode: (barcode: string) =>
     fetchAPI<ApiProduct>(`/products/barcode/${barcode}`),
 
-  // DÃ©tail
+  // DÃƒÂ©tail
   get: (id: string) => fetchAPI<ApiProduct>(`/products/${id}`),
 
-  // CrÃ©er
+  // CrÃƒÂ©er
   create: (data: Partial<ApiProduct>) =>
     fetchAPI<ApiProduct>(`/products`, {
       method: "POST",
@@ -271,7 +424,7 @@ export const productsApi = {
 
   // Import CSV
   importCsv: (csv: string) =>
-    fetchAPI<{ total: number; success: number; errors: number; duration: number }>(
+    fetchAPI<{ total: number; success: number; errors: number; duration: number; errorDetails?: Array<{ row: number; sku?: string; error: string }> }>(
       `/import/products`,
       { method: "POST", body: JSON.stringify({ csv }) }
     ),
@@ -302,7 +455,7 @@ export const productsApi = {
 // API TRANSACTIONS (VENTES)
 // ========================================
 export const transactionsApi = {
-  // CrÃ©er une vente
+  // CrÃƒÂ©er une vente
   create: (data: {
     cashierId: string;
     registerId?: string;
@@ -339,7 +492,7 @@ export const transactionsApi = {
     return fetchAPI<PaginatedResponse<ApiTransaction>>(`/transactions?${query}`);
   },
 
-  // DÃ©tail
+  // DÃƒÂ©tail
   get: (id: string) => fetchAPI<ApiTransaction>(`/transactions/${id}`),
 
   // Stats du jour
@@ -372,10 +525,28 @@ export const transactionsApi = {
       `/transactions/stats/by-hour`
     ),
 
-  // Marge par catÃ©gorie (graphique dashboard)
+  // Marge par catÃƒÂ©gorie (graphique dashboard)
   marginByCategory: () =>
     fetchAPI<Array<{ category: string; revenue: number; margin: number; marginRate: number }>>(
       `/transactions/stats/margin-by-category`
+    ),
+
+  // Objectif mensuel
+  monthlyGoal: () =>
+    fetchAPI<{ current: number; goal: number; progress: number; transactions: number; remaining: number }>(
+      `/transactions/stats/monthly-goal`
+    ),
+
+  // Top produits vendus
+  topProducts: (limit?: number) =>
+    fetchAPI<Array<{ productId: string; productName: string; sku: string; quantity: number; revenue: number }>>(
+      `/transactions/stats/top-products${limit ? `?limit=${limit}` : ""}`
+    ),
+
+  // Panier moyen
+  averageBasket: () =>
+    fetchAPI<{ average: number; total: number; transactions: number }>(
+      `/transactions/stats/average-basket`
     ),
 
   // Rembourser
@@ -399,7 +570,7 @@ export const stockApi = {
     return fetchAPI<PaginatedResponse<ApiStockMovement>>(`/stock/movements?${query}`);
   },
 
-  // CrÃ©er mouvement
+  // CrÃƒÂ©er mouvement
   createMovement: (data: {
     productId: string;
     type: string;
@@ -477,7 +648,7 @@ export const suppliersApi = {
 };
 
 // ========================================
-// API EMPLOYEES (EMPLOYÃ‰S)
+// API EMPLOYEES (EMPLOYÃƒâ€°S)
 // ========================================
 export const employeesApi = {
   list: () => fetchAPI<ApiEmployee[]>(`/employees`),
@@ -521,25 +692,25 @@ export interface ApiPurchaseOrder {
 }
 
 export const purchaseOrdersApi = {
-  list: async (status?: string): Promise<ApiPurchaseOrder[]> => {
-    const res = await fetchAPI<{ data: ApiPurchaseOrder[]; total: number } | ApiPurchaseOrder[]>(`/purchase-orders${status ? `?status=${status}` : ""}`);
-    return Array.isArray(res) ? res : (res?.data ?? []);
+  list: async (status?: string) => {
+    const res = await fetchAPI<{ data: ApiPurchaseOrder[]; total: number; page: number; limit: number; totalPages: number }>(`/purchase-orders?limit=100${status ? `&status=${status}` : ""}`);
+    return res.data || res as unknown as ApiPurchaseOrder[];
   },
+  get: (id: string) => fetchAPI<ApiPurchaseOrder>(`/purchase-orders/${id}`),
   create: (data: { supplierId: string; expectedDate: string; notes?: string; items: Array<{ productId: string; quantity: number; unitCost: number }> }) =>
     fetchAPI<ApiPurchaseOrder>(`/purchase-orders`, { method: "POST", body: JSON.stringify(data) }),
-  createDirect: (data: {
-    supplierId: string;
-    expectedDate: string;
-    invoiceNumber?: string;
-    notes?: string;
-    items: Array<{
-      productId: string;
-      quantity: number;
-      unitCost: number;
-      sellPrice?: number;
-      expiryDate?: string;
-    }>;
-  }) =>
+  createDirect: (data: { supplierId: string; expectedDate: string; notes?: string; invoiceNumber?: string; items: Array<{
+    productId: string;
+    quantity: number;
+    unitCost: number;
+    isNewProduct?: boolean;
+    newProductName?: string;
+    newProductBarcode?: string;
+    newProductCategory?: string;
+    newProductUnit?: string;
+    sellPrice?: number;
+    expiryDate?: string;
+  }> }) =>
     fetchAPI<ApiPurchaseOrder>(`/purchase-orders/direct`, { method: "POST", body: JSON.stringify(data) }),
   updateStatus: (id: string, status: string) =>
     fetchAPI<ApiPurchaseOrder>(`/purchase-orders/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
@@ -582,8 +753,12 @@ export interface ApiZReport {
   totalTax: number;
   netSales: number;
   nonTaxableSales: number;
-  invoicePayments?: { cash: number; card: number; mobile: number; total: number };
-  receiptsByMethod: { cash: number; card: number; mobile: number; orange: number; split: number };
+  receiptsByMethod: {
+    cash: number;
+    card: number;
+    mobile: number;
+    split: number;
+  };
   totalReceipts: number;
   changeGiven: number;
   cashReceived: number;
@@ -591,13 +766,23 @@ export interface ApiZReport {
   totalExpected: number;
   customerCount: number;
   averageSale: number;
-  transactions: Array<{ id: string; transactionNumber: string; date: string; total: number; paymentMethod: string }>;
+  invoicePayments?: {
+    total: number;
+    count?: number;
+  };
+  transactions: Array<{
+    id: string;
+    transactionNumber: string;
+    date: string;
+    total: number;
+    paymentMethod: string;
+  }>;
 }
 
 export const shiftsApi = {
   list: () => fetchAPI<ApiShift[]>(`/shifts`),
   active: () => fetchAPI<ApiShift[]>(`/shifts/active`),
-  open: (data: { registerId: string; employeeId: string; openingCash: number; employeeName?: string; registerName?: string }) =>
+  open: (data: { registerId: string; registerName?: string; employeeId: string; employeeName?: string; openingCash: number }) =>
     fetchAPI<ApiShift>(`/shifts/open`, { method: "POST", body: JSON.stringify(data) }),
   close: (id: string, data: { closingCash: number; expectedCash: number; notes?: string }) =>
     fetchAPI<ApiShift>(`/shifts/${id}/close`, { method: "POST", body: JSON.stringify(data) }),
@@ -614,6 +799,7 @@ export interface ApiSchedule {
   id: string;
   employeeId: string;
   registerId: string;
+  registerName?: string;
   dayOfWeek: number; // 0=dimanche, 1=lundi, ..., 6=samedi
   startTime: string; // "08:00"
   endTime: string; // "17:00"
@@ -629,6 +815,7 @@ export interface ApiSchedule {
 
 export const schedulesApi = {
   list: () => fetchAPI<{ all: ApiSchedule[]; byDay: Record<number, ApiSchedule[]>; total: number }>(`/schedules`),
+  registers: () => fetchAPI<Array<{ id: string; name: string; code: string; isActive: boolean }>>(`/schedules/registers`),
   today: () => fetchAPI<{ dayOfWeek: number; currentTime: string; active: ApiSchedule[] }>(`/schedules/today`),
   byEmployee: (employeeId: string) => fetchAPI<ApiSchedule[]>(`/schedules/employee/${employeeId}`),
   byRegister: (registerId: string) => fetchAPI<ApiSchedule[]>(`/schedules/register/${registerId}`),
@@ -642,7 +829,7 @@ export const schedulesApi = {
 };
 
 // ========================================
-// API CUSTOMERS (CLIENTS FIDÃ‰LITÃ‰)
+// API CUSTOMERS (CLIENTS FIDÃƒâ€°LITÃƒâ€°)
 // ========================================
 // Note: ApiCustomer is already defined above in the TYPES section.
 export interface ApiLoyaltyHistory {
@@ -655,7 +842,11 @@ export interface ApiLoyaltyHistory {
 }
 
 export const customersApi = {
-  list: (search?: string) => fetchAPI<ApiCustomer[]>(`/customers${search ? `?search=${search}` : ""}`),
+  list: async (search?: string): Promise<ApiCustomer[]> => {
+    const res = await fetchAPI<ApiCustomer[] | { data: ApiCustomer[] }>(`/customers${search ? `?search=${search}` : ""}`);
+    // Backend returns paginated { data: [...] }, extract the array
+    return Array.isArray(res) ? res : (res as any)?.data ?? [];
+  },
   get: (id: string) => fetchAPI<ApiCustomer & { loyaltyHistory: ApiLoyaltyHistory[] }>(`/customers/${id}`),
   stats: () => fetchAPI<{ total: number; totalPoints: number; totalRedeemed: number }>(`/customers/stats`),
   create: (data: { firstName: string; lastName: string; phone: string; email?: string }) =>
@@ -671,11 +862,11 @@ export const customersApi = {
 // ========================================
 export const reportsApi = {
   sales: (startDate: string, endDate: string) =>
-    fetchAPI<{ totalRevenue: number; transactionCount: number; transactionsCount: number; totalSubtotal?: number; totalDiscount?: number; totalTax?: number; avgBasket: number; byDay: Array<{ date: string; revenue: number; transactions: number }>; transactions?: any[]; byProduct?: any[] }>(`/reports/sales?startDate=${startDate}&endDate=${endDate}`),
+    fetchAPI<{ totalRevenue: number; totalSubtotal: number; totalDiscount: number; totalTax: number; transactionsCount: number; avgBasket: number; byDay: Array<{ date: string; revenue: number; transactions: number }> }>(`/reports/sales?startDate=${startDate}&endDate=${endDate}`),
   salesByCategory: (startDate: string, endDate: string) =>
     fetchAPI<Array<{ category: string; revenue: number; quantity: number }>>(`/reports/sales/by-category?startDate=${startDate}&endDate=${endDate}`),
   salesByEmployee: (startDate: string, endDate: string) =>
-    fetchAPI<Array<{ cashierId: string; employeeId?: string; firstName?: string; lastName?: string; employeeName?: string; employeeNumber?: string; revenue: number; transactions: number }>>(`/reports/sales/by-employee?startDate=${startDate}&endDate=${endDate}`),
+    fetchAPI<Array<{ employeeId: string; employeeName: string; employeeNumber: string; revenue: number; transactions: number }>>(`/reports/sales/by-employee?startDate=${startDate}&endDate=${endDate}`),
   topProducts: (startDate: string, endDate: string, limit?: number) =>
     fetchAPI<Array<{ productId: string; name: string; quantity: number; revenue: number }>>(`/reports/products/top?startDate=${startDate}&endDate=${endDate}${limit ? `&limit=${limit}` : ""}`),
   worstProducts: (startDate: string, endDate: string, limit?: number) =>
@@ -688,80 +879,26 @@ export const reportsApi = {
     fetchAPI<Array<{ month: number; revenue: number; transactions: number }>>(`/reports/sales/by-month?year=${year}`),
   inventoryValuation: () =>
     fetchAPI<{ totalCostValue: number; totalSaleValue: number; potentialMargin: number; productCount: number }>(`/reports/inventory/valuation`),
+  discounts: (startDate: string, endDate: string) =>
+    fetchAPI<{
+      totalDiscount: number;
+      transactionsCount: number;
+      transactions: Array<{
+        id: string;
+        transactionNumber: string;
+        date: string;
+        cashierName: string;
+        subtotal: number;
+        discount: number;
+        total: number;
+        items: Array<{ productName: string; sku: string; quantity: number; discount: number }>;
+      }>;
+      byProduct: Array<{ productName: string; sku: string; totalDiscount: number; occurrences: number }>;
+    }>(`/reports/discounts?startDate=${startDate}&endDate=${endDate}`),
 };
 
 // ========================================
-// API RETURNS (RETOURS PRODUITS)
-// ========================================
-export interface ApiReturn {
-  id: string;
-  licenseKey?: string;
-  originalTransactionId?: string;
-  originalInvoiceId?: string;
-  clientName?: string;
-  returnDate: string;
-  reason: string;
-  resolution: string;
-  totalRefunded: number;
-  refundMethod?: string;
-  status: string;
-  note?: string;
-  createdBy?: string;
-  items?: ApiReturnItem[];
-}
-
-export interface ApiReturnItem {
-  id: string;
-  returnId: string;
-  productId?: string;
-  productName: string;
-  quantity: number;
-  unitPrice: number;
-  total: number;
-  exchangeProductId?: string;
-  exchangeProductName?: string;
-  exchangeTotal?: number;
-}
-
-export const returnsApi = {
-  list: () => fetchAPI<ApiReturn[]>(`/returns`),
-  create: (data: {
-    originalTransactionId?: string;
-    originalInvoiceId?: string;
-    clientName?: string;
-    reason: string;
-    resolution: string;
-    note?: string;
-    refundMethod?: string;
-    items: Array<{
-      productId?: string;
-      productName: string;
-      quantity: number;
-      unitPrice: number;
-      total: number;
-      exchangeProductId?: string;
-      exchangeProductName?: string;
-      exchangeTotal?: number;
-    }>;
-  }) =>
-    fetchAPI<ApiReturn>(`/returns`, { method: "POST", body: JSON.stringify(data) }),
-  stats: () => fetchAPI<{ total: number; totalAmount: number; byReason: Record<string, number> }>(`/returns/stats`),
-};
-
-// ========================================
-// API BATCHES (LOTS DE STOCK / PÃ‰REMPTION)
-// ========================================
-export const batchesApi = {
-  list: (productId?: string) =>
-    fetchAPI<any[]>(`/batches${productId ? `?productId=${productId}` : ""}`),
-  create: (data: { productId: string; quantity: number; expiryDate?: string; costPrice?: number; sellPrice?: number }) =>
-    fetchAPI<any>(`/batches`, { method: "POST", body: JSON.stringify(data) }),
-  delete: (id: string) =>
-    fetchAPI<any>(`/batches/${id}`, { method: "DELETE" }),
-};
-
-// ========================================
-// API ACCOUNTING (COMPTABILITÃ‰)
+// API ACCOUNTING (COMPTABILITÃƒâ€°)
 // ========================================
 export interface ApiExpense {
   id: string;
@@ -906,6 +1043,7 @@ export const invoicesApi = {
     fetchAPI<{ invoices: ApiInvoice[]; total: number }>(`/invoices${status ? `?status=${status}` : ""}`),
   get: (id: string) => fetchAPI<ApiInvoice>(`/invoices/${id}`),
   stats: () => fetchAPI<{ total: number; paid: number; partial: number; pending: number; overdue: number; totalPaidAmount: number; totalOutstanding: number }>(`/invoices/stats`),
+  unpaidStats: () => fetchAPI<{ totalUnpaid: number; count: number; partial: { amount: number; count: number }; overdue: { amount: number; count: number } }>(`/invoices/stats/unpaid`),
   create: (data: {
     clientName: string;
     clientPhone: string;
@@ -957,6 +1095,85 @@ export const notificationsApi = {
 };
 
 // ========================================
+// BATCHES (LOTS PRODUITS)
+// ========================================
+export interface ApiProductBatch {
+  id: string;
+  productId: string;
+  batchNumber?: string;
+  quantity: number;
+  initialQty: number;
+  expiryDate?: string;
+  receivedDate: string;
+  product?: { id: string; name: string; barcode: string; price: number; category: string };
+}
+
+export const batchesApi = {
+  list: (productId?: string) =>
+    fetchAPI<ApiProductBatch[]>(`/batches${productId ? `?productId=${productId}` : ""}`),
+  expiring: () => fetchAPI<ApiProductBatch[]>(`/batches?expiring=true`),
+  expiryAlerts: () => fetchAPI<{ expired: ApiProductBatch[]; expiring7: ApiProductBatch[]; expiring30: ApiProductBatch[] }>(`/batches/expiry-alerts`),
+  create: (data: { productId: string; batchNumber?: string; quantity: number; expiryDate?: string }) =>
+    fetchAPI<ApiProductBatch>(`/batches`, { method: "POST", body: JSON.stringify(data) }),
+  remove: (id: string) => fetchAPI<{ id: string }>(`/batches/${id}`, { method: "DELETE" }),
+};
+
+// ========================================
+// RETURNS (RETOURS PRODUITS)
+// ========================================
+export interface ApiReturnItem {
+  id: string;
+  productId?: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+  exchangeProductId?: string;
+  exchangeProductName?: string;
+  exchangeTotal?: number;
+}
+
+export interface ApiReturn {
+  id: string;
+  originalTransactionId?: string;
+  originalInvoiceId?: string;
+  clientName?: string;
+  returnDate: string;
+  reason: string;
+  resolution: string;
+  totalRefunded: number;
+  refundMethod?: string;
+  status: string;
+  note?: string;
+  items: ApiReturnItem[];
+  createdAt: string;
+}
+
+export const returnsApi = {
+  create: (data: {
+    originalTransactionId?: string;
+    clientName?: string;
+    reason: string;
+    resolution: string;
+    note?: string;
+    refundMethod?: string;
+    items: Array<{
+      productId?: string;
+      productName: string;
+      quantity: number;
+      unitPrice: number;
+      total: number;
+      exchangeProductId?: string;
+      exchangeProductName?: string;
+      exchangeTotal?: number;
+    }>;
+  }) => fetchAPI<ApiReturn>(`/returns`, { method: "POST", body: JSON.stringify(data) }),
+
+  list: () => fetchAPI<ApiReturn[]>(`/returns`),
+  stats: () => fetchAPI<{ total: number; totalAmount: number; byReason: Record<string, number> }>(`/returns/stats`),
+};
+
+// ========================================
 // HELPERS
 // ========================================
 
@@ -986,16 +1203,16 @@ export function apiProductToFrontend(p: ApiProduct): Product {
 // Prix effectif d'un produit (markdown si actif, sinon prix normal)
 export function getEffectivePrice(p: Pick<Product, "price" | "markdownPrice" | "markdownExpiresAt">): number {
   if (p.markdownPrice != null && p.markdownPrice > 0) {
-    // VÃ©rifier si le markdown n'a pas expirÃ©
+    // VÃƒÂ©rifier si le markdown n'a pas expirÃƒÂ©
     if (p.markdownExpiresAt && new Date(p.markdownExpiresAt) < new Date()) {
-      return p.price; // Markdown expirÃ© â†’ prix normal
+      return p.price; // Markdown expirÃƒÂ© Ã¢â€ â€™ prix normal
     }
     return p.markdownPrice;
   }
   return p.price;
 }
 
-// VÃ©rifier si un produit a un markdown actif
+// VÃƒÂ©rifier si un produit a un markdown actif
 export function hasActiveMarkdown(p: Pick<Product, "markdownPrice" | "markdownExpiresAt">): boolean {
   if (p.markdownPrice == null || p.markdownPrice <= 0) return false;
   if (p.markdownExpiresAt && new Date(p.markdownExpiresAt) < new Date()) return false;

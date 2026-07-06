@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNotifications } from "@/lib/hooks/useApi";
+import { useI18n } from "@/lib/i18n/context";
 import type { ApiNotification } from "@/lib/api";
 import type { LucideIcon } from "lucide-react";
 
@@ -39,6 +40,7 @@ const PRIORITY_DOT: Record<string, string> = {
 
 export function NotificationBell() {
   const router = useRouter();
+  const { t } = useI18n();
   const { notifications, summary, unreadCount, criticalCount, lastChecked, reload } = useNotifications();
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -90,7 +92,7 @@ export function NotificationBell() {
           <div className="px-4 py-3 border-b border-[var(--border)] flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Bell className="w-4 h-4 text-[var(--brand)]" />
-              <h3 className="text-sm font-bold text-[var(--text-primary)]">Notifications</h3>
+              <h3 className="text-sm font-bold text-[var(--text-primary)]">{t.notifications.title}</h3>
               {unreadCount > 0 && (
                 <span className="text-[10px] font-bold text-white bg-[var(--brand)] px-1.5 py-0.5 rounded-full tabular-nums">
                   {unreadCount}
@@ -109,7 +111,7 @@ export function NotificationBell() {
           {summary && (
             <div className="px-4 py-2.5 bg-slate-50 border-b border-[var(--border-subtle)]">
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[11px] font-medium text-[var(--text-muted)]">CA du jour</span>
+                <span className="text-[11px] font-medium text-[var(--text-muted)]">{t.notifications.dailyRevenue}</span>
                 <span className="text-[11px] font-bold text-[var(--text-primary)] tabular-nums">
                   {summary.revenue.toLocaleString("fr-FR")} / {summary.revenueGoal.toLocaleString("fr-FR")} FCFA
                 </span>
@@ -131,8 +133,8 @@ export function NotificationBell() {
             {notifications.length === 0 ? (
               <div className="px-4 py-12 text-center">
                 <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto mb-2" />
-                <p className="text-sm font-medium text-[var(--text-primary)]">Tout est sous contrôle!</p>
-                <p className="text-xs text-[var(--text-muted)] mt-0.5">Aucune notification pour le moment</p>
+                <p className="text-sm font-medium text-[var(--text-primary)]">{t.notifications.allGood}</p>
+                <p className="text-xs text-[var(--text-muted)] mt-0.5">{t.notifications.noNotifications}</p>
               </div>
             ) : (
               notifications.map((notif) => {
@@ -175,13 +177,13 @@ export function NotificationBell() {
           {/* Footer */}
           <div className="px-4 py-2.5 border-t border-[var(--border)] bg-slate-50 flex items-center justify-between">
             <span className="text-[10px] text-[var(--text-muted)]">
-              {lastChecked ? `Vérifié à ${lastChecked.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}` : "Chargement..."}
+              {lastChecked ? `${t.notifications.checked} ${lastChecked.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}` : t.notifications.loading}
             </span>
             <button
               onClick={reload}
               className="text-[10px] font-medium text-[var(--brand)] hover:underline"
             >
-              Actualiser
+              {t.notifications.refresh}
             </button>
           </div>
         </div>

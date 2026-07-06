@@ -106,14 +106,14 @@ export function useServerProductSearch() {
   const [bestsellers, setBestsellers] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const search = useCallback(async (query: string, category?: string) => {
-    if (!query || query.length < 1) {
+  const search = useCallback(async (query: string, category?: string, stockStatus?: string) => {
+    if ((!query || query.length < 1) && !category && !stockStatus) {
       setResults([]);
       return;
     }
     try {
       setLoading(true);
-      const response = await productsApi.search({ q: query, category, limit: 100 });
+      const response = await productsApi.search({ q: query, category, stockStatus, limit: 100 });
       setResults(response.data.map(apiProductToFrontend));
     } catch (e) {
       console.warn("Erreur recherche server-side:", e);
@@ -241,6 +241,70 @@ export function useWeekTrend() {
 
   useEffect(() => {
     transactionsApi.weekTrend()
+      .then(setData)
+      .catch(() => {});
+  }, []);
+
+  return { data };
+}
+
+// ========================================
+// HOOK: useMonthlyGoal
+// Objectif mensuel (dashboard)
+// ========================================
+export function useMonthlyGoal() {
+  const [data, setData] = useState<{ current: number; goal: number; progress: number; transactions: number; remaining: number } | null>(null);
+
+  useEffect(() => {
+    transactionsApi.monthlyGoal()
+      .then(setData)
+      .catch(() => {});
+  }, []);
+
+  return { data };
+}
+
+// ========================================
+// HOOK: useMonthlyTopProducts
+// Top produits vendus ce mois (dashboard)
+// ========================================
+export function useMonthlyTopProducts(limit?: number) {
+  const [data, setData] = useState<Array<{ productId: string; productName: string; sku: string; quantity: number; revenue: number }>>([]);
+
+  useEffect(() => {
+    transactionsApi.topProducts(limit)
+      .then(setData)
+      .catch(() => {});
+  }, [limit]);
+
+  return { data };
+}
+
+// ========================================
+// HOOK: useAverageBasket
+// Panier moyen (dashboard)
+// ========================================
+export function useAverageBasket() {
+  const [data, setData] = useState<{ average: number; total: number; transactions: number } | null>(null);
+
+  useEffect(() => {
+    transactionsApi.averageBasket()
+      .then(setData)
+      .catch(() => {});
+  }, []);
+
+  return { data };
+}
+
+// ========================================
+// HOOK: useUnpaidInvoices
+// Factures impayees (dashboard)
+// ========================================
+export function useUnpaidInvoices() {
+  const [data, setData] = useState<{ totalUnpaid: number; count: number; partial: { amount: number; count: number }; overdue: { amount: number; count: number } } | null>(null);
+
+  useEffect(() => {
+    invoicesApi.unpaidStats()
       .then(setData)
       .catch(() => {});
   }, []);
@@ -864,8 +928,7 @@ export function useMarkdownSuggestions() {
 //  useProfitAnalysis, useInventoryValuation already defined above via useApi)
 // ========================================
 export function useDiscountsReport(startDate: string, endDate: string) {
-  // Pas d'endpoint dédié aux remises — on dérive du sales report
-  return useApi(() => reportsApi.sales(startDate, endDate), [startDate, endDate]);
+  return useApi(() => reportsApi.discounts(startDate, endDate), [startDate, endDate]);
 }
 
 // ========================================

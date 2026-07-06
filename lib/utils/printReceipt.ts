@@ -71,22 +71,22 @@ export function reprintTicket(
       <style>
         @page { size: 80mm auto; margin: 0; }
         * { -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; padding: 0; box-sizing: border-box; }
-        html, body { width: 72mm; max-width: 72mm; margin: 0 auto; padding: 0; }
-        body { padding: 1mm 1mm 2mm; font-family: 'Courier New', monospace; color: #000; font-size: 11px; line-height: 1.3; font-weight: bold; }
-        h1 { font-size: 14px; text-align: center; margin: 0; font-weight: bold; letter-spacing: 0.5px; }
+        html, body { width: 76mm; max-width: 76mm; min-width: 76mm; margin: 0 auto; padding: 0; overflow: hidden; }
+        body { padding: 2mm 2mm 4mm; font-family: 'Courier New', monospace; color: #000; font-size: 10px; line-height: 1.3; font-weight: bold; }
+        h1 { font-size: 13px; text-align: center; margin: 0; font-weight: bold; letter-spacing: 0.5px; }
         .center { text-align: center; }
-        .dashed { text-align: center; font-size: 10px; letter-spacing: 1px; margin: 2px 0; white-space: nowrap; }
+        .dashed { text-align: center; font-size: 9px; letter-spacing: 1px; margin: 2px 0; white-space: nowrap; overflow: hidden; }
         .dashed::before { content: "--------------------------------"; }
         table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-        td { padding: 0; vertical-align: top; }
-        .total { font-size: 13px; font-weight: bold; white-space: nowrap; }
-        .right { text-align: right; white-space: nowrap; }
-        .small { font-size: 10px; white-space: nowrap; }
-        .xsmall { font-size: 9px; }
-        .item-name { font-size: 10px; font-weight: bold; white-space: normal; word-wrap: break-word; }
-        .item-detail { font-size: 10px; white-space: nowrap; }
+        td { padding: 0; vertical-align: top; overflow: hidden; }
+        .total { font-size: 12px; font-weight: bold; white-space: nowrap; }
+        .right { text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .small { font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .xsmall { font-size: 8px; }
+        .item-name { font-size: 9px; font-weight: bold; white-space: normal; word-wrap: break-word; }
+        .item-detail { font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         @media print {
-          html, body { width: 72mm; max-width: 72mm; padding: 1mm 1mm 2mm; }
+          html, body { width: 76mm; max-width: 76mm; min-width: 76mm; padding: 2mm 2mm 4mm; overflow: hidden; }
           * { page-break-inside: avoid; break-inside: avoid; }
         }
       </style>

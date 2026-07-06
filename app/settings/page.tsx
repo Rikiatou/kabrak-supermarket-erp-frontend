@@ -41,6 +41,18 @@ export default function SettingsPage() {
     if (config) {
       setForm(config);
       setLoading(false);
+    } else {
+      // Mode sans licence : config par défaut
+      setForm({
+        supermarketName: "KABRAK SUPERMARKET",
+        primaryColor: "#0ea5e9",
+        currency: "FCFA",
+        taxRate: 0,
+        receiptShowLogo: false,
+        enableLoyalty: false,
+        enableAutoPrint: false,
+      });
+      setLoading(false);
     }
   }, [config]);
 
@@ -106,6 +118,8 @@ export default function SettingsPage() {
     if (ok) {
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
+    } else {
+      alert("Erreur lors de la sauvegarde. Vérifiez votre connexion et que vous êtes connecté.");
     }
     setSaving(false);
   };

@@ -7,10 +7,12 @@ import { useAuth } from "@/lib/auth/context";
 import { authApi, type ApiCashier } from "@/lib/api";
 import { ROLE_HOME, type Role } from "@/lib/auth/roles";
 import { Button } from "@/components/ui/Button";
+import { useI18n } from "@/lib/i18n/context";
 
 export default function LoginPage() {
   const router = useRouter();
   const { login, user, isAuthenticated, loading: authLoading } = useAuth();
+  const { t } = useI18n();
   const [cashiers, setCashiers] = useState<ApiCashier[]>([]);
   const [selectedCashier, setSelectedCashier] = useState<ApiCashier | null>(null);
   const [pin, setPin] = useState("");
@@ -32,7 +34,7 @@ export default function LoginPage() {
 
   const handleLogin = async () => {
     if (!selectedCashier || !pin) {
-      setError("Veuillez sÃ©lectionner un employÃ© et entrer votre PIN");
+      setError(t.login.errorSelectEmployee);
       return;
     }
 
@@ -45,7 +47,7 @@ export default function LoginPage() {
       const role = selectedCashier.role as Role;
       router.push(ROLE_HOME[role] || "/dashboard");
     } else {
-      setError("PIN incorrect ou compte inaccessible");
+      setError(t.login.errorIncorrectPin);
       setPin("");
     }
     setLoading(false);
@@ -71,7 +73,7 @@ export default function LoginPage() {
       const role = selectedCashier.role as Role;
       router.push(ROLE_HOME[role] || "/dashboard");
     } else {
-      setError("PIN incorrect");
+      setError(t.login.errorPin);
       setPin("");
     }
     setLoading(false);
@@ -88,8 +90,8 @@ export default function LoginPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-lg mb-3">
             <ShoppingBag className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">Kabrak Supermarket</h1>
-          <p className="text-sm text-slate-500 mt-1">ERP - Connexion Caisse</p>
+          <h1 className="text-2xl font-bold text-slate-900">{t.login.appName}</h1>
+          <p className="text-sm text-slate-500 mt-1">{t.login.subtitle}</p>
         </div>
 
         {/* Card */}
@@ -98,13 +100,13 @@ export default function LoginPage() {
           {!selectedCashier && (
             <>
               <h2 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
-                <User className="w-4 h-4" /> SÃ©lectionnez votre profil
+                <User className="w-4 h-4" /> {t.login.selectProfile}
               </h2>
               <div className="space-y-2 max-h-80 overflow-y-auto">
                 {cashiers.length === 0 ? (
                   <div className="text-center py-8">
                     <Loader2 className="w-6 h-6 text-slate-400 animate-spin mx-auto mb-2" />
-                    <p className="text-xs text-slate-400">Chargement...</p>
+                    <p className="text-xs text-slate-400">{t.login.loading}</p>
                   </div>
                 ) : (
                   cashiers.map((cashier) => (
@@ -155,7 +157,7 @@ export default function LoginPage() {
                   }}
                   className="text-xs text-slate-400 hover:text-slate-600"
                 >
-                  Changer
+                  {t.login.change}
                 </button>
               </div>
 
@@ -213,14 +215,14 @@ export default function LoginPage() {
                   disabled={loading || !pin}
                   className="h-14 rounded-xl bg-slate-50 hover:bg-slate-100 active:scale-95 transition-all text-sm font-medium text-slate-500 disabled:opacity-50"
                 >
-                  Effacer
+                  {t.login.clear}
                 </button>
               </div>
 
               {loading && (
                 <div className="flex items-center justify-center gap-2 mt-4 text-sm text-slate-500">
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Connexion...
+                  {t.login.connecting}
                 </div>
               )}
             </>

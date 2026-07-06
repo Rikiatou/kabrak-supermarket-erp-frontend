@@ -5,7 +5,7 @@ export const STORE_INFO = {
   name: "KABRAK RETAIL",
   address: "Limbe, Cameroun",
   phone: "Tel: +237 6XX XXX XXX",
-  receiptFooter: "goods sold are not refundable\nThanks for patronizing us",
+  receiptFooter: "Merci de votre confiance\nKABRAK RETAIL",
   logoUrl: null as string | null,
 };
 

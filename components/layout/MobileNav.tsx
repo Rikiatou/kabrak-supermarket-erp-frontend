@@ -6,21 +6,22 @@ import { LayoutDashboard, ShoppingCart, Package, BarChart3, Menu } from "lucide-
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth/context";
 import { canAccess } from "@/lib/auth/roles";
-
-const allTabs = [
-  { href: "/dashboard", label: "Accueil", icon: LayoutDashboard },
-  { href: "/pos", label: "Caisse", icon: ShoppingCart },
-  { href: "/stocks", label: "Stock", icon: Package },
-  { href: "/rapports", label: "Rapports", icon: BarChart3 },
-];
+import { useI18n } from "@/lib/i18n/context";
 
 export function MobileNav() {
   const pathname = usePathname();
   const { user } = useAuth();
+  const { t } = useI18n();
+  const allTabs = [
+    { href: "/dashboard", label: t.mobileNav.home, icon: LayoutDashboard },
+    { href: "/pos", label: t.mobileNav.pos, icon: ShoppingCart },
+    { href: "/stocks", label: t.mobileNav.stock, icon: Package },
+    { href: "/rapports", label: t.mobileNav.reports, icon: BarChart3 },
+  ];
   const tabs = allTabs.filter((tab) => canAccess(user?.role, tab.href));
 
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-[var(--border)] z-30 safe-area-pb">
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-[var(--border)] z-[60] safe-area-pb">
       <div className="flex items-center justify-around h-14 px-2">
         {tabs.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + "/");

@@ -88,7 +88,14 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
   // Mettre à jour la config
   const updateConfig = useCallback(
     async (updates: Partial<ClientConfig>): Promise<boolean> => {
-      if (!license) return false;
+      // Mode sans licence (mono-magasin) : sauvegarder en localStorage uniquement
+      if (!license) {
+        const currentCfg = LicenseValidator.getConfig();
+        const merged = { ...currentCfg, ...updates } as ClientConfig;
+        LicenseValidator.saveConfigLocal(merged);
+        setConfig(merged);
+        return true;
+      }
       try {
         const cfg = await LicenseValidator.updateConfig(license.licenseKey, updates);
         if (cfg) {

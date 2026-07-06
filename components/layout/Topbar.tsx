@@ -1,7 +1,8 @@
 "use client";
 
-import { Bell, Search, Wifi, WifiOff, Menu } from "lucide-react";
+import { Bell, Search, Wifi, WifiOff, Menu, ArrowLeft } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { cn, formatDate, formatTime } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/context";
 import { NotificationBell } from "./NotificationBell";
@@ -14,8 +15,13 @@ interface TopbarProps {
 
 export function Topbar({ title, subtitle, onMenuClick }: TopbarProps) {
   const { t } = useI18n();
+  const router = useRouter();
+  const pathname = usePathname();
   const [now, setNow] = useState(new Date());
   const [online, setOnline] = useState(true);
+
+  // Show back button on all pages except dashboard
+  const showBack = pathname !== "/dashboard";
 
   useEffect(() => {
     const tick = setInterval(() => setNow(new Date()), 60000);
@@ -31,8 +37,17 @@ export function Topbar({ title, subtitle, onMenuClick }: TopbarProps) {
     };
   }, []);
 
+  const handleBack = () => {
+    // If there's history, go back; otherwise go to dashboard
+    if (window.history.length > 1) {
+      router.back();
+    } else {
+      router.push("/dashboard");
+    }
+  };
+
   return (
-    <header className="h-14 lg:h-16 bg-white border-b border-[var(--border)] flex items-center px-3 lg:px-6 gap-2 lg:gap-4 sticky top-0 z-30">
+    <header className="h-14 lg:h-16 bg-white border-b border-[var(--border)] flex items-center px-3 lg:px-6 gap-2 lg:gap-4 sticky top-0 z-[60]">
       {/* Menu button - mobile only */}
       {onMenuClick && (
         <button
@@ -40,6 +55,17 @@ export function Topbar({ title, subtitle, onMenuClick }: TopbarProps) {
           className="lg:hidden w-9 h-9 flex items-center justify-center rounded-lg hover:bg-[var(--surface-hover)] transition-colors shrink-0"
         >
           <Menu className="w-5 h-5 text-[var(--text-primary)]" />
+        </button>
+      )}
+
+      {/* Back button - shown on all pages except dashboard */}
+      {showBack && (
+        <button
+          onClick={handleBack}
+          className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-[var(--surface-hover)] transition-colors shrink-0"
+          title={t.common.back || "Back"}
+        >
+          <ArrowLeft className="w-5 h-5 text-[var(--text-primary)]" />
         </button>
       )}
 

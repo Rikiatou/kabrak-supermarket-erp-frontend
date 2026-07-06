@@ -148,12 +148,15 @@ export function ZReportReceipt({
           <title>Z-Report ${report.registerName}</title>
           <style>
             @page { size: 80mm auto; margin: 0; }
-            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            html, body { width: 80mm; max-width: 80mm; margin: 0; padding: 0; }
-            body { padding: 2mm 2mm 4mm; font-family: 'Courier New', monospace; color: #000; font-size: 12px; line-height: 1.4; font-weight: bold; }
+            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; box-sizing: border-box; }
+            html, body { width: 80mm; max-width: 80mm; min-width: 80mm; margin: 0; padding: 0; overflow: hidden; }
+            body { padding: 2mm 2mm 4mm; font-family: 'Courier New', monospace; color: #000; font-size: 10px; line-height: 1.35; font-weight: bold; }
+            /* Chaque ligne fait exactement la largeur du papier, les montants ne sont jamais coupés */
+            body > div > div { max-width: 76mm; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
             @media print {
-              html, body { width: 80mm; max-width: 80mm; padding: 2mm 2mm 4mm; }
+              html, body { width: 80mm; max-width: 80mm; min-width: 80mm; padding: 2mm 2mm 4mm; overflow: hidden; }
               * { page-break-inside: avoid; break-inside: avoid; }
+              .no-print { display: none !important; }
             }
           </style>
         </head>

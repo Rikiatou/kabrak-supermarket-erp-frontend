@@ -45,6 +45,12 @@ export class LicenseValidator {
     }
   }
 
+  // Sauvegarder la config en localStorage (mode sans licence / offline)
+  static saveConfigLocal(config: ClientConfig) {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+  }
+
   // Charger les magasins
   static getStores(): Store[] {
     if (typeof window === "undefined") return [];
@@ -164,9 +170,16 @@ export class LicenseValidator {
     licenseKey: string,
     updates: Partial<ClientConfig>
   ): Promise<ClientConfig | null> {
+    const token =
+      typeof window !== "undefined"
+        ? localStorage.getItem("kabrak_auth_token")
+        : null;
     const res = await fetch(`${API_URL}/licenses/${licenseKey}/config`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       body: JSON.stringify(updates),
     });
 

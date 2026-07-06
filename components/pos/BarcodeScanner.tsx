@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useRef, useState } from "react";
 import { BrowserMultiFormatReader, IScannerControls } from "@zxing/browser";
@@ -36,7 +36,7 @@ export function BarcodeScanner({ onScan, onClose, result }: BarcodeScannerProps)
 
     (async () => {
       try {
-        // Demander la caméra arrière (ou la première disponible)
+        // Demander la camÃ©ra arriÃ¨re (ou la premiÃ¨re disponible)
         const devices = await BrowserMultiFormatReader.listVideoInputDevices();
         const backCam = devices.find((d) => /back|rear|environment/i.test(d.label)) || devices[0];
 
@@ -50,7 +50,7 @@ export function BarcodeScanner({ onScan, onClose, result }: BarcodeScannerProps)
             const code = result.getText();
             const now = Date.now();
 
-            // Éviter les doublons : même code dans les 2 secondes
+            // Ã‰viter les doublons : mÃªme code dans les 2 secondes
             const last = lastScanRef.current;
             if (last && last.code === code && now - last.time < 2000) return;
 
@@ -63,7 +63,7 @@ export function BarcodeScanner({ onScan, onClose, result }: BarcodeScannerProps)
       } catch (e: any) {
         if (mounted) {
           setStarting(false);
-          setError(e?.message || "Impossible d'accéder à la caméra");
+          setError(e?.message || "Impossible d'accÃ©der Ã  la camÃ©ra");
         }
       }
     })();
@@ -111,7 +111,7 @@ export function BarcodeScanner({ onScan, onClose, result }: BarcodeScannerProps)
               <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-emerald-400 rounded-tr-xl" />
               <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-emerald-400 rounded-bl-xl" />
               <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-emerald-400 rounded-br-xl" />
-              {/* Ligne de scan animée */}
+              {/* Ligne de scan animÃ©e */}
               <div className="absolute left-2 right-2 top-1/2 h-0.5 bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse" />
             </div>
           </div>
@@ -121,7 +121,7 @@ export function BarcodeScanner({ onScan, onClose, result }: BarcodeScannerProps)
         {starting && !error && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/50">
             <Loader2 className="w-8 h-8 text-white animate-spin" />
-            <p className="text-white text-sm">Activation de la caméra...</p>
+            <p className="text-white text-sm">Activation de la camÃ©ra...</p>
           </div>
         )}
 
@@ -129,10 +129,10 @@ export function BarcodeScanner({ onScan, onClose, result }: BarcodeScannerProps)
         {error && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center">
             <AlertCircle className="w-12 h-12 text-red-400" />
-            <p className="text-white font-semibold">Caméra indisponible</p>
+            <p className="text-white font-semibold">CamÃ©ra indisponible</p>
             <p className="text-white/60 text-sm max-w-xs">{error}</p>
             <p className="text-white/40 text-xs mt-2">
-              Vérifiez les permissions du navigateur et utilisez HTTPS
+              VÃ©rifiez les permissions du navigateur et utilisez HTTPS
             </p>
           </div>
         )}
@@ -148,10 +148,10 @@ export function BarcodeScanner({ onScan, onClose, result }: BarcodeScannerProps)
               : "bg-red-500/90 text-white")
           }>
             {result.status === "success"
-              ? "✓ " + result.code
+              ? "âœ“ " + result.code
               : result.status === "out_of_stock"
-              ? "Stock épuisé : " + result.code
-              : "Non trouvé : " + result.code}
+              ? "Stock Ã©puisÃ© : " + result.code
+              : "Non trouvÃ© : " + result.code}
           </div>
         )}
       </div>
@@ -159,7 +159,7 @@ export function BarcodeScanner({ onScan, onClose, result }: BarcodeScannerProps)
       {/* Footer */}
       <div className="p-4 bg-black/80 text-center">
         <p className="text-white/60 text-xs">
-          Pointez la caméra vers un code-barres · EAN-13, EAN-8, UPC, Code128, QR
+          Pointez la camÃ©ra vers un code-barres Â· EAN-13, EAN-8, UPC, Code128, QR
         </p>
       </div>
     </div>

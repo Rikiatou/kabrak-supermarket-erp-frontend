@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { useI18n } from "@/lib/i18n/context";
@@ -8,6 +9,11 @@ import { cn } from "@/lib/utils";
 export default function WelcomePage() {
   const router = useRouter();
   const { locale, setLocale } = useI18n();
+
+  // Mono-magasin: rediriger directement vers /login
+  useEffect(() => {
+    router.replace("/login");
+  }, [router]);
 
   const content = {
     en: {
@@ -81,7 +87,7 @@ export default function WelcomePage() {
               ))}
             </div>
             <button
-              onClick={() => router.push("/activate")}
+              onClick={() => router.push("/login")}
               className="text-[13px] text-neutral-500 hover:text-neutral-900 transition-colors"
             >
               {c.signIn}
@@ -116,14 +122,14 @@ export default function WelcomePage() {
 
         <div className="flex flex-col sm:flex-row items-center gap-3">
           <button
-            onClick={() => router.push("/activate")}
+            onClick={() => router.push("/login")}
             className="flex items-center gap-2 px-5 py-2.5 bg-neutral-900 text-white text-[14px] font-medium rounded-xl hover:bg-neutral-800 active:scale-[0.98] transition-all"
           >
-            {c.activate}
+            {c.signIn}
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
           <button
-            onClick={() => router.push("/activate")}
+            onClick={() => router.push("/login")}
             className="px-5 py-2.5 text-[14px] text-neutral-500 hover:text-neutral-900 transition-colors"
           >
             {c.access}

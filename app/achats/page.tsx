@@ -128,7 +128,7 @@ export default function AchatsPage() {
   }, [showDeliveryForm, showNewOrder, showNewSupplier, selectedSupplier, showNewProductModal]);
   type DeliveryLine = {
     productId: string;
-    productLabel: string;    // nom affiché du produit sélectionné (recherche server-side)
+    productLabel: string;    // nom affichÃ© du produit sÃ©lectionnÃ© (recherche server-side)
     qty: number;
     unitPrice: number;       // prix d'achat (cost)
     sellPrice: number;       // prix de vente
@@ -160,7 +160,7 @@ export default function AchatsPage() {
     // Chercher via le backend (barcode + SKU, tous les produits)
     const found = await prodScanBarcode(code);
     if (found) {
-      // Vérifier si déjà dans les lignes
+      // VÃ©rifier si dÃ©jÃ  dans les lignes
       const existingIdx = deliveryLines.findIndex((l) => l.productId === found.id);
       if (existingIdx >= 0) {
         updateDeliveryLine(existingIdx, "qty", deliveryLines[existingIdx].qty + 1);
@@ -175,20 +175,20 @@ export default function AchatsPage() {
       toast(`${found.name} ${t.achats.scanProductAdded}`, "success");
       setTimeout(() => scanInputRef.current?.focus(), 50);
     } else {
-      // Produit non trouvé → ouvrir le modal de création de produit avec le barcode pré-rempli
+      // Produit non trouvÃ© â†’ ouvrir le modal de crÃ©ation de produit avec le barcode prÃ©-rempli
       setPendingBarcode(code);
       setShowNewProductModal(true);
       setScanInput("");
     }
   }, [scanInput, prodScanBarcode, deliveryLines, toast]);
 
-  // Global barcode scanner — actif seulement quand le formulaire de livraison est ouvert
+  // Global barcode scanner â€” actif seulement quand le formulaire de livraison est ouvert
   useBarcodeScanner(
     useCallback((code: string) => { handleScanProduct(code); }, [handleScanProduct]),
     !showDeliveryForm || showNewProductModal
   );
 
-  // Handler quand un produit est créé depuis le modal
+  // Handler quand un produit est crÃ©Ã© depuis le modal
   const handleProductCreated = useCallback(async (data: Omit<Product, "id">) => {
     try {
       const created = await productsApi.create({
@@ -203,7 +203,7 @@ export default function AchatsPage() {
         unit: data.unit,
         expiryDate: data.expiryDate || undefined,
       });
-      // Ajouter le produit créé à la liste du bordereau
+      // Ajouter le produit crÃ©Ã© Ã  la liste du bordereau
       setDeliveryLines((l) => [...l, {
         productId: created.id, productLabel: `${created.name} (${created.sku})`, qty: 1,
         unitPrice: created.costPrice || 0,
@@ -230,7 +230,7 @@ export default function AchatsPage() {
 
   const handleSaveDelivery = useCallback(async () => {
     let supplierId = deliverySupplierId;
-    // If typed a name manually with no match → auto-create the supplier
+    // If typed a name manually with no match â†’ auto-create the supplier
     if (!supplierId && deliverySupplierName.trim()) {
       try {
         const created = await suppliersApi.create({ name: deliverySupplierName.trim(), contact: "", phone: "" });
@@ -259,7 +259,7 @@ export default function AchatsPage() {
           expiryDate: l.expiryDate || undefined,
         })),
       });
-      // Créer un lot (batch) pour chaque ligne avec date d'expiration
+      // CrÃ©er un lot (batch) pour chaque ligne avec date d'expiration
       for (const l of validLines) {
         await batchesApi.create({
           productId: l.productId,
@@ -303,7 +303,7 @@ export default function AchatsPage() {
         @media print{button{display:none}}
       </style></head><body>
       <div class="meta">
-        <div><strong>${t.achats.supplierLabel}</strong> ${sup?.name ?? "—"}</div>
+        <div><strong>${t.achats.supplierLabel}</strong> ${sup?.name ?? "â€”"}</div>
         <div><strong>${t.achats.dateLabelPrint}</strong> ${order.date}</div>
         <div><strong>${t.achats.refLabel}</strong> <strong>${order.id}</strong></div>
       </div>
@@ -391,7 +391,7 @@ export default function AchatsPage() {
   const orders = (apiOrders ?? []).map((o) => {
     const supplier = suppliers.find((s) => s.id === o.supplierId)
       || (o.supplier ? { id: o.supplier.id, name: o.supplier.name, contact: o.supplier.contact || "", phone: o.supplier.phone || "", email: o.supplier.email || "", address: o.supplier.address || "", paymentTerms: "", rating: 0, totalOrders: 0, pendingOrders: 0 } : null)
-      || { id: o.supplierId, name: "—", contact: "", phone: "", email: "", address: "", paymentTerms: "", rating: 0, totalOrders: 0, pendingOrders: 0 };
+      || { id: o.supplierId, name: "â€”", contact: "", phone: "", email: "", address: "", paymentTerms: "", rating: 0, totalOrders: 0, pendingOrders: 0 };
     return {
       id: o.orderNumber,
       supplier,
@@ -581,7 +581,7 @@ export default function AchatsPage() {
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-1">
                         <button
-                          onClick={() => toast(`${order.id} — ${order.supplier.name}`, "info")}
+                          onClick={() => toast(`${order.id} â€” ${order.supplier.name}`, "info")}
                           className="px-2.5 py-1 text-xs font-medium text-[var(--brand)] bg-[var(--brand-light)] rounded-lg hover:bg-blue-100 transition-colors"
                         >
                           {t.common.view}
@@ -735,13 +735,13 @@ export default function AchatsPage() {
                 />
               </div>
 
-              {/* Scanner barcode — global, pas besoin de cliquer */}
+              {/* Scanner barcode â€” global, pas besoin de cliquer */}
               <div className="bg-[#f0fdf4] border-2 border-[#86efac] rounded-xl p-3">
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-2 flex-1">
                     <ScanLine className="w-4 h-4 text-[#16a34a] shrink-0 animate-pulse" />
                     <span className="text-sm font-medium text-[#15803d]">
-                      {t.stocks.scannerReady} — {t.achats.scanHint}
+                      {t.stocks.scannerReady} â€” {t.achats.scanHint}
                     </span>
                   </div>
                   {/* Fallback saisie manuelle */}
@@ -778,7 +778,7 @@ export default function AchatsPage() {
                     const lineTotal = line.qty * line.unitPrice;
                     return (
                       <div key={i} className="border border-[var(--border)] rounded-lg p-2 space-y-1.5">
-                        {/* Ligne 1: Produit — recherche server-side (tous les produits) + bouton nouveau produit */}
+                        {/* Ligne 1: Produit â€” recherche server-side (tous les produits) + bouton nouveau produit */}
                         <div className="grid grid-cols-[1fr_30px] gap-1.5 items-center relative">
                             <input
                               type="text"
@@ -811,7 +811,7 @@ export default function AchatsPage() {
                                     }}
                                     className="w-full text-left px-2 py-1.5 text-xs hover:bg-slate-50 border-b border-[var(--border)] last:border-0 truncate"
                                   >
-                                    {p.name} ({p.sku}) — Stock: {p.stock} {p.unit}
+                                    {p.name} ({p.sku}) â€” Stock: {p.stock} {p.unit}
                                   </button>
                                 ))}
                               </div>
@@ -825,7 +825,7 @@ export default function AchatsPage() {
                             </button>
                         </div>
 
-                        {/* Ligne 2: Qté, P. Achat, P. Vente, Total, Expiration, Delete */}
+                        {/* Ligne 2: QtÃ©, P. Achat, P. Vente, Total, Expiration, Delete */}
                         <div className="grid grid-cols-[60px_80px_80px_80px_90px_30px] gap-1.5 items-center">
                           <input
                             type="number" min="1" value={line.qty}
@@ -848,7 +848,7 @@ export default function AchatsPage() {
                             title={t.achats.colSellPrice}
                           />
                           <div className="text-xs font-semibold text-[var(--text-primary)] text-right tabular-nums px-1">
-                            {lineTotal > 0 ? formatCurrency(lineTotal) : "—"}
+                            {lineTotal > 0 ? formatCurrency(lineTotal) : "â€”"}
                           </div>
                           <input
                             type="date"
@@ -1000,7 +1000,7 @@ export default function AchatsPage() {
               </div>
             </div>
             <div className="p-4 border-t border-[var(--border)] flex gap-2">
-              <Button variant="secondary" className="flex-1" size="md" icon={<TrendingUp className="w-4 h-4" />} onClick={() => toast(`${t.achats.orderHistory} — ${selectedSupplier.name}`, "info")}>
+              <Button variant="secondary" className="flex-1" size="md" icon={<TrendingUp className="w-4 h-4" />} onClick={() => toast(`${t.achats.orderHistory} â€” ${selectedSupplier.name}`, "info")}>
                 {t.achats.orderHistory}
               </Button>
               <Button className="flex-1" size="md" icon={<Plus className="w-4 h-4" />} onClick={() => { setSelectedSupplier(null); openNewOrder(selectedSupplier); }}>
@@ -1040,21 +1040,21 @@ export default function AchatsPage() {
 
               let result;
               
-              // Si "Direct Receive" est coché, utiliser createDirect pour mettre à jour le stock automatiquement
+              // Si "Direct Receive" est cochÃ©, utiliser createDirect pour mettre Ã  jour le stock automatiquement
               if (order.directReceive) {
                 result = await purchaseOrdersApi.createDirect({
                   ...orderData,
                   invoiceNumber: order.invoiceNumber,
                 });
                 toast(
-                  `${t.achats.orderReceived} ${result.orderNumber} — ${order.supplier.name} — ${formatCurrency(order.total)} — ${t.achats.invoice}: ${order.invoiceNumber}`,
+                  `${t.achats.orderReceived} ${result.orderNumber} â€” ${order.supplier.name} â€” ${formatCurrency(order.total)} â€” ${t.achats.invoice}: ${order.invoiceNumber}`,
                   "success"
                 );
               } else {
-                // Sinon, créer juste un bon de commande (sans mettre à jour le stock)
+                // Sinon, crÃ©er juste un bon de commande (sans mettre Ã  jour le stock)
                 result = await createOrder(orderData);
                 toast(
-                  `${t.achats.orderCreated} ${result.orderNumber} — ${order.supplier.name} — ${formatCurrency(order.total)}`,
+                  `${t.achats.orderCreated} ${result.orderNumber} â€” ${order.supplier.name} â€” ${formatCurrency(order.total)}`,
                   "success"
                 );
               }
@@ -1069,7 +1069,7 @@ export default function AchatsPage() {
         />
       )}
 
-      {/* New product modal — ouvert quand le scanner trouve un produit inexistant */}
+      {/* New product modal â€” ouvert quand le scanner trouve un produit inexistant */}
       {showNewProductModal && (
         <NewProductModal
           prefillBarcode={pendingBarcode}

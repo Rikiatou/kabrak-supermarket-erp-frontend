@@ -37,7 +37,15 @@ export default function ImportPage() {
 
   const handleFile = (file: File) => {
     if (!file.name.endsWith(".csv")) {
-      toast("Veuillez sélectionner un fichier CSV", "warning");
+      toast(t.import.selectCsv, "warning");
+      return;
+    }
+    if (file.size === 0) {
+      toast(t.import.emptyFile, "warning");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast(t.import.fileTooLarge, "warning");
       return;
     }
 
@@ -45,9 +53,9 @@ export default function ImportPage() {
     reader.onload = (e) => {
       const text = e.target?.result as string;
       setCsvText(text);
-      toast(`Fichier chargé: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`, "success");
+      toast(`${t.import.fileLoadedToast} ${file.name} (${(file.size / 1024).toFixed(1)} KB)`, "success");
     };
-    reader.readAsText(file);
+    reader.readAsText(file, "UTF-8");
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -59,7 +67,7 @@ export default function ImportPage() {
 
   const handleImport = async () => {
     if (!csvText) {
-      toast("Veuillez d'abord charger un fichier CSV", "warning");
+      toast(t.import.csvRequired, "warning");
       return;
     }
 
@@ -73,17 +81,17 @@ export default function ImportPage() {
         success: res.success,
         errors: res.errors,
         duration: res.duration,
-        errorDetails: [],
+        errorDetails: res.errorDetails || [],
       });
 
       if (res.errors === 0) {
-        toast(`${res.success} produits importés en ${(res.duration / 1000).toFixed(1)}s`, "success");
+        toast(`${res.success} ${t.import.products} ${t.import.importSuccess} ${(res.duration / 1000).toFixed(1)}s`, "success");
       } else {
-        toast(`${res.success} réussis, ${res.errors} erreurs sur ${res.total}`, "warning");
+        toast(`${res.success} ${t.import.success}, ${res.errors} ${t.import.errors} / ${res.total} ${t.import.total}`, "warning");
       }
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Erreur d'import";
-      toast(`Erreur d'import: ${msg}`, "warning");
+      const msg = e instanceof Error ? e.message : t.import.importError;
+      toast(`${t.import.importError}: ${msg}`, "warning");
     } finally {
       setImporting(false);
     }
@@ -91,9 +99,9 @@ export default function ImportPage() {
 
   const downloadTemplate = () => {
     const template = `sku,barcode,name,category,subCategory,brand,price,costPrice,stock,minStock,unit,expiryDate,imageUrl
-HV-5L-001,0620012345678,Huile Végétale 5L,Épicerie,Huiles,SCTB,5500,4100,50,20,bouteille,,
-EM-1.5-003,0610098765432,Eau Minérale 1.5L,Boissons,Eaux,SABC,400,250,200,50,bouteille,,
-RIZ-25-002,0640055667788,Riz Parfumé 25kg,Épicerie,Riz,Import Asie,22000,17500,42,15,sac,,`;
+HV-5L-001,0620012345678,Vegetable Oil 5L,Grocery,Oils,SCTB,5500,4100,50,20,bottle,,
+EM-1.5-003,0610098765432,Mineral Water 1.5L,Beverages,Waters,SABC,400,250,200,50,bottle,,
+RIZ-25-002,0640055667788,Scented Rice 25kg,Grocery,Rice,Import Asia,22000,17500,42,15,sack,,`;
 
     const blob = new Blob([template], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -112,30 +120,30 @@ RIZ-25-002,0640055667788,Riz Parfumé 25kg,Épicerie,Riz,Import Asie,22000,17500
 
   return (
     <AppShell
-      title="Import de Produits"
-      subtitle="Importez en masse vos produits depuis un fichier CSV"
+      title={t.import.title}
+      subtitle={t.import.subtitle}
     >
       <div className="max-w-4xl mx-auto space-y-4">
         {/* Instructions */}
         <Card padding="md">
           <CardHeader
-            title="Format CSV requis"
-            subtitle="Votre fichier doit contenir ces colonnes (les colonnes en gras sont obligatoires)"
+            title={t.import.csvFormat}
+            subtitle={t.import.csvFormatSub}
           />
           <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-2">
             {[
-              { name: "sku", required: true, desc: "Référence unique" },
-              { name: "barcode", required: true, desc: "Code-barres" },
-              { name: "name", required: true, desc: "Nom du produit" },
-              { name: "category", required: true, desc: "Catégorie" },
-              { name: "price", required: true, desc: "Prix en FCFA" },
-              { name: "stock", required: true, desc: "Stock actuel" },
-              { name: "costPrice", required: false, desc: "Prix d'achat" },
-              { name: "minStock", required: false, desc: "Stock min (défaut: 10)" },
-              { name: "unit", required: false, desc: "Unité (défaut: pièce)" },
-              { name: "expiryDate", required: false, desc: "YYYY-MM-DD" },
-              { name: "brand", required: false, desc: "Marque" },
-              { name: "imageUrl", required: false, desc: "URL image" },
+              { name: "sku", required: false, desc: t.import.colSku },
+              { name: "barcode", required: false, desc: t.import.colBarcode },
+              { name: "name", required: true, desc: t.import.colName },
+              { name: "category", required: true, desc: t.import.colCategory },
+              { name: "price", required: true, desc: t.import.colPrice },
+              { name: "stock", required: true, desc: t.import.colStock },
+              { name: "costPrice", required: false, desc: t.import.colCostPrice },
+              { name: "minStock", required: false, desc: t.import.colMinStock },
+              { name: "unit", required: false, desc: t.import.colUnit },
+              { name: "expiryDate", required: false, desc: t.import.colExpiryDate },
+              { name: "brand", required: false, desc: t.import.colBrand },
+              { name: "imageUrl", required: false, desc: t.import.colImageUrl },
             ].map((col) => (
               <div
                 key={col.name}
@@ -144,7 +152,7 @@ RIZ-25-002,0640055667788,Riz Parfumé 25kg,Épicerie,Riz,Import Asie,22000,17500
                 <code className="text-xs font-mono text-[var(--text-primary)]">{col.name}</code>
                 {col.required && (
                   <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full font-bold">
-                    requis
+                    {t.import.required}
                   </span>
                 )}
               </div>
@@ -157,7 +165,7 @@ RIZ-25-002,0640055667788,Riz Parfumé 25kg,Épicerie,Riz,Import Asie,22000,17500
               icon={<Download className="w-3.5 h-3.5" />}
               onClick={downloadTemplate}
             >
-              Télécharger le template
+              {t.import.downloadTemplate}
             </Button>
           </div>
         </Card>
@@ -165,8 +173,8 @@ RIZ-25-002,0640055667788,Riz Parfumé 25kg,Épicerie,Riz,Import Asie,22000,17500
         {/* Upload zone */}
         <Card padding="md">
           <CardHeader
-            title="Charger votre fichier CSV"
-            subtitle="Glissez-déposez votre fichier ou cliquez pour parcourir"
+            title={t.import.uploadCsv}
+            subtitle={t.import.uploadCsvSub}
           />
 
           <div
@@ -198,10 +206,10 @@ RIZ-25-002,0640055667788,Riz Parfumé 25kg,Épicerie,Riz,Import Asie,22000,17500
               <div className="flex flex-col items-center gap-2">
                 <CheckCircle2 className="w-10 h-10 text-emerald-500" />
                 <p className="text-sm font-medium text-[var(--text-primary)]">
-                  Fichier chargé
+                  {t.import.fileLoaded}
                 </p>
                 <p className="text-xs text-[var(--text-muted)]">
-                  {csvText.split("\n").length - 1} lignes détectées
+                  {csvText.split("\n").length - 1} {t.import.linesDetected}
                 </p>
                 <button
                   onClick={(e) => {
@@ -210,17 +218,17 @@ RIZ-25-002,0640055667788,Riz Parfumé 25kg,Épicerie,Riz,Import Asie,22000,17500
                   }}
                   className="mt-2 text-xs text-red-500 hover:text-red-600 flex items-center gap-1"
                 >
-                  <X className="w-3 h-3" /> Retirer
+                  <X className="w-3 h-3" /> {t.import.remove}
                 </button>
               </div>
             ) : (
               <div className="flex flex-col items-center gap-2">
                 <Upload className="w-10 h-10 text-[var(--text-muted)]" />
                 <p className="text-sm font-medium text-[var(--text-primary)]">
-                  Cliquez ou glissez votre CSV ici
+                  {t.import.clickOrDrag}
                 </p>
                 <p className="text-xs text-[var(--text-muted)]">
-                  Format: .csv (jusqu'à 50 000 produits)
+                  {t.import.formatHint}
                 </p>
               </div>
             )}
@@ -231,7 +239,7 @@ RIZ-25-002,0640055667788,Riz Parfumé 25kg,Épicerie,Riz,Import Asie,22000,17500
             <div className="mt-4 flex items-center justify-between">
               <div className="text-xs text-[var(--text-muted)] flex items-center gap-1.5">
                 <FileText className="w-3.5 h-3.5" />
-                Prêt à importer {csvText.split("\n").length - 1} produits
+                {t.import.readyToImport} {csvText.split("\n").length - 1} {t.import.products}
               </div>
               <Button
                 onClick={handleImport}
@@ -244,7 +252,7 @@ RIZ-25-002,0640055667788,Riz Parfumé 25kg,Épicerie,Riz,Import Asie,22000,17500
                   )
                 }
               >
-                {importing ? "Import en cours..." : "Lancer l'import"}
+                {importing ? t.import.importing : t.import.launchImport}
               </Button>
             </div>
           )}
@@ -254,24 +262,24 @@ RIZ-25-002,0640055667788,Riz Parfumé 25kg,Épicerie,Riz,Import Asie,22000,17500
         {result && (
           <Card padding="md">
             <CardHeader
-              title="Résultats de l'import"
-              subtitle={`Terminé en ${(result.duration / 1000).toFixed(1)} secondes`}
+              title={t.import.importResults}
+              subtitle={`${t.import.completedIn} ${(result.duration / 1000).toFixed(1)} ${t.import.seconds}`}
             />
             <div className="mt-4 grid grid-cols-3 gap-3">
               <div className="bg-emerald-50 rounded-xl p-4 text-center">
                 <CheckCircle2 className="w-6 h-6 text-emerald-500 mx-auto mb-1" />
                 <p className="text-2xl font-bold text-emerald-600">{result.success}</p>
-                <p className="text-xs text-emerald-700">Réussis</p>
+                <p className="text-xs text-emerald-700">{t.import.success}</p>
               </div>
               <div className="bg-red-50 rounded-xl p-4 text-center">
                 <AlertCircle className="w-6 h-6 text-red-500 mx-auto mb-1" />
                 <p className="text-2xl font-bold text-red-600">{result.errors}</p>
-                <p className="text-xs text-red-700">Erreurs</p>
+                <p className="text-xs text-red-700">{t.import.errors}</p>
               </div>
               <div className="bg-blue-50 rounded-xl p-4 text-center">
                 <FileText className="w-6 h-6 text-blue-500 mx-auto mb-1" />
                 <p className="text-2xl font-bold text-blue-600">{result.total}</p>
-                <p className="text-xs text-blue-700">Total</p>
+                <p className="text-xs text-blue-700">{t.import.total}</p>
               </div>
             </div>
 
@@ -279,12 +287,12 @@ RIZ-25-002,0640055667788,Riz Parfumé 25kg,Épicerie,Riz,Import Asie,22000,17500
             {result.errorDetails.length > 0 && (
               <div className="mt-4">
                 <p className="text-xs font-semibold text-[var(--text-secondary)] mb-2">
-                  Détails des erreurs ({result.errorDetails.length} affichés):
+                  {t.import.errorDetails} ({result.errorDetails.length} {t.import.shown}):
                 </p>
                 <div className="max-h-48 overflow-y-auto bg-[var(--background)] rounded-xl p-3 space-y-1">
                   {result.errorDetails.map((err, i) => (
                     <div key={i} className="text-xs flex items-start gap-2">
-                      <Badge variant="danger" size="sm">Ligne {err.row}</Badge>
+                      <Badge variant="danger" size="sm">{t.import.row} {err.row}</Badge>
                       <span className="text-[var(--text-secondary)]">{err.error}</span>
                     </div>
                   ))}
@@ -296,7 +304,7 @@ RIZ-25-002,0640055667788,Riz Parfumé 25kg,Épicerie,Riz,Import Asie,22000,17500
               <div className="mt-4 bg-emerald-50 rounded-xl p-4 flex items-center gap-3">
                 <CheckCircle2 className="w-5 h-5 text-emerald-500" />
                 <p className="text-sm text-emerald-700">
-                  Tous les {result.success} produits ont été importés avec succès!
+                  {t.import.allImported} {result.success} {t.import.productsImported}
                 </p>
               </div>
             )}
