@@ -85,8 +85,8 @@ export default function PlanningPage() {
   const [registersLoading, setRegistersLoading] = useState(true);
   useEffect(() => {
     setRegistersLoading(true);
-    schedulesApi.registers()
-      .then((regs) => setApiRegisters(regs))
+    (schedulesApi as any).registers()
+      .then((regs: any) => setApiRegisters(regs))
       .catch(() => {
         setApiRegisters([]);
         console.warn("Impossible de charger les caisses depuis le backend");
@@ -298,7 +298,7 @@ export default function PlanningPage() {
                                   >
                                     <div className="flex items-center gap-1 font-semibold">
                                       <Store className="w-3 h-3 shrink-0" />
-                                      <span className="truncate">{slot.registerName || reg?.name || t.common.register1}</span>
+                                      <span className="truncate">{(slot as any).registerName || reg?.name || t.common.register1}</span>
                                     </div>
                                     <div className="flex items-center gap-1 text-[10px] mt-0.5 opacity-80">
                                       <Clock className="w-2.5 h-2.5 shrink-0" />

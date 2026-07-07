@@ -81,7 +81,7 @@ export default function ImportPage() {
         success: res.success,
         errors: res.errors,
         duration: res.duration,
-        errorDetails: res.errorDetails || [],
+        errorDetails: (res as any).errorDetails || [],
       });
 
       if (res.errors === 0) {
