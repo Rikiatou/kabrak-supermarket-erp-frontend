@@ -83,7 +83,7 @@ export interface Transaction {
   discount: number;
   tax: number;
   total: number;
-  paymentMethod: "cash" | "card" | "mobile";
+  paymentMethod: "cash" | "card" | "mobile" | "orange" | "split";
   status: "completed" | "refunded" | "pending";
 }
 

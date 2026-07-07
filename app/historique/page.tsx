@@ -424,9 +424,10 @@ export default function HistoriquePage() {
                         "text-[10px] px-1.5 py-0.5 rounded-full font-medium",
                         tx.paymentMethod === "cash" ? "bg-emerald-100 text-emerald-700" :
                         tx.paymentMethod === "mobile" ? "bg-purple-100 text-purple-700" :
+                        tx.paymentMethod === "orange" ? "bg-orange-100 text-orange-700" :
                         "bg-blue-100 text-blue-700"
                       )}>
-                        {tx.paymentMethod}
+                        {tx.paymentMethod === "orange" ? "Orange Money" : tx.paymentMethod}
                       </span>
                     </div>
                     <div className="flex items-center gap-3 text-xs text-[var(--text-muted)] mt-0.5">
@@ -954,6 +955,7 @@ export default function HistoriquePage() {
                     >
                       <option value="cash">{t.common.cash}</option>
                       <option value="mobile">{t.common.mobile}</option>
+                      <option value="orange">{t.common.orange}</option>
                       <option value="card">{t.common.card}</option>
                     </select>
                   </div>

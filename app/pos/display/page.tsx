@@ -52,11 +52,21 @@ export default function CustomerDisplayPage() {
       setLang(getLang());
     };
     update();
+    // Écouter l'événement storage (déclenché par POS page)
     window.addEventListener("storage", update);
-    const interval = setInterval(update, 500); // fallback polling
+    // Fallback polling toutes les 5 secondes (au lieu de 500ms)
+    const interval = setInterval(update, 5000);
+    // Stop polling quand la page n'est pas visible (économie CPU)
+    const onVisibility = () => {
+      if (document.hidden) {
+        clearInterval(interval);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
       window.removeEventListener("storage", update);
       clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, []);
 

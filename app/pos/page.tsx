@@ -42,13 +42,14 @@ const TAX_RATE = 0.155;
 // Stable backend category keys (match DB seed data) - order matches CATEGORIES labels
 const CATEGORY_KEYS = ["Tous", "Grocery", "Beverages", "Dairy", "Hygiene", "Butchery", "Bakery", "Frozen"];
 
-type PaymentMethod = "cash" | "card" | "mobile" | "split";
+type PaymentMethod = "cash" | "card" | "mobile" | "orange" | "split";
 type CheckoutStep = "cart" | "payment" | "receipt";
 
 interface SplitPayment {
   cash: number;
   mobile: number;
   card: number;
+  orange: number;
 }
 
 interface ReceiptData {
@@ -97,7 +98,7 @@ export default function POSPage() {
   const [cashierDiscountAmount, setCashierDiscountAmount] = useState(0);
   const [cashierDiscountReason, setCashierDiscountReason] = useState("");
   const [showDiscountModal, setShowDiscountModal] = useState(false);
-  const [splitPayment, setSplitPayment] = useState<SplitPayment>({ cash: 0, mobile: 0, card: 0 });
+  const [splitPayment, setSplitPayment] = useState<SplitPayment>({ cash: 0, mobile: 0, card: 0, orange: 0 });
   const [selectedCustomer, setSelectedCustomer] = useState<ApiCustomer | null>(null);
   const [showCustomerSearch, setShowCustomerSearch] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
@@ -237,56 +238,59 @@ export default function POSPage() {
   const stockIssues = cart.filter((i) => i.quantity > i.product.stock);
   const hasStockIssues = stockIssues.length > 0;
 
-  // Raccourcis clavier pour le POS (F1-F4 modes de paiement, Enter confirmer, Echap retour)
+  // Raccourcis clavier pour le POS — utilise des refs pour éviter les re-renders
+  const stateRef = useRef({ checkoutStep, cart, paymentMethod, cashGivenNum, total, splitPayment });
+  stateRef.current = { checkoutStep, cart, paymentMethod, cashGivenNum, total, splitPayment };
+  const confirmRef = useRef(handleConfirmPayment);
+  confirmRef.current = handleConfirmPayment;
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       // Ignorer les raccourcis si l'utilisateur tape dans un input (sauf le champ scan)
       const target = e.target as HTMLElement;
       const isInput = target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable;
       const isSearchInput = isInput && target === searchRef.current;
+      const s = stateRef.current;
 
-      if (checkoutStep === "cart" && !isSearchInput && e.key === "Enter") {
-        // Enter dans le panier : aller au paiement
-        if (cart.length > 0) {
+      if (s.checkoutStep === "cart" && !isSearchInput && e.key === "Enter") {
+        if (s.cart.length > 0) {
           e.preventDefault();
           setCheckoutStep("payment");
         }
         return;
       }
 
-      if (checkoutStep === "payment") {
-        // F1-F4 : modes de paiement
+      if (s.checkoutStep === "payment") {
         if (["F1", "F2", "F3", "F4"].includes(e.key)) {
           e.preventDefault();
           const map: Record<string, PaymentMethod> = {
             F1: "cash",
             F2: "card",
             F3: "mobile",
-            F4: "split",
+            F4: "orange",
+            F5: "split",
           };
           setPaymentMethod(map[e.key]);
           return;
         }
 
-        // Echap : retour au panier
         if (e.key === "Escape") {
           e.preventDefault();
           setCheckoutStep("cart");
           return;
         }
 
-        // Enter : confirmer le paiement (sauf si on est dans un input)
         if (e.key === "Enter" && !isInput) {
           e.preventDefault();
-          const splitTotal = splitPayment.cash + splitPayment.mobile + splitPayment.card;
+          const splitTotal = s.splitPayment.cash + s.splitPayment.mobile + s.splitPayment.card + s.splitPayment.orange;
           const canConfirmNow =
-            paymentMethod === "cash" ? cashGivenNum >= total :
-            paymentMethod === "card" ? true :
-            paymentMethod === "mobile" ? true :
-            paymentMethod === "split" ? splitTotal >= total :
+            s.paymentMethod === "cash" ? s.cashGivenNum >= s.total :
+            s.paymentMethod === "card" ? true :
+            s.paymentMethod === "mobile" ? true :
+            s.paymentMethod === "split" ? splitTotal >= s.total :
             false;
           if (canConfirmNow) {
-            handleConfirmPayment();
+            confirmRef.current();
           }
           return;
         }
@@ -295,9 +299,9 @@ export default function POSPage() {
 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [checkoutStep, cart, paymentMethod, cashGivenNum, total, splitPayment, setPaymentMethod, setCheckoutStep]);
+  }, [setPaymentMethod, setCheckoutStep]);
 
-  // Mise à jour de l'écran client via localStorage
+  // Mise à jour de l'écran client via localStorage (debounce 300ms)
   useEffect(() => {
     const state = {
       type: checkoutStep === "receipt" ? "thanks" : checkoutStep,
@@ -322,9 +326,12 @@ export default function POSPage() {
           }
         : undefined,
     };
-    localStorage.setItem("kabrak_pos_display", JSON.stringify(state));
-    // Déclencher un événement pour les autres onglets (écran client)
-    window.dispatchEvent(new StorageEvent("storage", { key: "kabrak_pos_display" }));
+    // Debounce: attendre 300ms avant d'écrire pour éviter les écritures excessives
+    const timer = setTimeout(() => {
+      localStorage.setItem("kabrak_pos_display", JSON.stringify(state));
+      window.dispatchEvent(new StorageEvent("storage", { key: "kabrak_pos_display" }));
+    }, 300);
+    return () => clearTimeout(timer);
   }, [cart, checkoutStep, subtotal, discount, total, selectedCustomer]);
 
   const handleConfirmPayment = async () => {
@@ -332,7 +339,7 @@ export default function POSPage() {
     const defaultCashierId = user?.id || "cmqk34t550003j81mc4vb6bow";
 
     // Déterminer le montant payé et la monnaie selon le mode
-    const splitTotal = splitPayment.cash + splitPayment.mobile + splitPayment.card;
+    const splitTotal = splitPayment.cash + splitPayment.mobile + splitPayment.card + splitPayment.orange;
     const isSplit = paymentMethod === "split";
     const effectiveCashGiven = isSplit ? splitPayment.cash : paymentMethod === "cash" ? cashGivenNum : total;
     const effectiveChange = isSplit ? 0 : paymentMethod === "cash" ? change : 0;
@@ -415,7 +422,7 @@ export default function POSPage() {
     setReceipt(null);
     setCheckoutStep("cart");
     setCashGiven("");
-    setSplitPayment({ cash: 0, mobile: 0, card: 0 });
+    setSplitPayment({ cash: 0, mobile: 0, card: 0, orange: 0 });
     setCashierDiscountAmount(0);
     setCashierDiscountReason("");
     setTimeout(() => searchRef.current?.focus(), 100);
@@ -439,6 +446,8 @@ export default function POSPage() {
         ? t.pos.cash
         : receipt.method === "card"
         ? t.pos.card
+        : receipt.method === "orange"
+        ? t.pos.orange
         : t.pos.mobile;
 
     const printItemsHtml = receipt.items
@@ -459,16 +468,21 @@ export default function POSPage() {
         <title>${t.pos.receipt} ${receipt.id}</title>
         <style>
           @page { size: 80mm auto; margin: 0; }
-          body { width: 72mm; margin: 4mm auto; font-family: 'Courier New', monospace; color: #000; }
-          h1 { font-size: 14px; text-align: center; margin: 0 0 2px; }
+          * { box-sizing: border-box; }
+          html, body { width: 76mm; max-width: 76mm; min-width: 76mm; margin: 0 auto; padding: 0; overflow: hidden; }
+          body { padding: 2mm 2mm 4mm; font-family: 'Courier New', monospace; color: #000; font-size: 10px; line-height: 1.3; font-weight: bold; }
+          h1 { font-size: 13px; text-align: center; margin: 0 0 2px; }
           .center { text-align: center; }
-          .dashed { border-top: 1px dashed #000; margin: 4px 0; }
-          table { width: 100%; border-collapse: collapse; }
-          td { padding: 1px 0; vertical-align: top; }
-          .total { font-size: 14px; font-weight: bold; }
-          .right { text-align: right; }
-          .small { font-size: 10px; }
-          @media print { body { width: 72mm; } }
+          .dashed { border-top: 1px dashed #000; margin: 3px 0; }
+          table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+          td { padding: 1px 0; vertical-align: top; overflow: hidden; }
+          .total { font-size: 12px; font-weight: bold; white-space: nowrap; }
+          .right { text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+          .small { font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+          @media print {
+            html, body { width: 76mm; max-width: 76mm; min-width: 76mm; padding: 2mm 2mm 4mm; overflow: hidden; }
+            * { page-break-inside: avoid; break-inside: avoid; }
+          }
         </style>
       </head>
       <body>
@@ -499,6 +513,7 @@ export default function POSPage() {
         ${receipt.split ? `<table>
           <tr><td class="small">- ${t.pos.cash}</td><td class="right small">${formatCurrency(receipt.split.cash)}</td></tr>
           <tr><td class="small">- ${t.pos.mobile}</td><td class="right small">${formatCurrency(receipt.split.mobile)}</td></tr>
+          ${receipt.split.orange ? `<tr><td class="small">- ${t.pos.orange}</td><td class="right small">${formatCurrency(receipt.split.orange)}</td></tr>` : ""}
           <tr><td class="small">- ${t.pos.card}</td><td class="right small">${formatCurrency(receipt.split.card)}</td></tr>
         </table>` : ""}
         <div class="dashed"></div>
@@ -531,6 +546,8 @@ export default function POSPage() {
         ? t.pos.card
         : tx.paymentMethod === "mobile"
         ? t.pos.mobile
+        : tx.paymentMethod === "orange"
+        ? t.pos.orange
         : t.pos.split;
 
     const printItemsHtml = (tx.items || [])
@@ -551,16 +568,21 @@ export default function POSPage() {
         <title>${t.pos.receipt} ${tx.transactionNumber}</title>
         <style>
           @page { size: 80mm auto; margin: 0; }
-          body { width: 72mm; margin: 4mm auto; font-family: 'Courier New', monospace; color: #000; }
-          h1 { font-size: 14px; text-align: center; margin: 0 0 2px; }
+          * { box-sizing: border-box; }
+          html, body { width: 76mm; max-width: 76mm; min-width: 76mm; margin: 0 auto; padding: 0; overflow: hidden; }
+          body { padding: 2mm 2mm 4mm; font-family: 'Courier New', monospace; color: #000; font-size: 10px; line-height: 1.3; font-weight: bold; }
+          h1 { font-size: 13px; text-align: center; margin: 0 0 2px; }
           .center { text-align: center; }
-          .dashed { border-top: 1px dashed #000; margin: 4px 0; }
-          table { width: 100%; border-collapse: collapse; }
-          td { padding: 1px 0; vertical-align: top; }
-          .total { font-size: 14px; font-weight: bold; }
-          .right { text-align: right; }
-          .small { font-size: 10px; }
-          @media print { body { width: 72mm; } }
+          .dashed { border-top: 1px dashed #000; margin: 3px 0; }
+          table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+          td { padding: 1px 0; vertical-align: top; overflow: hidden; }
+          .total { font-size: 12px; font-weight: bold; white-space: nowrap; }
+          .right { text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+          .small { font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+          @media print {
+            html, body { width: 76mm; max-width: 76mm; min-width: 76mm; padding: 2mm 2mm 4mm; overflow: hidden; }
+            * { page-break-inside: avoid; break-inside: avoid; }
+          }
         </style>
       </head>
       <body>
@@ -773,7 +795,8 @@ export default function POSPage() {
                 (paymentMethod === "cash" && cashGivenNum >= total) ||
                 paymentMethod === "card" ||
                 paymentMethod === "mobile" ||
-                (paymentMethod === "split" && splitPayment.cash + splitPayment.mobile + splitPayment.card >= total)
+                paymentMethod === "orange" ||
+                (paymentMethod === "split" && splitPayment.cash + splitPayment.mobile + splitPayment.card + splitPayment.orange >= total)
               }
               creating={creating}
             />
@@ -1279,7 +1302,7 @@ function PaymentPanel({
     Math.ceil(total / 10000) * 10000,
   ].filter((v, i, a) => a.indexOf(v) === i);
 
-  const splitTotal = splitPayment.cash + splitPayment.mobile + splitPayment.card;
+  const splitTotal = splitPayment.cash + splitPayment.mobile + splitPayment.card + splitPayment.orange;
   const splitRemaining = Math.max(0, total - splitTotal);
 
   return (
@@ -1304,7 +1327,7 @@ function PaymentPanel({
             {t.pos.paymentMethod}
           </p>
           <div className="grid grid-cols-4 gap-2">
-            {(["cash", "card", "mobile", "split"] as PaymentMethod[]).map((m) => {
+            {(["cash", "card", "mobile", "orange", "split"] as PaymentMethod[]).map((m) => {
               const icons: Record<string, any> = {
                 cash: Banknote,
                 card: CreditCard,
@@ -1384,6 +1407,7 @@ function PaymentPanel({
             {[
               { key: "cash" as const, label: "Espèces", icon: Banknote },
               { key: "mobile" as const, label: "Mobile Money", icon: Smartphone },
+              { key: "orange" as const, label: "Orange Money", icon: Smartphone },
               { key: "card" as const, label: "Carte", icon: CreditCard },
             ].map(({ key, label, icon: Icon }) => (
               <div key={key}>
@@ -1472,7 +1496,7 @@ function ReceiptPanel({
   const { t } = useI18n();
   const { config: licenseConfig } = useLicense();
   const storeInfo = getStoreInfo(licenseConfig);
-  const methodLabels: Record<string, string> = { cash: t.pos.cash, card: t.pos.card, mobile: t.pos.mobile, split: t.pos.split };
+  const methodLabels: Record<string, string> = { cash: t.pos.cash, card: t.pos.card, mobile: t.pos.mobile, orange: t.pos.orange, split: t.pos.split };
   const now = new Date();
   const dateStr = now.toLocaleDateString("fr-FR");
   const timeStr = now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });

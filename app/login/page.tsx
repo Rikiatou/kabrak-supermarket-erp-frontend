@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -19,7 +19,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Rediriger si dÃ©jÃ  connectÃ©
+  // Rediriger si déjà connecté
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
       const role = user?.role as Role;
@@ -96,7 +96,7 @@ export default function LoginPage() {
 
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-6">
-          {/* Ã‰tape 1: SÃ©lection employÃ© */}
+          {/* Étape 1: Sélection employé */}
           {!selectedCashier && (
             <>
               <h2 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
@@ -123,7 +123,7 @@ export default function LoginPage() {
                           {cashier.firstName} {cashier.lastName}
                         </p>
                         <p className="text-xs text-slate-500 capitalize">
-                          {cashier.role} Â· {cashier.department}
+                          {cashier.role} · {cashier.department}
                         </p>
                       </div>
                     </button>
@@ -133,10 +133,10 @@ export default function LoginPage() {
             </>
           )}
 
-          {/* Ã‰tape 2: PIN */}
+          {/* Étape 2: PIN */}
           {selectedCashier && (
             <>
-              {/* Profil sÃ©lectionnÃ© */}
+              {/* Profil sélectionné */}
               <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl mb-4">
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center text-white text-base font-bold">
                   {selectedCashier.firstName.charAt(0)}
@@ -172,7 +172,7 @@ export default function LoginPage() {
                         : "border-slate-200 text-slate-300"
                     }`}
                   >
-                    {pin.length > i ? "â—" : "â€“"}
+                    {pin.length > i ? "●" : "–"}
                   </div>
                 ))}
               </div>
@@ -184,7 +184,7 @@ export default function LoginPage() {
                 </div>
               )}
 
-              {/* PavÃ© numÃ©rique */}
+              {/* Pavé numérique */}
               <div className="grid grid-cols-3 gap-2">
                 {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((d) => (
                   <button
@@ -201,7 +201,7 @@ export default function LoginPage() {
                   disabled={loading || !pin}
                   className="h-14 rounded-xl bg-slate-50 hover:bg-slate-100 active:scale-95 transition-all text-sm font-medium text-slate-500 disabled:opacity-50"
                 >
-                  âŒ«
+                  ⌫
                 </button>
                 <button
                   onClick={() => handlePinClick("0")}
@@ -230,5 +230,7 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
   );
 }

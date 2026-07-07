@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   productsApi,
   transactionsApi,
@@ -203,12 +203,7 @@ export function useTodayStats() {
     }
   }, []);
 
-  useEffect(() => {
-    load();
-    // Refresh toutes les 30 secondes
-    const interval = setInterval(load, 30000);
-    return () => clearInterval(interval);
-  }, [load]);
+  usePolling(load, 30000);
 
   return { stats, loading, reload: load };
 }
@@ -338,11 +333,7 @@ export function useProductStats() {
     }
   }, []);
 
-  useEffect(() => {
-    load();
-    const interval = setInterval(load, 60000); // Refresh chaque minute
-    return () => clearInterval(interval);
-  }, [load]);
+  usePolling(load, 60000);
 
   return { stats, loading, reload: load };
 }
@@ -412,11 +403,7 @@ export function useStockAlerts() {
     }
   }, []);
 
-  useEffect(() => {
-    load();
-    const interval = setInterval(load, 60000);
-    return () => clearInterval(interval);
-  }, [load]);
+  usePolling(load, 60000);
 
   return { alerts, loading, reload: load };
 }
@@ -441,11 +428,7 @@ export function useRecentTransactions(limit: number = 10, cashierId?: string, st
     }
   }, [limit, cashierId, startDate, endDate]);
 
-  useEffect(() => {
-    load();
-    const interval = setInterval(load, 30000);
-    return () => clearInterval(interval);
-  }, [load]);
+  usePolling(load, 30000);
 
   return { transactions, loading, reload: load };
 }
@@ -569,11 +552,7 @@ export function useSyncStatus() {
     }
   }, []);
 
-  useEffect(() => {
-    load();
-    const interval = setInterval(load, 10000); // Check chaque 10s
-    return () => clearInterval(interval);
-  }, [load]);
+  usePolling(load, 60000);
 
   return { status, reload: load };
 }
@@ -604,11 +583,7 @@ export function useStockValue() {
     }
   }, []);
 
-  useEffect(() => {
-    load();
-    const interval = setInterval(load, 60000);
-    return () => clearInterval(interval);
-  }, [load]);
+  usePolling(load, 60000);
 
   return { value, loading, reload: load };
 }
@@ -648,11 +623,7 @@ export function useSalesByHour() {
     }
   }, []);
 
-  useEffect(() => {
-    load();
-    const interval = setInterval(load, 60000);
-    return () => clearInterval(interval);
-  }, [load]);
+  usePolling(load, 60000);
 
   return { data, loading, reload: load };
 }
@@ -676,11 +647,7 @@ export function useMarginByCategory() {
     }
   }, []);
 
-  useEffect(() => {
-    load();
-    const interval = setInterval(load, 120000);
-    return () => clearInterval(interval);
-  }, [load]);
+  usePolling(load, 120000);
 
   return { data, loading, reload: load };
 }
@@ -741,6 +708,48 @@ export function useEmployees() {
 // GENERIC HOOK: useApi
 // Hook générique pour récupérer des données depuis le backend
 // ========================================
+// ========================================
+// HOOK: usePolling — polling avec visibility API
+// Stoppe le polling quand la page n'est pas visible (économie CPU)
+// ========================================
+export function usePolling(callback: () => void, intervalMs: number) {
+  const savedCallback = useRef(callback);
+  savedCallback.current = callback;
+
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | null = null;
+
+    const start = () => {
+      if (interval) return;
+      savedCallback.current();
+      interval = setInterval(() => savedCallback.current(), intervalMs);
+    };
+
+    const stop = () => {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+    };
+
+    const onVisibility = () => {
+      if (document.hidden) {
+        stop();
+      } else {
+        start();
+      }
+    };
+
+    start();
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [intervalMs]);
+}
+
 export function useApi<T>(fetcher: () => Promise<T>, deps: any[]) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
@@ -1012,11 +1021,7 @@ export function useNotifications(pollIntervalMs: number = 5 * 60 * 1000) {
     }
   }, []);
 
-  useEffect(() => {
-    load();
-    const interval = setInterval(load, pollIntervalMs);
-    return () => clearInterval(interval);
-  }, [load, pollIntervalMs]);
+  usePolling(load, pollIntervalMs);
 
   return {
     notifications,
@@ -1027,4 +1032,174 @@ export function useNotifications(pollIntervalMs: number = 5 * 60 * 1000) {
     unreadCount: summary?.total || 0,
     criticalCount: summary?.critical || 0,
   };
+}
+
+// ========================================
+// HOOKS: AI (Intelligence Artificielle)
+// ========================================
+export function useStockForecast() {
+  return useApi(() => aiApi.stockForecast(), []);
+}
+export function useAiRecommendations() {
+  return useApi(() => aiApi.recommendations(), []);
+}
+export function useSalesInsights() {
+  return useApi(() => aiApi.salesInsights(), []);
+}
+export function useMarkdownSuggestions() {
+  return useApi(() => aiApi.markdownSuggestions(), []);
+}
+
+// ========================================
+// HOOKS: REPORTS (RAPPORTS) — additional hooks
+// (useSalesReport, useSalesByCategory, useSalesByEmployee, useTopProducts,
+//  useProfitAnalysis, useInventoryValuation already defined above via useApi)
+// ========================================
+export function useDiscountsReport(startDate: string, endDate: string) {
+  // Pas d'endpoint dédié aux remises — on dérive du sales report
+  return useApi(() => reportsApi.sales(startDate, endDate), [startDate, endDate]);
+}
+
+// ========================================
+// INVOICES (FACTURES A4)
+// ========================================
+export function useInvoices(status?: string) {
+  return useApi(() => invoicesApi.list(status), [status]);
+}
+
+export function useInvoiceStats() {
+  return useApi(() => invoicesApi.stats(), []);
+}
+
+export function useCreateInvoice() {
+  const [creating, setCreating] = useState(false);
+  const create = async (data: Parameters<typeof invoicesApi.create>[0]) => {
+    setCreating(true);
+    try {
+      return await invoicesApi.create(data);
+    } catch (e) {
+      console.error("Create invoice failed:", e);
+      return null;
+    } finally {
+      setCreating(false);
+    }
+  };
+  return { create, creating };
+}
+
+export function useUpdateInvoiceStatus() {
+  const [updating, setUpdating] = useState(false);
+  const update = async (id: string, status: string, paymentMethod?: string) => {
+    setUpdating(true);
+    try {
+      return await invoicesApi.updateStatus(id, status, paymentMethod);
+    } catch (e) {
+      console.error("Update invoice status failed:", e);
+      return null;
+    } finally {
+      setUpdating(false);
+    }
+  };
+  return { update, updating };
+}
+
+export function useAddPayment() {
+  const [adding, setAdding] = useState(false);
+  const addPayment = async (invoiceId: string, data: { amount: number; method: string; note?: string }) => {
+    setAdding(true);
+    try {
+      return await invoicesApi.addPayment(invoiceId, data);
+    } catch (e) {
+      console.error("Add payment failed:", e);
+      return null;
+    } finally {
+      setAdding(false);
+    }
+  };
+  return { addPayment, adding };
+}
+
+// ========================================
+// HOOKS: AI (Intelligence Artificielle)
+// ========================================
+export function useStockForecast() {
+  return useApi(() => aiApi.stockForecast(), []);
+}
+export function useAiRecommendations() {
+  return useApi(() => aiApi.recommendations(), []);
+}
+export function useSalesInsights() {
+  return useApi(() => aiApi.salesInsights(), []);
+}
+export function useMarkdownSuggestions() {
+  return useApi(() => aiApi.markdownSuggestions(), []);
+}
+
+// ========================================
+// HOOKS: REPORTS (RAPPORTS) — additional hooks
+// (useSalesReport, useSalesByCategory, useSalesByEmployee, useTopProducts,
+//  useProfitAnalysis, useInventoryValuation already defined above via useApi)
+// ========================================
+export function useDiscountsReport(startDate: string, endDate: string) {
+  // Pas d'endpoint dédié aux remises — on dérive du sales report
+  return useApi(() => reportsApi.sales(startDate, endDate), [startDate, endDate]);
+}
+
+// ========================================
+// INVOICES (FACTURES A4)
+// ========================================
+export function useInvoices(status?: string) {
+  return useApi(() => invoicesApi.list(status), [status]);
+}
+
+export function useInvoiceStats() {
+  return useApi(() => invoicesApi.stats(), []);
+}
+
+export function useCreateInvoice() {
+  const [creating, setCreating] = useState(false);
+  const create = async (data: Parameters<typeof invoicesApi.create>[0]) => {
+    setCreating(true);
+    try {
+      return await invoicesApi.create(data);
+    } catch (e) {
+      console.error("Create invoice failed:", e);
+      return null;
+    } finally {
+      setCreating(false);
+    }
+  };
+  return { create, creating };
+}
+
+export function useUpdateInvoiceStatus() {
+  const [updating, setUpdating] = useState(false);
+  const update = async (id: string, status: string, paymentMethod?: string) => {
+    setUpdating(true);
+    try {
+      return await invoicesApi.updateStatus(id, status, paymentMethod);
+    } catch (e) {
+      console.error("Update invoice status failed:", e);
+      return null;
+    } finally {
+      setUpdating(false);
+    }
+  };
+  return { update, updating };
+}
+
+export function useAddPayment() {
+  const [adding, setAdding] = useState(false);
+  const addPayment = async (invoiceId: string, data: { amount: number; method: string; note?: string }) => {
+    setAdding(true);
+    try {
+      return await invoicesApi.addPayment(invoiceId, data);
+    } catch (e) {
+      console.error("Add payment failed:", e);
+      return null;
+    } finally {
+      setAdding(false);
+    }
+  };
+  return { addPayment, adding };
 }

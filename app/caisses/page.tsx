@@ -570,8 +570,11 @@ export default function CaissesPage() {
       const mobileSales = shiftTx
         .filter((tx) => tx.paymentMethod === "mobile")
         .reduce((sum, tx) => sum + tx.total, 0);
+      const orangeSales = shiftTx
+        .filter((tx) => tx.paymentMethod === "orange")
+        .reduce((sum, tx) => sum + tx.total, 0);
       const changeGiven = shiftTx.reduce((sum, tx) => sum + (tx.change || 0), 0);
-      const expected = shift.openingCash + cashSales + cardSales + mobileSales - changeGiven;
+      const expected = shift.openingCash + cashSales + cardSales + mobileSales + orangeSales - changeGiven;
 
       console.log("Close shift calc:", { openingCash: shift.openingCash, cashSales, changeGiven, expected, txCount: shiftTx.length });
       setCloseExpectedCash(expected);
