@@ -241,8 +241,7 @@ export default function POSPage() {
   // Raccourcis clavier pour le POS — utilise des refs pour éviter les re-renders
   const stateRef = useRef({ checkoutStep, cart, paymentMethod, cashGivenNum, total, splitPayment });
   stateRef.current = { checkoutStep, cart, paymentMethod, cashGivenNum, total, splitPayment };
-  const confirmRef = useRef(handleConfirmPayment);
-  confirmRef.current = handleConfirmPayment;
+  const confirmRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -416,6 +415,9 @@ export default function POSPage() {
       }, 400);
     }
   };
+
+  // Mettre à jour la ref après la définition de handleConfirmPayment
+  confirmRef.current = handleConfirmPayment;
 
   const handleNewSale = () => {
     clearCart();
