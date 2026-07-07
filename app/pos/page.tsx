@@ -286,10 +286,11 @@ export default function POSPage() {
             s.paymentMethod === "cash" ? s.cashGivenNum >= s.total :
             s.paymentMethod === "card" ? true :
             s.paymentMethod === "mobile" ? true :
+            s.paymentMethod === "orange" ? true :
             s.paymentMethod === "split" ? splitTotal >= s.total :
             false;
           if (canConfirmNow) {
-            confirmRef.current();
+            confirmRef.current?.();
           }
           return;
         }
