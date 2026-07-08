@@ -1928,8 +1928,6 @@ export default function POSPage() {
 
           ${tx.change != null && tx.change > 0 ? `<tr><td class="small">CHANGE</td><td class="right small">${tx.change.toLocaleString("fr-CM")}</td></tr>` : ""}
 
-          ${tx.split ? `<tr><td class="small">- CASH</td><td class="right small">${formatCurrency(tx.split.cash)}</td></tr><tr><td class="small">- MOBILE</td><td class="right small">${formatCurrency(tx.split.mobile)}</td></tr><tr><td class="small">- ORANGE</td><td class="right small">${formatCurrency(tx.split.orange)}</td></tr><tr><td class="small">- CARD</td><td class="right small">${formatCurrency(tx.split.card)}</td></tr>` : ""}
-
         </table>
 
         <div class="dashed"></div>
