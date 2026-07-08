@@ -61,8 +61,11 @@ export function ZReportReceipt({
     noNotes: "Aucune note",
   };
 
+  // Valeurs par defaut pour eviter tout plantage si un champ manque (rapport journalier, ancien shift...)
+  const rbm = report.receiptsByMethod ?? { cash: 0, card: 0, mobile: 0, orange: 0, split: 0 } as any;
+
   // Calcul: Opening Cash + Cash Received - Change Given = Expected Cash in Drawer
-  const cashReceived = report.cashReceived ?? report.receiptsByMethod?.cash ?? 0;
+  const cashReceived = report.cashReceived ?? rbm.cash ?? 0;
   const changeGiven = report.changeGiven ?? 0;
   const expectedCash = (report.openingCash ?? 0) + cashReceived - changeGiven;
   const countedCash = report.closingCash ?? 0;
@@ -93,11 +96,11 @@ export function ZReportReceipt({
       </div>
       <div style="border-top:1px dashed #000;margin-top:4px;padding-top:4px">
         <div style="font-weight:bold;text-transform:uppercase;font-size:10px;margin-bottom:2px">${z.receiptsByMethod}</div>
-        ${row(z.cash, formatCurrency(report.receiptsByMethod.cash))}
-        ${report.receiptsByMethod.card > 0 ? row(z.card, formatCurrency(report.receiptsByMethod.card)) : ""}
-        ${report.receiptsByMethod.mobile > 0 ? row(z.mobile, formatCurrency(report.receiptsByMethod.mobile)) : ""}
-        ${(report.receiptsByMethod as any).orange > 0 ? row(z.orange || "Orange Money", formatCurrency((report.receiptsByMethod as any).orange)) : ""}
-        ${report.receiptsByMethod.split > 0 ? row(z.split, formatCurrency(report.receiptsByMethod.split)) : ""}
+        ${row(z.cash, formatCurrency(rbm.cash))}
+        ${rbm.card > 0 ? row(z.card, formatCurrency(rbm.card)) : ""}
+        ${rbm.mobile > 0 ? row(z.mobile, formatCurrency(rbm.mobile)) : ""}
+        ${(rbm as any).orange > 0 ? row(z.orange || "Orange Money", formatCurrency((rbm as any).orange)) : ""}
+        ${rbm.split > 0 ? row(z.split, formatCurrency(rbm.split)) : ""}
         <div style="border-top:1px solid #000;margin-top:2px;padding-top:2px">
           ${row(z.totalReceipts, formatCurrency(report.totalReceipts), true)}
         </div>
@@ -251,30 +254,30 @@ export function ZReportReceipt({
             <div className="space-y-1.5">
               <div className="flex justify-between text-sm">
                 <span>{z.cash}</span>
-                <span className="font-semibold tabular-nums">{formatCurrency(report.receiptsByMethod.cash)}</span>
+                <span className="font-semibold tabular-nums">{formatCurrency(rbm.cash)}</span>
               </div>
-              {report.receiptsByMethod.card > 0 && (
+              {rbm.card > 0 && (
                 <div className="flex justify-between text-sm">
                   <span>{z.card}</span>
-                  <span className="font-semibold tabular-nums">{formatCurrency(report.receiptsByMethod.card)}</span>
+                  <span className="font-semibold tabular-nums">{formatCurrency(rbm.card)}</span>
                 </div>
               )}
-              {report.receiptsByMethod.mobile > 0 && (
+              {rbm.mobile > 0 && (
                 <div className="flex justify-between text-sm">
                   <span>{z.mobile}</span>
-                  <span className="font-semibold tabular-nums">{formatCurrency(report.receiptsByMethod.mobile)}</span>
+                  <span className="font-semibold tabular-nums">{formatCurrency(rbm.mobile)}</span>
                 </div>
               )}
-              {(report.receiptsByMethod as any).orange > 0 && (
+              {(rbm as any).orange > 0 && (
                 <div className="flex justify-between text-sm">
                   <span>{z.orange || "Orange Money"}</span>
-                  <span className="font-semibold tabular-nums">{formatCurrency((report.receiptsByMethod as any).orange)}</span>
+                  <span className="font-semibold tabular-nums">{formatCurrency((rbm as any).orange)}</span>
                 </div>
               )}
-              {report.receiptsByMethod.split > 0 && (
+              {rbm.split > 0 && (
                 <div className="flex justify-between text-sm">
                   <span>{z.split}</span>
-                  <span className="font-semibold tabular-nums">{formatCurrency(report.receiptsByMethod.split)}</span>
+                  <span className="font-semibold tabular-nums">{formatCurrency(rbm.split)}</span>
                 </div>
               )}
               <div className="flex justify-between text-sm font-bold border-t border-[var(--border-subtle)] pt-1.5">
