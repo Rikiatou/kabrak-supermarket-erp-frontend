@@ -1655,11 +1655,11 @@ export default function POSPage() {
 
         <style>
 
-          @page { size: 80mm auto; margin: 0; }
+          @page { size: 80mm 297mm; margin: 0; }
 
-          * { -webkit-print-color-adjust: exact; }
+          * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
-          html, body { width: 72mm; margin: 0 auto; padding: 0; }
+          html, body { width: 76mm; max-width: 76mm; min-width: 76mm; margin: 0 auto; padding: 0; overflow: hidden; background: #fff; }
 
           body { padding: 2mm 2mm 4mm; font-family: 'Courier New', monospace; color: #000; font-size: 13px; line-height: 1.4; font-weight: bold; }
 
@@ -1681,7 +1681,7 @@ export default function POSPage() {
 
           @media print {
 
-            body { width: 72mm; padding: 2mm 2mm 4mm; }
+            html, body { width: 76mm; max-width: 76mm; min-width: 76mm; padding: 2mm 2mm 4mm; overflow: hidden; background: #fff; }
 
             * { page-break-inside: avoid; break-inside: avoid; }
 
@@ -1854,11 +1854,11 @@ export default function POSPage() {
 
         <style>
 
-          @page { size: 80mm auto; margin: 0; }
+          @page { size: 80mm 297mm; margin: 0; }
 
-          * { -webkit-print-color-adjust: exact; }
+          * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
-          html, body { width: 72mm; margin: 0 auto; padding: 0; }
+          html, body { width: 76mm; max-width: 76mm; min-width: 76mm; margin: 0 auto; padding: 0; overflow: hidden; background: #fff; }
 
           body { padding: 2mm 2mm 4mm; font-family: 'Courier New', monospace; color: #000; font-size: 13px; line-height: 1.4; font-weight: bold; }
 
@@ -1880,7 +1880,7 @@ export default function POSPage() {
 
           @media print {
 
-            body { width: 72mm; padding: 2mm 2mm 4mm; }
+            html, body { width: 76mm; max-width: 76mm; min-width: 76mm; padding: 2mm 2mm 4mm; overflow: hidden; background: #fff; }
 
             * { page-break-inside: avoid; break-inside: avoid; }
 

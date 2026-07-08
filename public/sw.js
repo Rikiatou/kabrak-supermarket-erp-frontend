@@ -1,11 +1,14 @@
-// KABRAK Service Worker — v5 (cache bust: license gate disabled)
-// Strategy: only cache genuine static assets.
+// KABRAK Service Worker — v6 (network-first for JS/CSS to avoid stale chunk errors)
+// Strategy: network-first for JS/CSS (always fresh, prevents ChunkLoadError after deploy),
+//           cache-first for fonts/images (stable assets).
 // NEVER intercept: API calls, Next.js RSC payloads, page navigation, cross-origin requests.
 
-const CACHE_NAME = "kabrak-v5";
+const CACHE_NAME = "kabrak-v6";
 
-// Only files with these extensions get cached
-const CACHEABLE_EXT = [".js", ".css", ".woff", ".woff2", ".ttf", ".otf", ".svg", ".png", ".ico", ".webp", ".jpg", ".jpeg"];
+// Assets that change on every deploy — always fetch fresh, cache as offline fallback
+const NETWORK_FIRST_EXT = [".js", ".css"];
+// Stable assets — safe to serve from cache first
+const CACHE_FIRST_EXT = [".woff", ".woff2", ".ttf", ".otf", ".svg", ".png", ".ico", ".webp", ".jpg", ".jpeg"];
 
 self.addEventListener("install", () => {
   self.skipWaiting();
@@ -40,24 +43,44 @@ self.addEventListener("fetch", (event) => {
     url.pathname.startsWith("/api/")
   ) return;
 
-  // 4. Only cache actual static files — skip everything else (page routes, etc.)
+  // 4. Determine strategy by extension
   const ext = "." + url.pathname.split(".").pop().toLowerCase();
-  if (!CACHEABLE_EXT.includes(ext)) return;
 
-  // 5. Cache-first for static assets
-  event.respondWith(
-    caches.match(request).then(
-      (cached) =>
-        cached ||
-        fetch(request)
-          .then((response) => {
-            if (response.ok) {
-              const clone = response.clone();
-              caches.open(CACHE_NAME).then((c) => c.put(request, clone));
-            }
-            return response;
-          })
-          .catch(() => new Response("", { status: 503 }))
-    )
-  );
+  // 5a. Network-first for JS/CSS: always get the latest build, fall back to cache offline
+  if (NETWORK_FIRST_EXT.includes(ext)) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((c) => c.put(request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(request).then((cached) => cached || new Response("", { status: 503 })))
+    );
+    return;
+  }
+
+  // 5b. Cache-first for stable assets (fonts, images)
+  if (CACHE_FIRST_EXT.includes(ext)) {
+    event.respondWith(
+      caches.match(request).then(
+        (cached) =>
+          cached ||
+          fetch(request)
+            .then((response) => {
+              if (response.ok) {
+                const clone = response.clone();
+                caches.open(CACHE_NAME).then((c) => c.put(request, clone));
+              }
+              return response;
+            })
+            .catch(() => new Response("", { status: 503 }))
+      )
+    );
+    return;
+  }
+
+  // 6. Everything else (page routes, etc.) — don't intercept
 });

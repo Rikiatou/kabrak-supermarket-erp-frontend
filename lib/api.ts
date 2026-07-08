@@ -378,6 +378,24 @@ export const transactionsApi = {
       `/transactions/stats/margin-by-category`
     ),
 
+  // Objectif mensuel (dashboard)
+  monthlyGoal: () =>
+    fetchAPI<{ current: number; goal: number; progress: number; transactions: number; remaining: number }>(
+      `/transactions/stats/monthly-goal`
+    ),
+
+  // Top produits vendus (dashboard)
+  topProducts: (limit?: number) =>
+    fetchAPI<Array<{ productId: string; productName: string; sku: string; quantity: number; revenue: number }>>(
+      `/transactions/stats/top-products${limit ? `?limit=${limit}` : ""}`
+    ),
+
+  // Panier moyen (dashboard)
+  averageBasket: () =>
+    fetchAPI<{ average: number; total: number; transactions: number }>(
+      `/transactions/stats/average-basket`
+    ),
+
   // Rembourser
   refund: (id: string, reason: string) =>
     fetchAPI<ApiTransaction>(`/transactions/${id}/refund`, {
@@ -628,6 +646,7 @@ export interface ApiSchedule {
 
 export const schedulesApi = {
   list: () => fetchAPI<{ all: ApiSchedule[]; byDay: Record<number, ApiSchedule[]>; total: number }>(`/schedules`),
+  registers: () => fetchAPI<Array<{ id: string; name: string; code: string; isActive: boolean }>>(`/schedules/registers`),
   today: () => fetchAPI<{ dayOfWeek: number; currentTime: string; active: ApiSchedule[] }>(`/schedules/today`),
   byEmployee: (employeeId: string) => fetchAPI<ApiSchedule[]>(`/schedules/employee/${employeeId}`),
   byRegister: (registerId: string) => fetchAPI<ApiSchedule[]>(`/schedules/register/${registerId}`),
@@ -687,6 +706,22 @@ export const reportsApi = {
     fetchAPI<Array<{ month: number; revenue: number; transactions: number }>>(`/reports/sales/by-month?year=${year}`),
   inventoryValuation: () =>
     fetchAPI<{ totalCostValue: number; totalSaleValue: number; potentialMargin: number; productCount: number }>(`/reports/inventory/valuation`),
+  discounts: (startDate: string, endDate: string) =>
+    fetchAPI<{
+      totalDiscount: number;
+      transactionsCount: number;
+      transactions: Array<{
+        id: string;
+        transactionNumber: string;
+        date: string;
+        cashierName: string;
+        subtotal: number;
+        discount: number;
+        total: number;
+        items: Array<{ productName: string; sku: string; quantity: number; discount: number }>;
+      }>;
+      byProduct: Array<{ productName: string; sku: string; totalDiscount: number; occurrences: number }>;
+    }>(`/reports/discounts?startDate=${startDate}&endDate=${endDate}`),
 };
 
 // ========================================
@@ -905,6 +940,7 @@ export const invoicesApi = {
     fetchAPI<{ invoices: ApiInvoice[]; total: number }>(`/invoices${status ? `?status=${status}` : ""}`),
   get: (id: string) => fetchAPI<ApiInvoice>(`/invoices/${id}`),
   stats: () => fetchAPI<{ total: number; paid: number; partial: number; pending: number; overdue: number; totalPaidAmount: number; totalOutstanding: number }>(`/invoices/stats`),
+  unpaidStats: () => fetchAPI<{ totalUnpaid: number; count: number; partial: { amount: number; count: number }; overdue: { amount: number; count: number } }>(`/invoices/stats/unpaid`),
   create: (data: {
     clientName: string;
     clientPhone: string;
