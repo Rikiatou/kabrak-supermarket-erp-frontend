@@ -60,14 +60,63 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
   // Activer une licence
   const activate = useCallback(async (licenseKey: string): Promise<boolean> => {
     try {
-      const data = await LicenseValidator.validate(licenseKey);
-      setLicense(data.license);
-      setConfig(data.config);
-      setStores(data.stores);
+      const key = licenseKey.trim().toUpperCase();
+      const encKey = encodeURIComponent(key);
+
+      // 1. Fetch status
+      const statusRes = await fetch(`/api/licenses/${encKey}/status`);
+      if (!statusRes.ok) throw new Error(`Status ${statusRes.status}`);
+      const status = await statusRes.json();
+
+      // 2. Fetch config
+      let config: any = null;
+      try {
+        const configRes = await fetch(`/api/licenses/${encKey}/config`);
+        if (configRes.ok) config = await configRes.json();
+      } catch {}
+
+      // 3. Fetch stores
+      let stores: any[] = [];
+      try {
+        const storesRes = await fetch(`/api/licenses/${encKey}/stores`);
+        if (storesRes.ok) stores = await storesRes.json();
+      } catch {}
+
+      // 4. Build license data
+      const now = new Date();
+      const expiresAt = new Date(status.expiresAt);
+      const isExpired = now > expiresAt;
+
+      if (isExpired || status.status !== "ACTIVE") {
+        throw new Error("Licence expirée ou inactive");
+      }
+
+      const licenseData = {
+        licenseKey: status.licenseKey,
+        clientName: status.clientName,
+        type: status.type,
+        maxStores: status.maxStores,
+        modules: ["pos", "inventory", "purchases", "suppliers", "customers", "loyalty", "reports", "dashboard", "invoices", "employees", "cashiers", "schedules", "scanner", "losses", "accounting", "ai", "import", "notifications", "offline_sync", "cloud_backup"],
+        issuedAt: status.issuedAt,
+        expiresAt: status.expiresAt,
+        daysRemaining: Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)),
+        status: status.status,
+      };
+
+      // 5. Save to localStorage
+      localStorage.setItem("kabrak_license_data", JSON.stringify(licenseData));
+      localStorage.setItem("kabrak_client_config", JSON.stringify(config));
+      localStorage.setItem("kabrak_stores", JSON.stringify(stores));
+      localStorage.setItem("kabrak_license_last_check", String(Date.now()));
+
+      // 6. Update state
+      setLicense(licenseData as any);
+      setConfig(config);
+      setStores(stores);
+
       return true;
     } catch (err: any) {
       console.error("License activation error:", err?.message || err);
-      // Stocker l'erreur pour que la page activate puisse l'afficher
       (window as any).__licenseError = err?.message || "Unknown error";
       return false;
     }
