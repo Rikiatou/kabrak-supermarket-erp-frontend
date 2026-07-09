@@ -611,9 +611,13 @@ export default function POSPage() {
 
       if (found) {
 
-        // Produit trouvé — détecter si le code scanné correspond au packBarcode
-        const isPackScan = found.packBarcode && code === found.packBarcode;
-        const sellAsPack = isPackScan && found.wholesalePrice && found.packQuantity;
+        // Déterminer le mode de vente:
+        // 1. Si le code scanné = packBarcode → vend en pack (auto)
+        // 2. Si le toggle est sur PACK et le produit a un pack → vend en pack
+        // 3. Sinon → vend en unité
+        const isPackBarcodeScan = found.packBarcode && code === found.packBarcode;
+        const hasPack = found.wholesalePrice && found.packQuantity;
+        const sellAsPack = hasPack && (isPackBarcodeScan || sellMode === "pack");
 
         // Vérifier le stock avant d'ajouter
         if (sellAsPack) {
