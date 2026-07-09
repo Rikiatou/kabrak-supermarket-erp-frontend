@@ -65,7 +65,8 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
       setConfig(data.config);
       setStores(data.stores);
       return true;
-    } catch (err) {
+    } catch (err: any) {
+      console.error("License activation error:", err?.message || err);
       return false;
     }
   }, []);

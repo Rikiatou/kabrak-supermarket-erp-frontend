@@ -114,18 +114,55 @@ export class LicenseValidator {
 
   // Valider une clé de licence auprès du serveur
   static async validate(licenseKey: string): Promise<LicenseValidationResponse> {
-    const res = await fetch(`${API_URL}/licenses/validate`, {
-      method: "POST",
+    // Utiliser GET au lieu de POST (le proxy Next.js a parfois des soucis avec les POST body)
+    const statusRes = await fetch(`${API_URL}/licenses/${encodeURIComponent(licenseKey)}/status`, {
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ licenseKey }),
     });
 
-    if (!res.ok) {
-      const error = await res.json().catch(() => ({ message: "Erreur de validation" }));
-      throw new Error(error.message || `Erreur ${res.status}`);
+    if (!statusRes.ok) {
+      const error = await statusRes.json().catch(() => ({ message: "Licence introuvable" }));
+      throw new Error(error.message || `Erreur ${statusRes.status}`);
     }
 
-    const data: LicenseValidationResponse = await res.json();
+    const status = await statusRes.json();
+
+    // Récupérer la config
+    const configRes = await fetch(`${API_URL}/licenses/${encodeURIComponent(licenseKey)}/config`, {
+      headers: { "Content-Type": "application/json" },
+    });
+    const config = configRes.ok ? await configRes.json() : null;
+
+    // Récupérer les magasins
+    const storesRes = await fetch(`${API_URL}/licenses/${encodeURIComponent(licenseKey)}/stores`, {
+      headers: { "Content-Type": "application/json" },
+    });
+    const stores = storesRes.ok ? await storesRes.json() : [];
+
+    const now = new Date();
+    const expiresAt = new Date(status.expiresAt);
+    const isExpired = now > expiresAt;
+
+    const data: LicenseValidationResponse = {
+      valid: !isExpired && status.status === "ACTIVE",
+      license: {
+        licenseKey: status.licenseKey,
+        clientName: status.clientName,
+        type: status.type,
+        maxStores: status.maxStores,
+        modules: ["pos", "inventory", "purchases", "suppliers", "customers", "loyalty", "reports", "dashboard", "invoices", "employees", "cashiers", "schedules", "scanner", "losses", "accounting", "ai", "import", "notifications", "offline_sync", "cloud_backup"],
+        issuedAt: status.issuedAt,
+        expiresAt: status.expiresAt,
+        daysRemaining: Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)),
+        status: status.status,
+      },
+      config,
+      stores,
+    };
+
+    if (!data.valid) {
+      throw new Error("Licence invalide ou expirée");
+    }
+
     this.save(data);
     return data;
   }
