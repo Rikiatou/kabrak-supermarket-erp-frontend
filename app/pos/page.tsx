@@ -519,14 +519,22 @@ export default function POSPage() {
 
   const addToCart = useCallback((product: Product) => {
 
-    // Stock non bloquant: les chiffres migrés ne sont pas fiables, on laisse vendre
+    // Bloquer si stock = 0
+    if (product.stock <= 0) {
+      toast(`${product.name} — Out of stock`, "warning");
+      return;
+    }
 
     setCart((prev) => {
 
       const existing = prev.find((i) => i.product.id === product.id);
 
       if (existing) {
-
+        // Vérifier qu'on ne dépasse pas le stock
+        if (existing.quantity + 1 > product.stock) {
+          toast(`Only ${product.stock} in stock`, "warning");
+          return prev;
+        }
         return prev.map((i) =>
 
           i.product.id === product.id
@@ -543,7 +551,7 @@ export default function POSPage() {
 
     });
 
-  }, []);
+  }, [toast]);
 
 
 
@@ -2680,7 +2688,7 @@ export default function POSPage() {
 
                     const inCart = cart.find((i) => i.product.id === product.id);
 
-                    const outOfStock = false;
+                    const outOfStock = product.stock <= 0;
 
                     return (
 
@@ -2688,15 +2696,19 @@ export default function POSPage() {
 
                         key={product.id}
 
-                        onClick={() => addToCart(product)}
+                        onClick={() => !outOfStock && addToCart(product)}
 
-                        disabled={false}
+                        disabled={outOfStock}
 
                         className={cn(
 
                           "w-full text-left px-4 py-3 flex items-center gap-3 border-b border-[#f3f4f6] last:border-0 transition-colors",
 
-                          inCart
+                          outOfStock
+
+                            ? "opacity-40 cursor-not-allowed"
+
+                            : inCart
 
                             ? "bg-[#f0fdf4] hover:bg-[#dcfce7]"
 
