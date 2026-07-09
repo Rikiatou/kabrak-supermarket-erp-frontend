@@ -557,7 +557,7 @@ export default function POSPage() {
 
 
 
-      // 1. Chercher en local d'abord
+      // 1. Chercher en local d'abord (barcode/SKU exact)
 
       let found = products.find(
 
@@ -567,11 +567,31 @@ export default function POSPage() {
 
 
 
-      // 2. Si pas trouvé localement et mode serveur, chercher sur le serveur
+      // 2. Si pas trouvé localement et mode serveur, chercher par barcode sur le serveur
 
       if (!found && useServerSearch) {
 
         found = await scanBarcode(code) ?? undefined;
+
+      }
+
+
+
+      // 3. Si toujours pas trouvé, prendre le 1er résultat de la recherche par nom
+
+      if (!found && useServerSearch && searchResults.length > 0) {
+
+        found = searchResults[0];
+
+      } else if (!found && !useServerSearch) {
+
+        // Mode local: chercher par nom dans les produits chargés
+
+        found = products.find(
+
+          (p) => p.name.toLowerCase().includes(code.toLowerCase())
+
+        );
 
       }
 
@@ -621,7 +641,7 @@ export default function POSPage() {
 
     },
 
-    [search, products, addToCart, useServerSearch, scanBarcode, canCreateProduct, toast, t]
+    [search, products, searchResults, addToCart, useServerSearch, scanBarcode, canCreateProduct, toast, t]
 
   );
 
