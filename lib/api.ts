@@ -678,7 +678,12 @@ export interface ApiLoyaltyHistory {
 }
 
 export const customersApi = {
-  list: (search?: string) => fetchAPI<ApiCustomer[]>(`/customers${search ? `?search=${search}` : ""}`),
+  list: async (search?: string): Promise<ApiCustomer[]> => {
+    const res = await fetchAPI<{ data: ApiCustomer[]; total: number; page: number; limit: number; totalPages: number }>(
+      `/customers?limit=1000${search ? `&search=${search}` : ""}`
+    );
+    return Array.isArray(res) ? res : (res?.data ?? []);
+  },
   get: (id: string) => fetchAPI<ApiCustomer & { loyaltyHistory: ApiLoyaltyHistory[] }>(`/customers/${id}`),
   stats: () => fetchAPI<{ total: number; totalPoints: number; totalRedeemed: number }>(`/customers/stats`),
   create: (data: { firstName: string; lastName: string; phone: string; email?: string }) =>
