@@ -108,10 +108,11 @@ export function useServerProductSearch() {
 
   const search = useCallback(async (query: string, category?: string, stockStatus?: string) => {
     // Ne pas bloquer si query vide — le backend retourne les premiers produits
-    // On bloque seulement si tout est vide ET qu'on n'a pas encore de bestsellers
+    // "All" (ou "Tout") = pas de filtre catégorie
+    const catFilter = category && category !== "All" && category !== "Tout" ? category : undefined;
     try {
       setLoading(true);
-      const response = await productsApi.search({ q: query || undefined, category, stockStatus, limit: 100 });
+      const response = await productsApi.search({ q: query || undefined, category: catFilter, stockStatus, limit: 100 });
       setResults(response.data.map(apiProductToFrontend));
     } catch (e) {
       console.warn("Erreur recherche server-side:", e);
