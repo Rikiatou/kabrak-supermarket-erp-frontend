@@ -74,6 +74,7 @@ export default function PertesPage() {
   const [showLossModal, setShowLossModal] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<string>("");
+  const [selectedProductData, setSelectedProductData] = useState<any>(null);
   const [quantity, setQuantity] = useState(1);
   const [lossType, setLossType] = useState("damage");
   const [reason, setReason] = useState("");
@@ -126,7 +127,7 @@ export default function PertesPage() {
     : [];
 
   const handleAddLossItem = () => {
-    const product = products.find((p) => p.id === selectedProduct);
+    const product = selectedProductData;
     if (!product || quantity < 1) return;
 
     if (quantity > product.stock) {
@@ -158,6 +159,7 @@ export default function PertesPage() {
 
     // Reset la sélection produit pour en ajouter un autre
     setSelectedProduct("");
+    setSelectedProductData(null);
     setQuantity(1);
     setReason("");
     setSearch("");
@@ -573,7 +575,7 @@ export default function PertesPage() {
                   <input
                     type="text"
                     value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+                    onChange={(e) => { setSearch(e.target.value); setSelectedProduct(""); setSelectedProductData(null); }}
                     placeholder={t.pertes.searchProduct}
                     className="w-full pl-9 pr-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]"
                   />
@@ -583,7 +585,7 @@ export default function PertesPage() {
                     {filteredProducts.map((p) => (
                       <button
                         key={p.id}
-                        onClick={() => { setSelectedProduct(p.id); setSearch(p.name); }}
+                        onClick={() => { setSelectedProduct(p.id); setSelectedProductData(p); setSearch(p.name); }}
                         className="w-full text-left px-3 py-2 hover:bg-[var(--surface-hover)] text-sm flex justify-between items-center"
                       >
                         <span className="font-medium text-[var(--text-primary)]">{p.name}</span>

@@ -73,6 +73,7 @@ export default function CadeauxPage() {
   const [showModal, setShowModal] = useState(false);
   const [productSearch, setProductSearch] = useState("");
   const [selectedProductId, setSelectedProductId] = useState("");
+  const [selectedProductData, setSelectedProductData] = useState<any>(null);
   const [quantity, setQuantity] = useState(1);
   const [giftItems, setGiftItems] = useState<GiftItem[]>([]);
   const [recipientType, setRecipientType] = useState<RecipientType>("staff");
@@ -96,6 +97,7 @@ export default function CadeauxPage() {
   const resetModal = () => {
     setProductSearch("");
     setSelectedProductId("");
+    setSelectedProductData(null);
     setQuantity(1);
     setGiftItems([]);
     setRecipientType("staff");
@@ -106,7 +108,8 @@ export default function CadeauxPage() {
 
   // Ajouter un produit à la liste des cadeaux
   const addGiftItem = () => {
-    if (!selectedProductId || !selectedProduct) {
+    const product = selectedProductData;
+    if (!selectedProductId || !product) {
       toast(t.gifts.selectProductRequired, "warning");
       return;
     }
@@ -125,14 +128,15 @@ export default function CadeauxPage() {
     } else {
       setGiftItems([...giftItems, {
         productId: selectedProductId,
-        productName: selectedProduct.name,
+        productName: product.name,
         quantity,
-        stock: selectedProduct.stock,
+        stock: product.stock,
       }]);
     }
     // Reset la sélection produit pour en ajouter un autre
     setProductSearch("");
     setSelectedProductId("");
+    setSelectedProductData(null);
     setQuantity(1);
   };
 
@@ -367,7 +371,7 @@ export default function CadeauxPage() {
                       <input
                         type="text"
                         value={productSearch}
-                        onChange={(e) => { setProductSearch(e.target.value); setSelectedProductId(""); }}
+                        onChange={(e) => { setProductSearch(e.target.value); setSelectedProductId(""); setSelectedProductData(null); }}
                         placeholder={t.gifts.productSearchPh}
                         className="w-full pl-9 pr-3 py-2.5 border border-[var(--border)] rounded-xl text-[13px] outline-none focus:border-[var(--brand)]"
                       />
@@ -384,7 +388,7 @@ export default function CadeauxPage() {
                         {filteredProducts.map((p) => (
                           <button
                             key={p.id}
-                            onClick={() => { setSelectedProductId(p.id); setProductSearch(p.name); }}
+                            onClick={() => { setSelectedProductId(p.id); setSelectedProductData(p); setProductSearch(p.name); }}
                             className="w-full text-left px-3 py-2.5 text-[13px] hover:bg-slate-50 flex items-center justify-between border-b border-[var(--border)] last:border-0"
                           >
                             <span>{p.name}</span>

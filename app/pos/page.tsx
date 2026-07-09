@@ -1217,6 +1217,8 @@ export default function POSPage() {
 
             paymentMethod === "mobile" ? true :
 
+            paymentMethod === "orange" ? true :
+
             paymentMethod === "split" ? splitTotal >= total :
 
             false;
@@ -1376,8 +1378,8 @@ export default function POSPage() {
 
 
     // Pour le paiement mixte, on enregistre comme "cash" si cash dominant, sinon "card"
-
-    const recordedMethod = isSplit ? (splitPayment.cash > 0 ? "cash" : "card") : paymentMethod;
+    // Pour orange, on enregistre "orange" directement
+    const recordedMethod = isSplit ? (splitPayment.cash > 0 ? "cash" : splitPayment.orange > 0 ? "orange" : "card") : paymentMethod;
 
 
 
@@ -2169,6 +2171,8 @@ export default function POSPage() {
                 paymentMethod === "card" ||
 
                 paymentMethod === "mobile" ||
+
+                paymentMethod === "orange" ||
 
                 (paymentMethod === "split" && splitPayment.cash + splitPayment.mobile + splitPayment.card + splitPayment.orange >= total)
 
