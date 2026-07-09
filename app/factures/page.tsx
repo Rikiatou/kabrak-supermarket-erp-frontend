@@ -109,21 +109,21 @@ const mockInvoices: Invoice[] = [
 ];
 
 const statusConfig: Record<string, { label: string; color: string }> = {
-  draft: { label: "Brouillon", color: "bg-slate-100 text-slate-600" },
-  sent: { label: "Envoyée", color: "bg-blue-100 text-blue-700" },
-  partial: { label: "Partiel", color: "bg-amber-100 text-amber-700" },
-  paid: { label: "Payée", color: "bg-emerald-100 text-emerald-700" },
-  overdue: { label: "En retard", color: "bg-red-100 text-red-700" },
-  cancelled: { label: "Annulée", color: "bg-slate-100 text-slate-400" },
+  draft: { label: "Draft", color: "bg-slate-100 text-slate-600" },
+  sent: { label: "Sent", color: "bg-blue-100 text-blue-700" },
+  partial: { label: "Partial", color: "bg-amber-100 text-amber-700" },
+  paid: { label: "Paid", color: "bg-emerald-100 text-emerald-700" },
+  overdue: { label: "Overdue", color: "bg-red-100 text-red-700" },
+  cancelled: { label: "Cancelled", color: "bg-slate-100 text-slate-400" },
 };
 
 const paymentMethodLabels: Record<string, string> = {
-  cash: "Espèces",
-  card: "Carte",
+  cash: "Cash",
+  card: "Card",
   mobile: "Mobile Money",
   orange: "Orange Money",
-  bank: "Virement",
-  check: "Chèque",
+  bank: "Bank Transfer",
+  check: "Check",
 };
 
 export default function FacturesPage() {
@@ -239,10 +239,10 @@ export default function FacturesPage() {
       })),
     });
     if (result) {
-      toast(`Facture ${result.number} créée`, "success");
+      toast(`${t.factures.invoiceCreated}: ${result.number}`, "success");
       reload();
     } else {
-      toast(`Facture créée localement (backend indisponible)`, "warning");
+      toast(t.factures.invoiceCreatedLocal, "warning");
     }
     setShowModal(false);
     setClientName("");
@@ -271,11 +271,11 @@ export default function FacturesPage() {
     if (!paymentInvoice) return;
     const amount = parseFloat(paymentAmount);
     if (!amount || amount <= 0) {
-      toast("Montant invalide", "warning");
+      toast(t.factures.invalidAmount, "warning");
       return;
     }
     if (amount > paymentInvoice.balance) {
-      toast(`Montant supérieur au reste à payer (${formatCurrency(paymentInvoice.balance)})`, "warning");
+      toast(`${t.factures.amountTooHigh} (${formatCurrency(paymentInvoice.balance)})`, "warning");
       return;
     }
     const result = await addPayment(paymentInvoice.id, {
@@ -284,7 +284,7 @@ export default function FacturesPage() {
       note: paymentNote || undefined,
     });
     if (result) {
-      toast(`Paiement de ${formatCurrency(amount)} enregistré`, "success");
+      toast(`${t.factures.paymentSaved}: ${formatCurrency(amount)}`, "success");
       reload();
       // Mettre à jour la facture affichée dans le modal
       setPaymentInvoice({
@@ -323,7 +323,7 @@ export default function FacturesPage() {
         status: newBalance <= 0 ? "paid" : "partial",
         payments: [...paymentInvoice.payments, newPayment],
       });
-      toast(`Paiement local enregistré (backend indisponible)`, "warning");
+      toast(t.factures.paymentSavedLocal, "warning");
       setPaymentAmount("");
       setPaymentNote("");
     }
@@ -355,7 +355,7 @@ export default function FacturesPage() {
     pdf.setTextColor(30, 64, 175);
     pdf.setFontSize(28);
     pdf.setFont("helvetica", "bold");
-    pdf.text("FACTURE", pageWidth - margin - 50, 55);
+    pdf.text(t.factures.title.toUpperCase(), pageWidth - margin - 50, 55);
 
     // Invoice info
     pdf.setTextColor(100, 100, 100);
@@ -393,10 +393,10 @@ export default function FacturesPage() {
     pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(9);
     pdf.setFont("helvetica", "bold");
-    pdf.text("Description", margin + 5, tableY + 7);
-    pdf.text("Qté", margin + 110, tableY + 7, { align: "center" });
-    pdf.text("Prix unit.", margin + 135, tableY + 7, { align: "right" });
-    pdf.text("Total", pageWidth - margin - 5, tableY + 7, { align: "right" });
+    pdf.text(t.factures.description, margin + 5, tableY + 7);
+    pdf.text(t.factures.qty, margin + 110, tableY + 7, { align: "center" });
+    pdf.text(t.factures.unitPrice, margin + 135, tableY + 7, { align: "right" });
+    pdf.text(t.factures.lineTotal, pageWidth - margin - 5, tableY + 7, { align: "right" });
 
     let y = tableY + 18;
     pdf.setTextColor(50, 50, 50);
@@ -421,7 +421,7 @@ export default function FacturesPage() {
     pdf.line(margin + 90, y, pageWidth - margin, y);
     y += 8;
     pdf.setFontSize(10);
-    pdf.text("Sous-total:", margin + 95, y);
+    pdf.text(`${t.factures.subtotal}:`, margin + 95, y);
     pdf.text(formatCurrency(invoice.subtotal), pageWidth - margin - 5, y, { align: "right" });
     y += 10;
     pdf.setFillColor(30, 64, 175);
@@ -429,7 +429,7 @@ export default function FacturesPage() {
     pdf.setTextColor(255, 255, 255);
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(12);
-    pdf.text("TOTAL:", margin + 95, y + 2);
+    pdf.text(`${t.factures.total}:`, margin + 95, y + 2);
     pdf.text(formatCurrency(invoice.total), pageWidth - margin - 5, y + 2, { align: "right" });
 
     // Footer
@@ -447,13 +447,13 @@ export default function FacturesPage() {
     pdf.text("Signature & cachet", margin + 5, y + 62);
 
     pdf.save(`${invoice.number}.pdf`);
-    toast(`PDF généré: ${invoice.number}.pdf`, "success");
+    toast(`${t.factures.pdfGenerated} ${invoice.number}.pdf`, "success");
   };
 
   const sendWhatsApp = (invoice: Invoice) => {
     const msg = `Bonjour ${invoice.clientName},%0A%0AVoici votre facture ${invoice.number} de ${licenseConfig?.supermarketName || "KABRAK RETAIL"}.%0A%0AMontant total: ${formatCurrency(invoice.total)}%0ADate: ${new Date(invoice.date).toLocaleDateString("fr-FR")}%0A%0AMerci pour votre confiance!`;
     window.open(`https://wa.me/${invoice.clientPhone.replace(/[^0-9]/g, "")}?text=${msg}`, "_blank");
-    toast(`WhatsApp ouvert pour ${invoice.clientName}`, "info");
+    toast(`${t.factures.whatsappOpened} ${invoice.clientName}`, "info");
   };
 
   const sendEmail = (invoice: Invoice) => {
@@ -464,7 +464,7 @@ export default function FacturesPage() {
   };
 
   return (
-    <AppShell title="Factures A4" subtitle="Factures professionnelles pour clients entreprises">
+    <AppShell title={t.factures.title} subtitle={t.factures.subtitle}>
       <div className="space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between gap-3">
@@ -474,19 +474,19 @@ export default function FacturesPage() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher par numéro ou client..."
+              placeholder={t.factures.search}
               className="w-full pl-9 pr-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)] bg-white"
             />
           </div>
           <Button icon={<Plus className="w-4 h-4" />} onClick={() => setShowModal(true)}>
-            Nouvelle facture
+            {t.factures.newInvoice}
           </Button>
           <Button
             variant="secondary"
             icon={<Download className="w-4 h-4" />}
             onClick={() => {
               if (invoices.length === 0) {
-                toast("Aucune facture à exporter", "warning");
+                toast(t.factures.noInvoicesToExport || "No invoices to export", "warning");
                 return;
               }
               exportToCSV(
@@ -502,14 +502,14 @@ export default function FacturesPage() {
                 })),
                 `factures_${new Date().toISOString().slice(0, 10)}`,
                 [
-                  { key: "Numero", label: "Numéro" },
-                  { key: "Client", label: "Client" },
-                  { key: "Date", label: "Date" },
-                  { key: "Echeance", label: "Échéance" },
-                  { key: "Total", label: "Total (FCFA)" },
-                  { key: "Paye", label: "Payé (FCFA)" },
-                  { key: "Solde", label: "Solde (FCFA)" },
-                  { key: "Statut", label: "Statut" },
+                  { key: "Numero", label: t.factures.invoiceNumber },
+                  { key: "Client", label: t.factures.client },
+                  { key: "Date", label: t.factures.date },
+                  { key: "Echeance", label: t.factures.dueDate },
+                  { key: "Total", label: `${t.factures.total} (FCFA)` },
+                  { key: "Paye", label: `${t.factures.paidAmount} (FCFA)` },
+                  { key: "Solde", label: `${t.factures.balance} (FCFA)` },
+                  { key: "Statut", label: t.factures.status.draft ? "Status" : "Status" },
                 ],
               );
               toast("Export CSV téléchargé", "success");
@@ -525,14 +525,14 @@ export default function FacturesPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-[var(--border)] bg-[var(--background)]">
-                  <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">N° Facture</th>
-                  <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Client</th>
-                  <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Date</th>
-                  <th className="text-right text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Total</th>
-                  <th className="text-right text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Payé</th>
-                  <th className="text-right text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Reste</th>
-                  <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Statut</th>
-                  <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Actions</th>
+                  <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">{t.factures.invoiceNumber}</th>
+                  <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">{t.factures.client}</th>
+                  <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">{t.factures.date}</th>
+                  <th className="text-right text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">{t.factures.total}</th>
+                  <th className="text-right text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">{t.factures.paidAmount}</th>
+                  <th className="text-right text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">{t.factures.balance}</th>
+                  <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">{t.factures.status.draft ? "Status" : "Status"}</th>
+                  <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">{t.factures.actions}</th>
                 </tr>
               </thead>
               <tbody>
@@ -548,7 +548,7 @@ export default function FacturesPage() {
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span className={cn("inline-flex px-2 py-0.5 rounded-md text-xs font-medium", statusConfig[invoice.status].color)}>
-                        {statusConfig[invoice.status].label}
+                        {(t.factures.status as any)[invoice.status] || statusConfig[invoice.status].label}
                       </span>
                     </td>
                     <td className="px-4 py-3">
@@ -582,7 +582,7 @@ export default function FacturesPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowModal(false)}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between sticky top-0 bg-white pb-2 border-b border-[var(--border)]">
-              <h3 className="text-sm font-bold text-[var(--text-primary)]">Nouvelle facture A4</h3>
+              <h3 className="text-sm font-bold text-[var(--text-primary)]">{t.factures.newInvoiceModal}</h3>
               <button onClick={() => setShowModal(false)} className="p-1 hover:bg-slate-100 rounded-lg">
                 <X className="w-4 h-4 text-[var(--text-muted)]" />
               </button>
@@ -591,15 +591,15 @@ export default function FacturesPage() {
             {/* Client info */}
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2">
-                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Client *</label>
-                <input value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Nom de l'entreprise" className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]" />
+                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">{t.factures.client} *</label>
+                <input value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder={t.factures.clientName} className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]" />
               </div>
               <div>
-                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Téléphone</label>
+                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">{t.factures.clientPhone}</label>
                 <input value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} placeholder="+237 6XX XXX XXX" className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]" />
               </div>
               <div>
-                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Email</label>
+                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">{t.factures.clientEmail}</label>
                 <input value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} placeholder="contact@email.cm" className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]" />
               </div>
             </div>
@@ -607,8 +607,8 @@ export default function FacturesPage() {
             {/* Items */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">Articles</label>
-                <button onClick={addItem} className="text-xs text-[var(--brand)] font-medium hover:underline">+ Ajouter une ligne</button>
+                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">{t.factures.items}</label>
+                <button onClick={addItem} className="text-xs text-[var(--brand)] font-medium hover:underline">+ {t.factures.addItem}</button>
               </div>
 
               {/* Recherche de produits depuis la DB */}
@@ -620,7 +620,7 @@ export default function FacturesPage() {
                     value={productSearch}
                     onChange={(e) => { setProductSearch(e.target.value); setShowProductDropdown(true); }}
                     onFocus={() => setShowProductDropdown(true)}
-                    placeholder="Rechercher un produit pour l'ajouter..."
+                    placeholder={t.factures.scanProductPh}
                     className="w-full pl-9 pr-3 py-2 border border-[var(--border)] rounded-lg text-sm outline-none focus:border-[var(--brand)]"
                   />
                 </div>
@@ -652,7 +652,7 @@ export default function FacturesPage() {
                       <input
                         value={item.description}
                         onChange={(e) => updateItem(idx, "description", e.target.value)}
-                        placeholder="Description"
+                        placeholder={t.factures.description}
                         className={`w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-[var(--brand)] ${item.productId ? "border-emerald-300 bg-emerald-50/30" : "border-[var(--border)]"}`}
                       />
                       {item.productId && (
@@ -663,14 +663,14 @@ export default function FacturesPage() {
                       type="number"
                       value={item.quantity}
                       onChange={(e) => updateItem(idx, "quantity", parseInt(e.target.value) || 0)}
-                      placeholder="Qté"
+                      placeholder={t.factures.qty}
                       className="w-16 px-2 py-2 border border-[var(--border)] rounded-lg text-sm tabular-nums text-center outline-none focus:border-[var(--brand)]"
                     />
                     <input
                       type="number"
                       value={item.unitPrice}
                       onChange={(e) => updateItem(idx, "unitPrice", parseInt(e.target.value) || 0)}
-                      placeholder="Prix"
+                      placeholder={t.factures.unitPrice}
                       className="w-24 px-2 py-2 border border-[var(--border)] rounded-lg text-sm tabular-nums text-right outline-none focus:border-[var(--brand)]"
                     />
                     <span className="w-28 text-right text-sm font-semibold tabular-nums py-2">{formatCurrency(item.total)}</span>
@@ -687,18 +687,18 @@ export default function FacturesPage() {
             {/* Totals */}
             <div className="bg-slate-50 rounded-xl p-4 space-y-1.5 text-sm">
               <div className="flex justify-between text-[var(--text-muted)]">
-                <span>Sous-total</span>
+                <span>{t.factures.subtotal}</span>
                 <span className="tabular-nums">{formatCurrency(subtotal)}</span>
               </div>
               <div className="flex justify-between font-bold text-base pt-1 border-t border-[var(--border)]">
-                <span>Total</span>
+                <span>{t.factures.total}</span>
                 <span className="tabular-nums text-[var(--brand)]">{formatCurrency(total)}</span>
               </div>
             </div>
 
             <div className="flex gap-2">
               <Button variant="secondary" className="flex-1" onClick={() => setShowModal(false)}>Annuler</Button>
-              <Button className="flex-1" onClick={handleCreate} disabled={!clientName}>Créer la facture</Button>
+              <Button className="flex-1" onClick={handleCreate} disabled={!clientName}>{t.factures.create}</Button>
             </div>
           </div>
         </div>
@@ -721,16 +721,16 @@ export default function FacturesPage() {
             {/* Résumé facture */}
             <div className="grid grid-cols-3 gap-3">
               <div className="bg-slate-50 rounded-xl p-3">
-                <div className="text-xs text-[var(--text-muted)] uppercase tracking-wide">Total</div>
+                <div className="text-xs text-[var(--text-muted)] uppercase tracking-wide">{t.factures.total}</div>
                 <div className="text-sm font-bold tabular-nums text-[var(--text-primary)]">{formatCurrency(paymentInvoice.total)}</div>
               </div>
               <div className="bg-emerald-50 rounded-xl p-3">
-                <div className="text-xs text-emerald-600 uppercase tracking-wide flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Payé</div>
+                <div className="text-xs text-emerald-600 uppercase tracking-wide flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> {t.factures.paidAmount}</div>
                 <div className="text-sm font-bold tabular-nums text-emerald-700">{formatCurrency(paymentInvoice.paidAmount)}</div>
               </div>
               <div className={cn("rounded-xl p-3", paymentInvoice.balance > 0 ? "bg-red-50" : "bg-emerald-50")}>
                 <div className={cn("text-xs uppercase tracking-wide flex items-center gap-1", paymentInvoice.balance > 0 ? "text-red-600" : "text-emerald-600")}>
-                  {paymentInvoice.balance > 0 ? <Clock className="w-3 h-3" /> : <CheckCircle2 className="w-3 h-3" />} Reste
+                  {paymentInvoice.balance > 0 ? <Clock className="w-3 h-3" /> : <CheckCircle2 className="w-3 h-3" />} {t.factures.remainingBalance}
                 </div>
                 <div className={cn("text-sm font-bold tabular-nums", paymentInvoice.balance > 0 ? "text-red-700" : "text-emerald-700")}>{formatCurrency(paymentInvoice.balance)}</div>
               </div>
@@ -739,7 +739,7 @@ export default function FacturesPage() {
             {/* Barre de progression */}
             <div>
               <div className="flex justify-between text-xs text-[var(--text-muted)] mb-1">
-                <span>Avancement paiement</span>
+                <span>{t.factures.paymentProgress}</span>
                 <span>{Math.round((paymentInvoice.paidAmount / paymentInvoice.total) * 100)}%</span>
               </div>
               <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
@@ -752,9 +752,9 @@ export default function FacturesPage() {
 
             {/* Historique des paiements */}
             <div>
-              <div className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-2">Historique des paiements</div>
+              <div className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-2">{t.factures.paymentHistory}</div>
               {paymentInvoice.payments.length === 0 ? (
-                <div className="text-sm text-[var(--text-muted)] italic py-3 text-center bg-slate-50 rounded-xl">Aucun paiement enregistré</div>
+                <div className="text-sm text-[var(--text-muted)] italic py-3 text-center bg-slate-50 rounded-xl">{t.factures.noPayments}</div>
               ) : (
                 <div className="space-y-2">
                   {paymentInvoice.payments.map((p) => (
@@ -780,10 +780,10 @@ export default function FacturesPage() {
             {/* Formulaire d'ajout paiement */}
             {paymentInvoice.balance > 0 ? (
               <div className="border-t border-[var(--border)] pt-4 space-y-3">
-                <div className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">Enregistrer un paiement</div>
+                <div className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">{t.factures.addPayment}</div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs text-[var(--text-muted)] mb-1.5 block">Montant</label>
+                    <label className="text-xs text-[var(--text-muted)] mb-1.5 block">{t.factures.paymentAmount}</label>
                     <input
                       type="number"
                       value={paymentAmount}
@@ -793,7 +793,7 @@ export default function FacturesPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-[var(--text-muted)] mb-1.5 block">Méthode</label>
+                    <label className="text-xs text-[var(--text-muted)] mb-1.5 block">{t.factures.method}</label>
                     <select
                       value={paymentMethod}
                       onChange={(e) => setPaymentMethod(e.target.value)}
@@ -808,25 +808,25 @@ export default function FacturesPage() {
                     </select>
                   </div>
                   <div className="col-span-2">
-                    <label className="text-xs text-[var(--text-muted)] mb-1.5 block">Note (optionnel)</label>
+                    <label className="text-xs text-[var(--text-muted)] mb-1.5 block">{t.factures.note}</label>
                     <input
                       value={paymentNote}
                       onChange={(e) => setPaymentNote(e.target.value)}
-                      placeholder="Référence, remarque..."
+                      placeholder={t.factures.notePh}
                       className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]"
                     />
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="secondary" className="flex-1" onClick={closePaymentModal}>Fermer</Button>
+                  <Button variant="secondary" className="flex-1" onClick={closePaymentModal}>{t.factures.close}</Button>
                   <Button className="flex-1" onClick={handleAddPayment} disabled={addingPayment || !paymentAmount}>
-                    {addingPayment ? "Enregistrement..." : "Enregistrer le paiement"}
+                    {addingPayment ? t.factures.saving : t.factures.save}
                   </Button>
                 </div>
               </div>
             ) : (
               <div className="flex justify-end">
-                <Button variant="secondary" onClick={closePaymentModal}>Fermer</Button>
+                <Button variant="secondary" onClick={closePaymentModal}>{t.factures.close}</Button>
               </div>
             )}
           </div>
