@@ -1,0 +1,9 @@
+fix: extract .data from paginated purchase-orders response
+
+The backend returns {data, total, page, limit, totalPages} for
+purchase-orders, but the frontend expected a plain array, causing
+".map is not a function" errors on the Achats page.
+
+Generated with [Devin](https://devin.ai)
+
+Co-Authored-By: Devin <158243242+devin-ai-integration[bot]@users.noreply.github.com>

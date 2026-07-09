@@ -23,6 +23,9 @@ type FormData = {
   category: string;
   price: string;
   costPrice: string;
+  wholesalePrice: string;
+  packQuantity: string;
+  packBarcode: string;
   stock: string;
   minStock: string;
   unit: string;
@@ -32,7 +35,7 @@ type FormData = {
 
 const empty: FormData = {
   name: "", sku: "", barcode: "", category: "", price: "",
-  costPrice: "", stock: "", minStock: "", unit: "unit", supplier: "", expiryDate: "",
+  costPrice: "", wholesalePrice: "", packQuantity: "", packBarcode: "", stock: "", minStock: "", unit: "unit", supplier: "", expiryDate: "",
 };
 
 export function NewProductModal({ onClose, onSave, prefillBarcode }: NewProductModalProps) {
@@ -105,13 +108,16 @@ export function NewProductModal({ onClose, onSave, prefillBarcode }: NewProductM
       category: form.category,
       price: Number(form.price),
       costPrice: Number(form.costPrice),
+      wholesalePrice: form.wholesalePrice ? Number(form.wholesalePrice) : undefined,
+      packQuantity: form.packQuantity ? Number(form.packQuantity) : undefined,
+      packBarcode: form.packBarcode || undefined,
       stock: Number(form.stock),
       minStock: Number(form.minStock),
       unit: form.unit,
       barcode: form.barcode,
       supplier: form.supplier || undefined,
       expiryDate: form.expiryDate || undefined,
-    });
+    } as any);
     setSaved(true);
     setTimeout(() => {
       setSaved(false);
@@ -235,6 +241,22 @@ export function NewProductModal({ onClose, onSave, prefillBarcode }: NewProductM
                         </div>
                       </div>
                     )}
+                    {/* Pack/Wholesale pricing */}
+                    <Field label="Wholesale Price (pack)">
+                      <input type="number" value={form.wholesalePrice} onChange={set("wholesalePrice")}
+                        placeholder="0 (optional)" min="0"
+                        className={inputClass(false)} />
+                    </Field>
+                    <Field label="Pack Quantity (units per pack)">
+                      <input type="number" value={form.packQuantity} onChange={set("packQuantity")}
+                        placeholder="0 (optional)" min="1"
+                        className={inputClass(false)} />
+                    </Field>
+                    <Field label="Pack Barcode (optional)" span={2}>
+                      <input type="text" value={form.packBarcode} onChange={set("packBarcode")}
+                        placeholder="Leave empty if pack has no barcode"
+                        className={inputClass(false)} />
+                    </Field>
                   </div>
                 </div>
 

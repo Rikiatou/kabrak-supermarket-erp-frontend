@@ -258,6 +258,7 @@ export default function POSPage() {
   const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>("cart");
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
+  const [sellMode, setSellMode] = useState<"unit" | "pack">("unit");
 
   const [cashGiven, setCashGiven] = useState("");
 
@@ -521,41 +522,38 @@ export default function POSPage() {
 
 
 
-  const addToCart = useCallback((product: Product) => {
+  const addToCart = useCallback((product: Product, mode: "unit" | "pack" = sellMode) => {
 
-    // Bloquer si stock = 0
-    if (product.stock <= 0) {
-      toast(`${product.name} — Out of stock`, "warning");
+    // Déterminer le prix et la quantité selon le mode
+    const isPack = mode === "pack" && product.wholesalePrice && product.packQuantity;
+    const effectiveUnitPrice = isPack ? product.wholesalePrice! : getEffectivePrice(product);
+    const stockNeeded = isPack ? product.packQuantity! : 1;
+
+    // Bloquer si stock insuffisant
+    if (product.stock < stockNeeded) {
+      toast(`${product.name} — Insufficient stock (${product.stock} left, need ${stockNeeded})`, "warning");
       return;
     }
 
     setCart((prev) => {
-
-      const existing = prev.find((i) => i.product.id === product.id);
-
+      const existing = prev.find((i) => i.product.id === product.id && (i as any).sellMode === mode);
       if (existing) {
-        // Vérifier qu'on ne dépasse pas le stock
-        if (existing.quantity + 1 > product.stock) {
+        const newQty = existing.quantity + 1;
+        const newStockNeeded = isPack ? newQty * product.packQuantity! : newQty;
+        if (newStockNeeded > product.stock) {
           toast(`Only ${product.stock} in stock`, "warning");
           return prev;
         }
         return prev.map((i) =>
-
-          i.product.id === product.id
-
-            ? { ...i, quantity: i.quantity + 1 }
-
+          i.product.id === product.id && (i as any).sellMode === mode
+            ? { ...i, quantity: newQty }
             : i
-
         );
-
       }
-
-      return [...prev, { product, quantity: 1, discount: 0 }];
-
+      return [...prev, { product, quantity: 1, discount: 0, sellMode: mode, unitPrice: effectiveUnitPrice } as any];
     });
 
-  }, [toast]);
+  }, [toast, sellMode]);
 
 
 
@@ -613,9 +611,24 @@ export default function POSPage() {
 
       if (found) {
 
-        // Produit trouvé ? ajouter au panier (stock non bloquant)
+        // Produit trouvé — détecter si le code scanné correspond au packBarcode
+        const isPackScan = found.packBarcode && code === found.packBarcode;
+        const sellAsPack = isPackScan && found.wholesalePrice && found.packQuantity;
 
-        addToCart(found);
+        // Vérifier le stock avant d'ajouter
+        if (sellAsPack) {
+          if (found.stock < found.packQuantity!) {
+            toast(`${found.name} — Insufficient stock for pack`, "warning");
+            setSearch("");
+            return;
+          }
+        } else if (found.stock <= 0) {
+          toast(`${found.name} — Out of stock`, "warning");
+          setSearch("");
+          return;
+        }
+
+        addToCart(found, sellAsPack ? "pack" : "unit");
 
         if (beepRef.current) {
 
@@ -1111,7 +1124,7 @@ export default function POSPage() {
 
 
 
-  const subtotal = cart.reduce((s, i) => s + getEffectivePrice(i.product) * i.quantity, 0);
+  const subtotal = cart.reduce((s, i) => s + ((i as any).unitPrice || getEffectivePrice(i.product)) * i.quantity, 0);
 
   const tax = Math.round(subtotal * TAX_RATE);
 
@@ -1269,11 +1282,12 @@ export default function POSPage() {
 
       items: cart.map((item) => {
 
-        const effPrice = getEffectivePrice(item.product);
+        const effPrice = (item as any).unitPrice || getEffectivePrice(item.product);
+        const isPackItem = (item as any).sellMode === "pack";
 
         return {
 
-          name: item.product.name,
+          name: item.product.name + (isPackItem ? " [PACK]" : ""),
 
           quantity: item.quantity,
 
@@ -1403,7 +1417,7 @@ export default function POSPage() {
 
     const allocatedDiscount = cart.map((item) => {
 
-      const effPrice = getEffectivePrice(item.product);
+      const effPrice = (item as any).unitPrice || getEffectivePrice(item.product);
 
       const lineTotal = effPrice * item.quantity;
 
@@ -1449,13 +1463,16 @@ export default function POSPage() {
 
       items: cart.map((item, idx) => {
 
-        const effPrice = getEffectivePrice(item.product);
+        const effPrice = (item as any).unitPrice || getEffectivePrice(item.product);
+        const isPackItem = (item as any).sellMode === "pack";
+        // Pour un pack: quantity = nombre de packs, mais le backend décrémente le stock en unités
+        const stockQuantity = isPackItem && item.product.packQuantity ? item.quantity * item.product.packQuantity : item.quantity;
 
         return {
 
           productId: item.product.id,
 
-          quantity: item.quantity,
+          quantity: stockQuantity,
 
           unitPrice: Math.round(effPrice),
 
@@ -1642,9 +1659,10 @@ export default function POSPage() {
 
       .map((item) => {
 
-        const effPrice = getEffectivePrice(item.product);
+        const effPrice = (item as any).unitPrice || getEffectivePrice(item.product);
+        const isPackItem = (item as any).sellMode === "pack";
         const barcode = item.product.barcode || "";
-        const name = item.product.name;
+        const name = item.product.name + (isPackItem ? " [PACK]" : "");
         const total = effPrice * item.quantity;
 
         return `<tr>
@@ -2396,7 +2414,9 @@ export default function POSPage() {
 
                     {cart.map((item) => {
 
-                      const effPrice = getEffectivePrice(item.product);
+                      const effPrice = (item as any).unitPrice || getEffectivePrice(item.product);
+
+                      const isPackItem = (item as any).sellMode === "pack";
 
                       const hasMarkdown = hasActiveMarkdown(item.product);
 
@@ -2421,6 +2441,8 @@ export default function POSPage() {
                               {item.product.name}
 
                               {hasMarkdown && <span className="text-[10px] font-bold bg-red-100 text-red-600 px-1.5 py-0.5 rounded shrink-0">{t.pos.promo}</span>}
+
+                              {isPackItem && <span className="text-[10px] font-bold bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded shrink-0">PACK {item.product.packQuantity}</span>}
 
                               {isExpired && <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded shrink-0">{t.pos.expired}</span>}
 
@@ -2666,7 +2688,30 @@ export default function POSPage() {
 
           </div>
 
-
+          {/* Toggle Unit/Pack */}
+          <div className="px-3 pb-2 flex items-center gap-2">
+            <button
+              onClick={() => setSellMode("unit")}
+              className={cn(
+                "px-3 py-1 rounded-lg text-[11px] font-bold transition-colors",
+                sellMode === "unit" ? "bg-[#16a34a] text-white" : "bg-white text-[#6b7280] border border-[#e5e7eb]"
+              )}
+            >
+              UNIT
+            </button>
+            <button
+              onClick={() => setSellMode("pack")}
+              className={cn(
+                "px-3 py-1 rounded-lg text-[11px] font-bold transition-colors",
+                sellMode === "pack" ? "bg-blue-600 text-white" : "bg-white text-[#6b7280] border border-[#e5e7eb]"
+              )}
+            >
+              PACK
+            </button>
+            {sellMode === "pack" && (
+              <span className="text-[10px] text-blue-600 font-medium">Products without pack will sell as unit</span>
+            )}
+          </div>
 
           {/* Dropdown résultats de recherche */}
 
@@ -2782,9 +2827,15 @@ export default function POSPage() {
 
                         )}>
 
-                          {formatCurrency(getEffectivePrice(product))}
+                          {sellMode === "pack" && product.wholesalePrice ? formatCurrency(product.wholesalePrice) : formatCurrency(getEffectivePrice(product))}
 
                         </span>
+
+                        {sellMode === "pack" && product.wholesalePrice && product.packQuantity && (
+                          <span className="text-[9px] text-blue-600 font-medium shrink-0">
+                            /{product.packQuantity}pcs
+                          </span>
+                        )}
 
                         <span className={cn(
 
@@ -4132,7 +4183,8 @@ function ReceiptPanel({
 
           {receipt.items.map((item) => {
 
-            const effPrice = getEffectivePrice(item.product);
+            const effPrice = (item as any).unitPrice || getEffectivePrice(item.product);
+            const isPackItem = (item as any).sellMode === "pack";
 
             const hasMd = hasActiveMarkdown(item.product);
 
@@ -4145,6 +4197,8 @@ function ReceiptPanel({
                 {item.product.name}
 
                 {hasMd && <span className="text-red-600 font-bold"> {t.pos.promoBadge}</span>}
+
+                {isPackItem && <span className="text-blue-600 font-bold"> PACK</span>}
 
               </span>
 

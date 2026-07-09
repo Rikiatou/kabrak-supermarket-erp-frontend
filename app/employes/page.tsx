@@ -14,6 +14,7 @@ import {
   EyeOff,
   RefreshCw,
   ChevronDown,
+  Trash2,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Card } from "@/components/ui/Card";
@@ -375,6 +376,7 @@ export default function EmployesPage() {
           employee={selectedEmployee}
           index={employees.findIndex((e) => e.id === selectedEmployee.id)}
           onClose={() => setSelectedEmployee(null)}
+          onDeleted={() => { setSelectedEmployee(null); reloadEmployees(); }}
         />
       )}
 
@@ -400,10 +402,12 @@ function EmployeeDetailPanel({
   employee,
   index,
   onClose,
+  onDeleted,
 }: {
   employee: Employee;
   index: number;
   onClose: () => void;
+  onDeleted: () => void;
 }) {
   const { t } = useI18n();
   const { toast } = useToast();
@@ -415,6 +419,23 @@ function EmployeeDetailPanel({
   const [resetting, setResetting] = useState(false);
 
   const canManagePin = user?.role === "boss" || user?.role === "manager";
+  const canDelete = user?.role === "boss";
+
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!confirm(`Delete employee "${employee.firstName} ${employee.lastName}"? This will deactivate their account. Their sales history will be preserved.`)) return;
+    setDeleting(true);
+    try {
+      await employeesApi.delete(employee.id);
+      toast(`${employee.firstName} ${employee.lastName} deleted`, "success");
+      onDeleted();
+    } catch (e: unknown) {
+      toast(e instanceof Error ? e.message : "Delete failed", "warning");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const handleResetPin = async () => {
     setResetting(true);
@@ -547,6 +568,17 @@ function EmployeeDetailPanel({
           <Button className="flex-1" size="md" onClick={() => toast(`${t.common.edit} — ${employee.firstName} ${employee.lastName}`, "info")}>
             {t.common.edit}
           </Button>
+          {canDelete && employee.role !== "boss" && (
+            <Button
+              variant="danger"
+              size="md"
+              icon={<Trash2 className="w-4 h-4" />}
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              {deleting ? "..." : "Delete"}
+            </Button>
+          )}
         </div>
       </div>
     </>

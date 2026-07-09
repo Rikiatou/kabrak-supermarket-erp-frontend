@@ -53,6 +53,9 @@ export interface ApiProduct {
   brand?: string;
   price: number;
   costPrice: number;
+  wholesalePrice?: number | null;
+  packQuantity?: number | null;
+  packBarcode?: string | null;
   taxRate: number;
   markdownPrice?: number | null;
   markdownReason?: string | null;
@@ -509,6 +512,8 @@ export const employeesApi = {
     fetchAPI<ApiEmployee>(`/employees`, { method: "POST", body: JSON.stringify(data) }),
   update: (id: string, data: any) =>
     fetchAPI<ApiEmployee>(`/employees/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  delete: (id: string) =>
+    fetchAPI<ApiEmployee>(`/employees/${id}`, { method: "DELETE" }),
 };
 
 // ========================================
@@ -1014,6 +1019,9 @@ export function apiProductToFrontend(p: ApiProduct): Product {
     category: p.category,
     price: p.price,
     costPrice: p.costPrice,
+    wholesalePrice: p.wholesalePrice,
+    packQuantity: p.packQuantity,
+    packBarcode: p.packBarcode,
     markdownPrice: p.markdownPrice,
     markdownReason: p.markdownReason,
     markdownNote: p.markdownNote,

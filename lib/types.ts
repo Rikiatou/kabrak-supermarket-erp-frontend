@@ -55,6 +55,9 @@ export interface Product {
   category: string;
   price: number;
   costPrice: number;
+  wholesalePrice?: number | null;
+  packQuantity?: number | null;
+  packBarcode?: string | null;
   markdownPrice?: number | null;
   markdownReason?: string | null;
   markdownNote?: string | null;

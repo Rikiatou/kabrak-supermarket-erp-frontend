@@ -129,10 +129,14 @@ export default function AchatsPage() {
   type DeliveryLine = {
     productId: string;
     productLabel: string;    // nom affiché du produit sélectionné (recherche server-side)
-    qty: number;
+    qty: number;             // quantité en UNITÉS (envoyée au backend)
     unitPrice: number;       // prix d'achat (cost)
     sellPrice: number;       // prix de vente
     expiryDate: string;      // date d'expiration
+    // Champs pour réception en cartons
+    receiveInPacks: boolean; // true = saisie en cartons, false = saisie en unités
+    packQty: number;         // nombre de cartons saisis
+    productPackQuantity: number | null; // packQuantity du produit (ex: 6)
     // Champs pour nouveau produit
     isNewProduct: boolean;
     newProductName: string;
@@ -141,13 +145,13 @@ export default function AchatsPage() {
     newProductUnit: string;
   };
   const [deliveryLines, setDeliveryLines] = useState<DeliveryLine[]>([
-    { productId: "", productLabel: "", qty: 1, unitPrice: 0, sellPrice: 0, expiryDate: "", isNewProduct: false, newProductName: "", newProductBarcode: "", newProductCategory: "Grocery", newProductUnit: "pc" },
+    { productId: "", productLabel: "", qty: 1, unitPrice: 0, sellPrice: 0, expiryDate: "", receiveInPacks: false, packQty: 1, productPackQuantity: null, isNewProduct: false, newProductName: "", newProductBarcode: "", newProductCategory: "Grocery", newProductUnit: "pc" },
   ]);
   const [printDelivery, setPrintDelivery] = useState<null | {
     ref: string; date: string; supplier: string; lines: Array<{ name: string; qty: number; unitPrice: number; total: number }>; grandTotal: number;
   }>(null);
 
-  const addDeliveryLine = () => setDeliveryLines((l) => [...l, { productId: "", productLabel: "", qty: 1, unitPrice: 0, sellPrice: 0, expiryDate: "", isNewProduct: false, newProductName: "", newProductBarcode: "", newProductCategory: "Grocery", newProductUnit: "pc" }]);
+  const addDeliveryLine = () => setDeliveryLines((l) => [...l, { productId: "", productLabel: "", qty: 1, unitPrice: 0, sellPrice: 0, expiryDate: "", receiveInPacks: false, packQty: 1, productPackQuantity: null, isNewProduct: false, newProductName: "", newProductBarcode: "", newProductCategory: "Grocery", newProductUnit: "pc" }]);
   const removeDeliveryLine = (i: number) => setDeliveryLines((l) => l.filter((_, idx) => idx !== i));
   const updateDeliveryLine = (i: number, field: keyof DeliveryLine, value: string | number | boolean) =>
     setDeliveryLines((l) => l.map((line, idx) => idx === i ? { ...line, [field]: value } : line));
@@ -168,6 +172,7 @@ export default function AchatsPage() {
         setDeliveryLines((l) => [...l, {
           productId: found.id, productLabel: `${found.name} (${found.sku})`, qty: 1, unitPrice: found.costPrice || 0,
           sellPrice: found.price || 0, expiryDate: found.expiryDate ? found.expiryDate.split("T")[0] : "",
+          receiveInPacks: false, packQty: 1, productPackQuantity: (found as any).packQuantity || null,
           isNewProduct: false, newProductName: "", newProductBarcode: "", newProductCategory: "Grocery", newProductUnit: "pc",
         }]);
       }
@@ -209,6 +214,7 @@ export default function AchatsPage() {
         unitPrice: created.costPrice || 0,
         sellPrice: created.price || 0,
         expiryDate: created.expiryDate ? created.expiryDate.split("T")[0] : "",
+        receiveInPacks: false, packQty: 1, productPackQuantity: (created as any).packQuantity || null,
         isNewProduct: false, newProductName: "", newProductBarcode: "", newProductCategory: "Grocery", newProductUnit: "pc",
       }]);
       toast(`${created.name} ${t.achats.scanProductAdded}`, "success");
@@ -224,7 +230,7 @@ export default function AchatsPage() {
 
   const resetDeliveryForm = () => {
     setDeliveryRef(""); setDeliveryDate(new Date().toISOString().split("T")[0]);
-    setDeliverySupplierId(""); setDeliverySupplierName(""); setDeliveryLines([{ productId: "", productLabel: "", qty: 1, unitPrice: 0, sellPrice: 0, expiryDate: "", isNewProduct: false, newProductName: "", newProductBarcode: "", newProductCategory: "Grocery", newProductUnit: "pc" }]);
+    setDeliverySupplierId(""); setDeliverySupplierName(""); setDeliveryLines([{ productId: "", productLabel: "", qty: 1, unitPrice: 0, sellPrice: 0, expiryDate: "", receiveInPacks: false, packQty: 1, productPackQuantity: null, isNewProduct: false, newProductName: "", newProductBarcode: "", newProductCategory: "Grocery", newProductUnit: "pc" }]);
     setScanInput(""); setScanMode(false);
   };
 
@@ -805,6 +811,7 @@ export default function AchatsPage() {
                                       updateDeliveryLine(i, "productLabel", `${p.name} (${p.sku})`);
                                       updateDeliveryLine(i, "unitPrice", p.costPrice || 0);
                                       updateDeliveryLine(i, "sellPrice", p.price || 0);
+                                      updateDeliveryLine(i, "productPackQuantity", p.packQuantity || null);
                                       if (p.expiryDate) updateDeliveryLine(i, "expiryDate", p.expiryDate.split("T")[0]);
                                       setActiveSearchLine(null);
                                       setProdSearchInput("");
@@ -827,12 +834,63 @@ export default function AchatsPage() {
 
                         {/* Ligne 2: Qté, P. Achat, P. Vente, Total, Expiration, Delete */}
                         <div className="grid grid-cols-[60px_80px_80px_80px_90px_30px] gap-1.5 items-center">
-                          <input
-                            type="number" min="1" value={line.qty}
-                            onChange={(e) => updateDeliveryLine(i, "qty", Math.max(1, parseInt(e.target.value) || 1))}
-                            className="border border-[var(--border)] rounded-lg px-2 py-1.5 text-xs text-center outline-none focus:border-[var(--brand)] tabular-nums"
-                            placeholder={t.achats.colQty}
-                          />
+                          {/* Quantité: si le produit a un packQuantity, afficher un toggle carton/unité */}
+                          {line.productPackQuantity && line.productPackQuantity > 1 ? (
+                            <div className="flex flex-col gap-0.5">
+                              <div className="flex gap-0.5">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    updateDeliveryLine(i, "receiveInPacks", false);
+                                    updateDeliveryLine(i, "qty", line.packQty * line.productPackQuantity!);
+                                  }}
+                                  className={`flex-1 text-[8px] font-bold py-0.5 rounded ${!line.receiveInPacks ? "bg-[#16a34a] text-white" : "bg-slate-100 text-slate-500"}`}
+                                >
+                                  UNIT
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    updateDeliveryLine(i, "receiveInPacks", true);
+                                    updateDeliveryLine(i, "qty", line.packQty * line.productPackQuantity!);
+                                  }}
+                                  className={`flex-1 text-[8px] font-bold py-0.5 rounded ${line.receiveInPacks ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}
+                                >
+                                  PACK
+                                </button>
+                              </div>
+                              {line.receiveInPacks ? (
+                                <input
+                                  type="number" min="1" value={line.packQty}
+                                  onChange={(e) => {
+                                    const pq = Math.max(1, parseInt(e.target.value) || 1);
+                                    updateDeliveryLine(i, "packQty", pq);
+                                    updateDeliveryLine(i, "qty", pq * line.productPackQuantity!);
+                                  }}
+                                  className="border border-[var(--border)] rounded-lg px-1 py-1 text-xs text-center outline-none focus:border-blue-500 tabular-nums"
+                                  placeholder="Cartons"
+                                  title={`Nombre de cartons (×${line.productPackQuantity} = ${line.qty} unités)`}
+                                />
+                              ) : (
+                                <input
+                                  type="number" min="1" value={line.qty}
+                                  onChange={(e) => updateDeliveryLine(i, "qty", Math.max(1, parseInt(e.target.value) || 1))}
+                                  className="border border-[var(--border)] rounded-lg px-1 py-1 text-xs text-center outline-none focus:border-[var(--brand)] tabular-nums"
+                                  placeholder={t.achats.colQty}
+                                />
+                              )}
+                              {line.receiveInPacks && (
+                                <span className="text-[8px] text-blue-600 text-center font-medium">= {line.qty} pcs</span>
+                              )}
+                            </div>
+                          ) : (
+                            <input
+                              type="number" min="1" value={line.qty}
+                              onChange={(e) => updateDeliveryLine(i, "qty", Math.max(1, parseInt(e.target.value) || 1))}
+                              className="border border-[var(--border)] rounded-lg px-2 py-1.5 text-xs text-center outline-none focus:border-[var(--brand)] tabular-nums"
+                              placeholder={t.achats.colQty}
+                            />
+                          )}
                           <input
                             type="number" min="0" value={line.unitPrice}
                             onChange={(e) => updateDeliveryLine(i, "unitPrice", parseFloat(e.target.value) || 0)}
