@@ -2298,7 +2298,7 @@ export default function POSPage() {
 
                   >
 
-                    <RotateCcw className="w-3.5 h-3.5" /> Retours
+                    <RotateCcw className="w-3.5 h-3.5" /> Returns
 
                   </button>
 
@@ -2312,7 +2312,7 @@ export default function POSPage() {
 
                   >
 
-                    <Gift className="w-3.5 h-3.5" /> Cadeaux
+                    <Gift className="w-3.5 h-3.5" /> Gifts
 
                   </button>
 

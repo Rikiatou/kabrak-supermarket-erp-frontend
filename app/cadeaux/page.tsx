@@ -10,6 +10,7 @@ import {
   Package,
   X,
   CheckCircle2,
+  Trash2,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Card } from "@/components/ui/Card";
@@ -25,15 +26,25 @@ import type { ApiStockMovement } from "@/lib/api";
 
 type RecipientType = "staff" | "other";
 
+interface GiftItem {
+  productId: string;
+  productName: string;
+  quantity: number;
+  stock: number;
+}
+
 export default function CadeauxPage() {
   const { t } = useI18n();
   const { toast } = useToast();
   const { user } = useAuth();
 
-  // Recherche server-side: cherche parmi TOUS les produits (18000+), pas seulement 50
+  // Nom complet de l'utilisateur connecté
+  const currentUserName = user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : "—";
+
+  // Recherche server-side
   const { results: searchResults, search: serverSearch, bestsellers } = useServerProductSearch();
 
-  // Historique des cadeaux — chargé depuis les mouvements de stock
+  // Historique des cadeaux
   const [giftMovements, setGiftMovements] = useState<ApiStockMovement[]>([]);
   const [loadingGifts, setLoadingGifts] = useState(false);
   const [giftsLoaded, setGiftsLoaded] = useState(false);
@@ -42,11 +53,10 @@ export default function CadeauxPage() {
     if (giftsLoaded) return;
     setLoadingGifts(true);
     try {
-      const res = await stockApi.listMovements(1, 200);
+      const res = await stockApi.listMovements(1, 500);
       const gifts = res.data.filter(
         (m) => m.reason === "gift_staff" || m.reason === "gift_other"
       );
-      // Si cashier: ne voir que ses propres cadeaux
       const isPrivileged = ["boss", "manager", "accountant", "supervisor"].includes(user?.role ?? "");
       setGiftMovements(isPrivileged ? gifts : gifts.filter((m) => m.createdBy === user?.id));
     } catch {
@@ -57,7 +67,6 @@ export default function CadeauxPage() {
     }
   };
 
-  // Charger au montage
   useMemo(() => { loadGifts(); }, []); // eslint-disable-line
 
   // --- Modal state ---
@@ -65,13 +74,13 @@ export default function CadeauxPage() {
   const [productSearch, setProductSearch] = useState("");
   const [selectedProductId, setSelectedProductId] = useState("");
   const [quantity, setQuantity] = useState(1);
+  const [giftItems, setGiftItems] = useState<GiftItem[]>([]);
   const [recipientType, setRecipientType] = useState<RecipientType>("staff");
   const [recipientName, setRecipientName] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  // Recherche server-side déclenchée à chaque changement (query vide → bestsellers)
   useEffect(() => {
     serverSearch(productSearch);
   }, [productSearch, serverSearch]);
@@ -80,7 +89,6 @@ export default function CadeauxPage() {
     (productSearch.trim() ? searchResults : bestsellers).slice(0, 8),
   [searchResults, bestsellers, productSearch]);
 
-  // Chercher le produit sélectionné dans les résultats ou bestsellers
   const selectedProduct = useMemo(() =>
     [...searchResults, ...bestsellers].find((p) => p.id === selectedProductId),
   [searchResults, bestsellers, selectedProductId]);
@@ -89,34 +97,79 @@ export default function CadeauxPage() {
     setProductSearch("");
     setSelectedProductId("");
     setQuantity(1);
+    setGiftItems([]);
     setRecipientType("staff");
     setRecipientName("");
     setNotes("");
     setSaved(false);
   };
 
+  // Ajouter un produit à la liste des cadeaux
+  const addGiftItem = () => {
+    if (!selectedProductId || !selectedProduct) {
+      toast(t.gifts.selectProductRequired, "warning");
+      return;
+    }
+    if (quantity < 1) {
+      toast(t.gifts.quantityRequired, "warning");
+      return;
+    }
+    // Vérifier si le produit est déjà dans la liste
+    const existing = giftItems.find((g) => g.productId === selectedProductId);
+    if (existing) {
+      setGiftItems(giftItems.map((g) =>
+        g.productId === selectedProductId
+          ? { ...g, quantity: g.quantity + quantity }
+          : g
+      ));
+    } else {
+      setGiftItems([...giftItems, {
+        productId: selectedProductId,
+        productName: selectedProduct.name,
+        quantity,
+        stock: selectedProduct.stock,
+      }]);
+    }
+    // Reset la sélection produit pour en ajouter un autre
+    setProductSearch("");
+    setSelectedProductId("");
+    setQuantity(1);
+  };
+
+  const removeGiftItem = (productId: string) => {
+    setGiftItems(giftItems.filter((g) => g.productId !== productId));
+  };
+
   const handleSave = async () => {
-    if (!selectedProductId) { toast(t.gifts.selectProductRequired, "warning"); return; }
-    if (quantity < 1) { toast(t.gifts.quantityRequired, "warning"); return; }
-    if (!recipientName.trim()) { toast(t.gifts.recipientRequired, "warning"); return; }
+    if (giftItems.length === 0) {
+      toast(t.gifts.selectProductRequired, "warning");
+      return;
+    }
+    if (!recipientName.trim()) {
+      toast(t.gifts.recipientRequired, "warning");
+      return;
+    }
 
     setSaving(true);
     try {
-      await stockApi.createMovement({
-        productId: selectedProductId,
-        type: "out",
-        quantity: -Math.abs(quantity), // négatif = sortie stock
-        reason: recipientType === "staff" ? "gift_staff" : "gift_other",
-        notes: `${recipientName.trim()}${notes.trim() ? ` — ${notes.trim()}` : ""}`,
-        createdBy: user?.id,
-      });
+      // Créer un mouvement de stock pour chaque produit
+      for (const item of giftItems) {
+        await stockApi.createMovement({
+          productId: item.productId,
+          type: "out",
+          quantity: -Math.abs(item.quantity),
+          reason: recipientType === "staff" ? "gift_staff" : "gift_other",
+          notes: `${recipientName.trim()}${notes.trim() ? ` — ${notes.trim()}` : ""}`,
+          createdBy: user?.id,
+        });
+      }
 
       setSaved(true);
       toast(t.gifts.savedSuccess, "success");
 
       // Recharger les cadeaux
       setGiftsLoaded(false);
-      const res = await stockApi.listMovements(1, 200);
+      const res = await stockApi.listMovements(1, 500);
       const gifts = res.data.filter((m) => m.reason === "gift_staff" || m.reason === "gift_other");
       const isPrivileged = ["boss", "manager", "accountant", "supervisor"].includes(user?.role ?? "");
       setGiftMovements(isPrivileged ? gifts : gifts.filter((m) => m.createdBy === user?.id));
@@ -206,10 +259,10 @@ export default function CadeauxPage() {
                   const isStaff = m.reason === "gift_staff";
                   const productName = m.product?.name ?? m.productId;
                   const qty = Math.abs(m.quantity);
+                  // Recorded by: afficher le nom de l'employé si disponible, sinon le nom de l'utilisateur connecté si c'est lui, sinon l'ID
                   const employeeName = m.employee
-                    ? `${m.employee.firstName} ${m.employee.lastName}`
-                    : m.createdBy ?? "—";
-                  // notes format: "recipient — extra notes"
+                    ? `${m.employee.firstName} ${m.employee.lastName}`.trim()
+                    : (m.createdBy === user?.id ? currentUserName : (m.createdBy ?? "—"));
                   const notesParts = (m.notes ?? "").split(" — ");
                   const recipientDisplay = notesParts[0] || "—";
                   const extraNotes = notesParts.slice(1).join(" — ");
@@ -282,10 +335,32 @@ export default function CadeauxPage() {
               ) : (
                 <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
 
-                  {/* Produit */}
+                  {/* Liste des produits ajoutés */}
+                  {giftItems.length > 0 && (
+                    <div className="space-y-2">
+                      <label className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-widest block">
+                        {t.gifts.product}s ({giftItems.length})
+                      </label>
+                      {giftItems.map((item) => (
+                        <div key={item.productId} className="flex items-center gap-2 bg-violet-50 border border-violet-200 rounded-xl px-3 py-2">
+                          <Package className="w-4 h-4 text-violet-600 shrink-0" />
+                          <span className="text-[13px] font-semibold text-violet-800 flex-1 truncate">{item.productName}</span>
+                          <span className="text-[12px] text-violet-600">x{item.quantity}</span>
+                          <button
+                            onClick={() => removeGiftItem(item.productId)}
+                            className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-red-100 text-red-500 transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Produit - recherche */}
                   <div>
                     <label className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-widest block mb-2">
-                      {t.gifts.product} *
+                      {t.gifts.product}
                     </label>
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
@@ -298,10 +373,10 @@ export default function CadeauxPage() {
                       />
                     </div>
                     {selectedProduct && (
-                      <div className="mt-2 flex items-center gap-2 bg-violet-50 border border-violet-200 rounded-xl px-3 py-2">
-                        <Package className="w-4 h-4 text-violet-600 shrink-0" />
-                        <span className="text-[13px] font-semibold text-violet-800">{selectedProduct.name}</span>
-                        <span className="text-[12px] text-violet-600 ml-auto">Stock: {selectedProduct.stock}</span>
+                      <div className="mt-2 flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2">
+                        <Package className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span className="text-[13px] font-semibold text-emerald-800">{selectedProduct.name}</span>
+                        <span className="text-[12px] text-emerald-600 ml-auto">Stock: {selectedProduct.stock}</span>
                       </div>
                     )}
                     {productSearch && !selectedProductId && filteredProducts.length > 0 && (
@@ -320,18 +395,31 @@ export default function CadeauxPage() {
                     )}
                   </div>
 
-                  {/* Quantité */}
-                  <div>
-                    <label className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-widest block mb-2">
-                      {t.gifts.quantity} *
-                    </label>
-                    <input
-                      type="number"
-                      min={1}
-                      value={quantity}
-                      onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
-                      className="w-full border border-[var(--border)] rounded-xl px-3 py-2.5 text-[13px] outline-none focus:border-[var(--brand)]"
-                    />
+                  {/* Quantité + bouton ajouter */}
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <label className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-widest block mb-2">
+                        {t.gifts.quantity}
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={quantity}
+                        onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
+                        className="w-full border border-[var(--border)] rounded-xl px-3 py-2.5 text-[13px] outline-none focus:border-[var(--brand)]"
+                      />
+                    </div>
+                    <div className="flex items-end">
+                      <Button
+                        variant="secondary"
+                        size="md"
+                        onClick={addGiftItem}
+                        disabled={!selectedProductId}
+                        icon={<Plus className="w-4 h-4" />}
+                      >
+                        Add
+                      </Button>
+                    </div>
                   </div>
 
                   {/* Type de bénéficiaire */}
@@ -346,11 +434,10 @@ export default function CadeauxPage() {
                           "flex items-center justify-center gap-2 h-11 rounded-xl border-2 text-[13px] font-semibold transition-all",
                           recipientType === "staff"
                             ? "border-blue-500 bg-blue-50 text-blue-700"
-                            : "border-[var(--border)] text-[var(--text-secondary)] hover:bg-slate-50"
+                            : "border-[var(--border)] text-[var(--text-muted)] hover:border-blue-300"
                         )}
                       >
-                        <Users className="w-4 h-4" />
-                        {t.gifts.typeStaff}
+                        <Users className="w-4 h-4" /> {t.gifts.typeStaff}
                       </button>
                       <button
                         onClick={() => setRecipientType("other")}
@@ -358,11 +445,10 @@ export default function CadeauxPage() {
                           "flex items-center justify-center gap-2 h-11 rounded-xl border-2 text-[13px] font-semibold transition-all",
                           recipientType === "other"
                             ? "border-emerald-500 bg-emerald-50 text-emerald-700"
-                            : "border-[var(--border)] text-[var(--text-secondary)] hover:bg-slate-50"
+                            : "border-[var(--border)] text-[var(--text-muted)] hover:border-emerald-300"
                         )}
                       >
-                        <User className="w-4 h-4" />
-                        {t.gifts.typeOther}
+                        <User className="w-4 h-4" /> {t.gifts.typeOther}
                       </button>
                     </div>
                   </div>
@@ -370,18 +456,18 @@ export default function CadeauxPage() {
                   {/* Nom du bénéficiaire */}
                   <div>
                     <label className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-widest block mb-2">
-                      {recipientType === "staff" ? t.gifts.staffName : t.gifts.clientName} *
+                      {t.gifts.recipientName} *
                     </label>
                     <input
                       type="text"
                       value={recipientName}
                       onChange={(e) => setRecipientName(e.target.value)}
-                      placeholder={recipientType === "staff" ? t.gifts.staffNamePh : t.gifts.clientNamePh}
+                      placeholder={t.gifts.recipientPh}
                       className="w-full border border-[var(--border)] rounded-xl px-3 py-2.5 text-[13px] outline-none focus:border-[var(--brand)]"
                     />
                   </div>
 
-                  {/* Notes optionnelles */}
+                  {/* Notes */}
                   <div>
                     <label className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-widest block mb-2">
                       {t.gifts.notes}
@@ -399,20 +485,16 @@ export default function CadeauxPage() {
 
               {/* Footer */}
               {!saved && (
-                <div className="px-6 py-4 border-t border-[var(--border)] shrink-0 flex gap-3">
-                  <button
-                    onClick={() => setShowModal(false)}
-                    className="flex-1 h-11 rounded-xl border border-[var(--border)] text-[13px] font-semibold text-[var(--text-secondary)] hover:bg-slate-50"
-                  >
-                    {t.common.cancel}
-                  </button>
+                <div className="px-6 py-4 border-t border-[var(--border)] shrink-0">
                   <Button
                     variant="primary"
-                    className="flex-1"
+                    size="lg"
+                    className="w-full"
                     onClick={handleSave}
-                    disabled={saving}
+                    loading={saving}
+                    disabled={giftItems.length === 0 || !recipientName.trim()}
                   >
-                    {saving ? "..." : t.gifts.save}
+                    {t.gifts.save}
                   </Button>
                 </div>
               )}

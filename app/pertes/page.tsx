@@ -77,6 +77,16 @@ export default function PertesPage() {
   const [quantity, setQuantity] = useState(1);
   const [lossType, setLossType] = useState("damage");
   const [reason, setReason] = useState("");
+  const [lossItems, setLossItems] = useState<Array<{
+    productId: string;
+    productName: string;
+    quantity: number;
+    type: string;
+    reason: string;
+    value: number;
+    stock: number;
+  }>>([]);
+  const [savingLosses, setSavingLosses] = useState(false);
 
   // Return state
   const [showReturnModal, setShowReturnModal] = useState(false);
@@ -115,7 +125,7 @@ export default function PertesPage() {
       ).slice(0, 5)
     : [];
 
-  const handleAddLoss = async () => {
+  const handleAddLossItem = () => {
     const product = products.find((p) => p.id === selectedProduct);
     if (!product || quantity < 1) return;
 
@@ -124,32 +134,72 @@ export default function PertesPage() {
       return;
     }
 
-    try {
-      await adjust(product.id, Math.max(0, product.stock - quantity), `${lossType}: ${reason || t.pertes.lossTypes.loss}`);
-      reloadProducts();
-    } catch (e) {
-      toast(t.pertes.stockAdjustmentError, "warning");
-      return;
-    }
-
-    const entry: LossEntry = {
-      id: `LOSS-${Date.now()}`,
-      productName: product.name,
+    // Vérifier si le produit est déjà dans la liste
+    const existing = lossItems.find((l) => l.productId === product.id);
+    const newEntry = {
       productId: product.id,
+      productName: product.name,
       quantity,
       type: lossType,
       reason: reason || lossTypes.find((l) => l.value === lossType)?.label || t.pertes.lossTypes.loss,
       value: product.costPrice * quantity,
-      date: new Date().toISOString(),
+      stock: product.stock,
     };
 
-    setLosses([entry, ...losses]);
-    toast(`${t.pertes.lossSaved} ${product.name} ×${quantity} - ${formatCurrency(entry.value)}`, "warning");
-    setShowLossModal(false);
+    if (existing) {
+      setLossItems(lossItems.map((l) =>
+        l.productId === product.id
+          ? { ...l, quantity: l.quantity + quantity, value: l.value + newEntry.value }
+          : l
+      ));
+    } else {
+      setLossItems([...lossItems, newEntry]);
+    }
+
+    // Reset la sélection produit pour en ajouter un autre
     setSelectedProduct("");
     setQuantity(1);
     setReason("");
     setSearch("");
+  };
+
+  const removeLossItem = (productId: string) => {
+    setLossItems(lossItems.filter((l) => l.productId !== productId));
+  };
+
+  const handleSaveAllLosses = async () => {
+    if (lossItems.length === 0) return;
+
+    setSavingLosses(true);
+    const savedEntries: LossEntry[] = [];
+
+    for (const item of lossItems) {
+      try {
+        await adjust(item.productId, Math.max(0, item.stock - item.quantity), `${item.type}: ${item.reason}`);
+        savedEntries.push({
+          id: `LOSS-${Date.now()}-${item.productId}`,
+          productName: item.productName,
+          productId: item.productId,
+          quantity: item.quantity,
+          type: item.type,
+          reason: item.reason,
+          value: item.value,
+          date: new Date().toISOString(),
+        });
+      } catch (e) {
+        toast(t.pertes.stockAdjustmentError, "warning");
+      }
+    }
+
+    if (savedEntries.length > 0) {
+      setLosses([...savedEntries.reverse(), ...losses]);
+      toast(`${savedEntries.length} loss(es) saved`, "warning");
+      reloadProducts();
+    }
+
+    setLossItems([]);
+    setShowLossModal(false);
+    setSavingLosses(false);
   };
 
   const handleLinkSale = (tx: any) => {
@@ -308,7 +358,7 @@ export default function PertesPage() {
                 <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t.pertes.lossHistory}</h2>
                 <p className="text-xs text-[var(--text-muted)]">{t.pertes.allLosses}</p>
               </div>
-              <Button icon={<Plus className="w-4 h-4" />} onClick={() => setShowLossModal(true)}>
+              <Button icon={<Plus className="w-4 h-4" />} onClick={() => { setLossItems([]); setShowLossModal(true); }}>
                 {t.pertes.declareLoss}
               </Button>
             </div>
@@ -482,90 +532,136 @@ export default function PertesPage() {
       {/* Modal: Declare loss */}
       {showLossModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowLossModal(false)}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b border-[var(--border)]">
               <h3 className="text-sm font-bold text-[var(--text-primary)]">{t.pertes.reportLoss}</h3>
               <button onClick={() => setShowLossModal(false)} className="p-1 hover:bg-slate-100 rounded-lg">
                 <X className="w-4 h-4 text-[var(--text-muted)]" />
               </button>
             </div>
 
-            <div>
-              <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">{t.pertes.product}</label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder={t.pertes.searchProduct}
-                  className="w-full pl-9 pr-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]"
-                />
-              </div>
-              {search && (
-                <div className="mt-1.5 max-h-40 overflow-y-auto border border-[var(--border)] rounded-xl divide-y divide-[var(--border-subtle)]">
-                  {filteredProducts.map((p) => (
-                    <button
-                      key={p.id}
-                      onClick={() => { setSelectedProduct(p.id); setSearch(p.name); }}
-                      className="w-full text-left px-3 py-2 hover:bg-[var(--surface-hover)] text-sm flex justify-between items-center"
-                    >
-                      <span className="font-medium text-[var(--text-primary)]">{p.name}</span>
-                      <span className="text-xs text-[var(--text-muted)]">Stock: {p.stock}</span>
-                    </button>
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+              {/* Liste des produits ajoutés */}
+              {lossItems.length > 0 && (
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide block">
+                    {t.pertes.product}s ({lossItems.length})
+                  </label>
+                  {lossItems.map((item) => (
+                    <div key={item.productId} className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+                      <Package className="w-4 h-4 text-red-600 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <span className="text-[13px] font-semibold text-red-800 block truncate">{item.productName}</span>
+                        <span className="text-[11px] text-red-600">x{item.quantity} · {lossTypeLabel(item.type)} · {formatCurrency(item.value)}</span>
+                      </div>
+                      <button
+                        onClick={() => removeLossItem(item.productId)}
+                        className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-red-100 text-red-500 transition-colors shrink-0"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   ))}
                 </div>
               )}
-            </div>
 
-            <div>
-              <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">{t.pertes.quantityLost}</label>
-              <input
-                type="number"
-                min={1}
-                value={quantity}
-                onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm tabular-nums outline-none focus:border-[var(--brand)]"
-              />
-            </div>
+              {/* Recherche produit */}
+              <div>
+                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">{t.pertes.product}</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder={t.pertes.searchProduct}
+                    className="w-full pl-9 pr-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]"
+                  />
+                </div>
+                {search && (
+                  <div className="mt-1.5 max-h-40 overflow-y-auto border border-[var(--border)] rounded-xl divide-y divide-[var(--border-subtle)]">
+                    {filteredProducts.map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => { setSelectedProduct(p.id); setSearch(p.name); }}
+                        className="w-full text-left px-3 py-2 hover:bg-[var(--surface-hover)] text-sm flex justify-between items-center"
+                      >
+                        <span className="font-medium text-[var(--text-primary)]">{p.name}</span>
+                        <span className="text-xs text-[var(--text-muted)]">Stock: {p.stock}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
-            <div>
-              <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">{t.pertes.lossType}</label>
-              <div className="grid grid-cols-3 gap-2">
-                {lossTypes.map((lt) => (
-                  <button
-                    key={lt.value}
-                    onClick={() => setLossType(lt.value)}
-                    className={cn(
-                      "px-2 py-2 rounded-lg text-xs font-medium border transition-all",
-                      lossType === lt.value
-                        ? "border-[var(--brand)] bg-[var(--brand-light)] text-[var(--brand)]"
-                        : "border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
-                    )}
+              {/* Quantité + bouton ajouter */}
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">{t.pertes.quantityLost}</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={quantity}
+                    onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm tabular-nums outline-none focus:border-[var(--brand)]"
+                  />
+                </div>
+                <div className="flex items-end">
+                  <Button
+                    variant="secondary"
+                    size="md"
+                    onClick={handleAddLossItem}
+                    disabled={!selectedProduct}
+                    icon={<Plus className="w-4 h-4" />}
                   >
-                    {lt.label}
-                  </button>
-                ))}
+                    Add
+                  </Button>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">{t.pertes.lossType}</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {lossTypes.map((lt) => (
+                    <button
+                      key={lt.value}
+                      onClick={() => setLossType(lt.value)}
+                      className={cn(
+                        "px-2 py-2 rounded-lg text-xs font-medium border transition-all",
+                        lossType === lt.value
+                          ? "border-[var(--brand)] bg-[var(--brand-light)] text-[var(--brand)]"
+                          : "border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
+                      )}
+                    >
+                      {lt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">{t.pertes.reasonOptional}</label>
+                <input
+                  type="text"
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  placeholder={t.pertes.reasonPlaceholder}
+                  className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]"
+                />
               </div>
             </div>
 
-            <div>
-              <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">{t.pertes.reasonOptional}</label>
-              <input
-                type="text"
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                placeholder={t.pertes.reasonPlaceholder}
-                className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]"
-              />
-            </div>
-
-            <div className="flex gap-2 pt-2">
+            {/* Footer */}
+            <div className="p-5 border-t border-[var(--border)] flex gap-2">
               <Button variant="secondary" className="flex-1" onClick={() => setShowLossModal(false)}>
                 {t.common.cancel}
               </Button>
-              <Button className="flex-1" onClick={handleAddLoss} disabled={!selectedProduct || adjusting}>
-                {adjusting ? t.common.processing : t.common.confirm}
+              <Button
+                className="flex-1"
+                onClick={handleSaveAllLosses}
+                disabled={lossItems.length === 0 || savingLosses || adjusting}
+              >
+                {savingLosses || adjusting ? t.common.processing : `${t.common.confirm} (${lossItems.length})`}
               </Button>
             </div>
           </div>
