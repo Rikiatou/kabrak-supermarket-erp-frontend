@@ -229,10 +229,11 @@ export const productsApi = {
     fetchAPI<Array<{ id: string; name: string }>>(`/products/categories`),
 
   // Recherche
-  search: (params: { q?: string; category?: string; page?: number; limit?: number }) => {
+  search: (params: { q?: string; category?: string; stockStatus?: string; page?: number; limit?: number }) => {
     const query = new URLSearchParams();
     if (params.q) query.set("q", params.q);
     if (params.category) query.set("category", params.category);
+    if (params.stockStatus) query.set("stockStatus", params.stockStatus);
     query.set("page", String(params.page || 1));
     query.set("limit", String(params.limit || 100));
     return fetchAPI<PaginatedResponse<ApiProduct>>(`/products/search?${query}`);
