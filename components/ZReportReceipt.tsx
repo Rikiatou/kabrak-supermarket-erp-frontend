@@ -33,43 +33,22 @@ export function ZReportReceipt({
     opened: "Ouvert",
     closed: "Fermé",
     grossSales: "Ventes brutes",
-    returnsAndCredits: "Retours & avoirs",
-    totalDiscount: "Réductions totales",
-    totalTax: "Taxe totale",
+    totalDiscount: "Remises",
     netSales: "Ventes nettes",
-    nonTaxableSales: "Ventes non taxables",
-    receiptsByMethod: "Encaissements par mode de paiement",
+    receiptsByMethod: "Encaissements",
     cash: "Espèces",
     card: "Carte",
     mobile: "Mobile Money",
     orange: "Orange Money",
-    split: "Paiement mixte",
-    totalReceipts: "Total encaissements",
-    changeGiven: "Monnaie rendue",
+    totalReceipts: "Total",
     openingCash: "Fonds d'ouverture",
-    cashReceived: "Espèces reçues",
-    cashDrawerTotal: "Total caisse",
-    totalExpected: "Total attendu",
-    expectedCash: "Caisse attendue",
-    closingCash: "Caisse comptée",
-    difference: "Écart",
-    customerCount: "Nombre de clients",
-    averageSale: "Vente moyenne",
-    notes: "Notes",
+    customerCount: "Clients",
     print: "Imprimer",
     close: "Fermer",
-    noNotes: "Aucune note",
   };
 
-  // Valeurs par defaut pour eviter tout plantage si un champ manque (rapport journalier, ancien shift...)
   const rbm = report.receiptsByMethod ?? { cash: 0, card: 0, mobile: 0, orange: 0, split: 0 } as any;
-
-  // Calcul: Opening Cash + Cash Received - Change Given = Expected Cash in Drawer
-  const cashReceived = report.cashReceived ?? rbm.cash ?? 0;
-  const changeGiven = report.changeGiven ?? 0;
-  const expectedCash = (report.openingCash ?? 0) + cashReceived - changeGiven;
-  const countedCash = report.closingCash ?? 0;
-  const diff = countedCash - expectedCash;
+  const totalDiscount = report.totalDiscount ?? 0;
 
   const handlePrint = () => {
     const row = (label: string, value: string, bold = false) =>
@@ -78,18 +57,16 @@ export function ZReportReceipt({
     let html = `
       <div style="text-align:center;margin-bottom:4px">
         <div style="font-size:16px;font-weight:bold;letter-spacing:2px">${z.title}</div>
-        <div style="font-size:11px">${z.closingReport}</div>
+        <div style="font-size:11px">${report.registerName}</div>
       </div>
       <div style="border-top:1px dashed #000;padding-top:4px">
-        ${row(z.station, report.registerName)}
         ${row(z.operator, report.employeeName)}
         ${row(z.opened, formatDateTime(report.openedAt))}
         ${row(z.closed, formatDateTime(report.closedAt))}
       </div>
       <div style="border-top:1px dashed #000;margin-top:4px;padding-top:4px">
         ${row(z.grossSales, formatCurrency(report.grossSales))}
-        ${report.returnsAndCredits > 0 ? row("- " + z.returnsAndCredits, formatCurrency(report.returnsAndCredits)) : ""}
-        ${(report.invoicePayments?.total || 0) > 0 ? row("+ Avances factures", formatCurrency(report.invoicePayments!.total)) : ""}
+        ${totalDiscount > 0 ? row("- " + z.totalDiscount, formatCurrency(totalDiscount)) : ""}
         <div style="border-top:1px solid #000;margin-top:2px;padding-top:2px">
           ${row(z.netSales, formatCurrency(report.netSales), true)}
         </div>
@@ -97,36 +74,17 @@ export function ZReportReceipt({
       <div style="border-top:1px dashed #000;margin-top:4px;padding-top:4px">
         <div style="font-weight:bold;text-transform:uppercase;font-size:10px;margin-bottom:2px">${z.receiptsByMethod}</div>
         ${row(z.cash, formatCurrency(rbm.cash))}
-        ${rbm.card > 0 ? row(z.card, formatCurrency(rbm.card)) : ""}
         ${rbm.mobile > 0 ? row(z.mobile, formatCurrency(rbm.mobile)) : ""}
         ${(rbm as any).orange > 0 ? row(z.orange || "Orange Money", formatCurrency((rbm as any).orange)) : ""}
-        ${rbm.split > 0 ? row(z.split, formatCurrency(rbm.split)) : ""}
+        ${rbm.card > 0 ? row(z.card, formatCurrency(rbm.card)) : ""}
         <div style="border-top:1px solid #000;margin-top:2px;padding-top:2px">
           ${row(z.totalReceipts, formatCurrency(report.totalReceipts), true)}
         </div>
       </div>
       <div style="border-top:1px dashed #000;margin-top:4px;padding-top:4px">
-        <div style="font-weight:bold;text-transform:uppercase;font-size:10px;margin-bottom:2px">${z.cashDrawerTotal}</div>
         ${row(z.openingCash, formatCurrency(report.openingCash))}
-        ${row("+ " + z.cashReceived, formatCurrency(cashReceived))}
-        ${changeGiven > 0 ? row("- " + z.changeGiven, formatCurrency(changeGiven)) : ""}
-        <div style="border-top:1px solid #000;margin-top:2px;padding-top:2px">
-          ${row(z.expectedCash, formatCurrency(expectedCash), true)}
-        </div>
-        ${report.closingCash !== null ? row(z.closingCash, formatCurrency(countedCash), true) : ""}
-        ${report.closingCash !== null && diff !== 0 ? row(z.difference, (diff > 0 ? "+" : "") + formatCurrency(diff), true) : ""}
-      </div>
-      <div style="border-top:1px dashed #000;margin-top:4px;padding-top:4px">
         ${row(z.customerCount, String(report.customerCount))}
       </div>`;
-
-    if (report.notes) {
-      html += `
-      <div style="border-top:1px dashed #000;margin-top:4px;padding-top:4px">
-        <div style="font-weight:bold;text-transform:uppercase;font-size:10px;margin-bottom:2px">${z.notes}</div>
-        <div style="font-size:11px;white-space:pre-wrap">${report.notes}</div>
-      </div>`;
-    }
 
     html += `<div style="text-align:center;margin-top:8px;font-size:10px">*** END ***</div><br/>`;
 
@@ -150,16 +108,14 @@ export function ZReportReceipt({
         <head>
           <title>Z-Report ${report.registerName}</title>
           <style>
-            @page { size: 80mm 297mm; margin: 0; }
+            @page { size: 80mm auto; margin: 0; }
             * { -webkit-print-color-adjust: exact; print-color-adjust: exact; box-sizing: border-box; }
-            html, body { width: 80mm; max-width: 80mm; min-width: 80mm; margin: 0; padding: 0; overflow: hidden; background: #fff; }
+            html, body { width: 80mm; max-width: 80mm; min-width: 80mm; margin: 0; padding: 0; background: #fff; }
             body { padding: 2mm 2mm 4mm; font-family: 'Courier New', monospace; color: #000; font-size: 10px; line-height: 1.35; font-weight: bold; }
-            /* Chaque ligne fait exactement la largeur du papier, les montants ne sont jamais coupés */
             body > div > div { max-width: 76mm; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
             @media print {
               html, body { width: 80mm; max-width: 80mm; min-width: 80mm; padding: 2mm 2mm 4mm; overflow: hidden; background: #fff; }
               * { page-break-inside: avoid; break-inside: avoid; }
-              .no-print { display: none !important; }
             }
           </style>
         </head>
@@ -178,7 +134,7 @@ export function ZReportReceipt({
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-[var(--border)] px-5 py-3 flex items-center justify-between z-10">
           <h2 className="text-sm font-bold text-[var(--text-primary)]">
@@ -188,26 +144,22 @@ export function ZReportReceipt({
             <Button size="sm" variant="secondary" icon={<Printer className="w-3.5 h-3.5" />} onClick={handlePrint}>
               {z.print}
             </Button>
-            <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg">
-              <X className="w-4 h-4 text-[var(--text-muted)]" />
+            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100">
+              <X className="w-4 h-4 text-[var(--text-secondary)]" />
             </button>
           </div>
         </div>
 
-        {/* Report content */}
-        <div id="z-report-print" className="p-5 space-y-4">
+        {/* Report content — compact */}
+        <div id="z-report-print" className="p-5 space-y-3">
           {/* Title */}
           <div className="text-center">
             <h1 className="text-base font-bold tracking-wider">{z.title}</h1>
-            <p className="text-xs text-[var(--text-muted)]">{z.closingReport}</p>
+            <p className="text-xs text-[var(--text-muted)]">{report.registerName}</p>
           </div>
 
           {/* Shift info */}
-          <div className="space-y-1 text-xs">
-            <div className="flex justify-between">
-              <span className="text-[var(--text-muted)]">{z.station}:</span>
-              <span className="font-semibold">{report.registerName}</span>
-            </div>
+          <div className="border-t border-dashed border-[var(--border)] pt-3 space-y-1 text-xs">
             <div className="flex justify-between">
               <span className="text-[var(--text-muted)]">{z.operator}:</span>
               <span className="font-semibold">{report.employeeName}</span>
@@ -222,22 +174,16 @@ export function ZReportReceipt({
             </div>
           </div>
 
-          {/* Sales summary — compact */}
+          {/* Sales summary */}
           <div className="border-t border-dashed border-[var(--border)] pt-3 space-y-1.5">
             <div className="flex justify-between text-sm">
               <span>{z.grossSales}</span>
               <span className="font-semibold tabular-nums">{formatCurrency(report.grossSales)}</span>
             </div>
-            {report.returnsAndCredits > 0 && (
+            {totalDiscount > 0 && (
               <div className="flex justify-between text-sm text-red-600">
-                <span>- {z.returnsAndCredits}</span>
-                <span className="tabular-nums">{formatCurrency(report.returnsAndCredits)}</span>
-              </div>
-            )}
-            {(report.invoicePayments?.total || 0) > 0 && (
-              <div className="flex justify-between text-sm text-green-600">
-                <span>+ Avances factures</span>
-                <span className="tabular-nums">{formatCurrency(report.invoicePayments!.total)}</span>
+                <span>- {z.totalDiscount}</span>
+                <span className="font-semibold tabular-nums">{formatCurrency(totalDiscount)}</span>
               </div>
             )}
             <div className="flex justify-between text-sm font-bold border-t border-[var(--border-subtle)] pt-1.5">
@@ -256,12 +202,6 @@ export function ZReportReceipt({
                 <span>{z.cash}</span>
                 <span className="font-semibold tabular-nums">{formatCurrency(rbm.cash)}</span>
               </div>
-              {rbm.card > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span>{z.card}</span>
-                  <span className="font-semibold tabular-nums">{formatCurrency(rbm.card)}</span>
-                </div>
-              )}
               {rbm.mobile > 0 && (
                 <div className="flex justify-between text-sm">
                   <span>{z.mobile}</span>
@@ -274,10 +214,10 @@ export function ZReportReceipt({
                   <span className="font-semibold tabular-nums">{formatCurrency((rbm as any).orange)}</span>
                 </div>
               )}
-              {rbm.split > 0 && (
+              {rbm.card > 0 && (
                 <div className="flex justify-between text-sm">
-                  <span>{z.split}</span>
-                  <span className="font-semibold tabular-nums">{formatCurrency(rbm.split)}</span>
+                  <span>{z.card}</span>
+                  <span className="font-semibold tabular-nums">{formatCurrency(rbm.card)}</span>
                 </div>
               )}
               <div className="flex justify-between text-sm font-bold border-t border-[var(--border-subtle)] pt-1.5">
@@ -287,62 +227,27 @@ export function ZReportReceipt({
             </div>
           </div>
 
-          {/* Cash drawer — avec détail du calcul */}
+          {/* Opening cash + customer count */}
           <div className="border-t border-dashed border-[var(--border)] pt-3 space-y-1.5">
-            <p className="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)] mb-1">
-              {z.cashDrawerTotal}
-            </p>
             <div className="flex justify-between text-sm">
               <span>{z.openingCash}</span>
-              <span className="tabular-nums">{formatCurrency(report.openingCash)}</span>
+              <span className="font-semibold tabular-nums">{formatCurrency(report.openingCash)}</span>
             </div>
-            <div className="flex justify-between text-sm">
-              <span>+ {z.cashReceived}</span>
-              <span className="tabular-nums">{formatCurrency(cashReceived)}</span>
-            </div>
-            {changeGiven > 0 && (
-              <div className="flex justify-between text-sm">
-                <span>- {z.changeGiven}</span>
-                <span className="tabular-nums">{formatCurrency(changeGiven)}</span>
-              </div>
-            )}
-            <div className="flex justify-between text-sm font-bold border-t border-[var(--border-subtle)] pt-1.5">
-              <span>= {z.expectedCash}</span>
-              <span className="tabular-nums">{formatCurrency(expectedCash)}</span>
-            </div>
-            {report.closingCash !== null && (
-              <>
-                <div className="flex justify-between text-sm font-bold pt-1">
-                  <span>{z.closingCash}</span>
-                  <span className="tabular-nums">{formatCurrency(countedCash)}</span>
-                </div>
-                {diff !== 0 && (
-                  <div className="flex justify-between text-sm font-bold">
-                    <span>{z.difference}</span>
-                    <span className={`tabular-nums ${diff > 0 ? "text-blue-600" : "text-red-600"}`}>
-                      {diff > 0 ? "+" : ""}{formatCurrency(diff)}
-                    </span>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-
-          {/* Stats */}
-          <div className="border-t border-dashed border-[var(--border)] pt-3 space-y-1.5">
             <div className="flex justify-between text-sm">
               <span>{z.customerCount}</span>
               <span className="font-semibold tabular-nums">{report.customerCount}</span>
             </div>
           </div>
+        </div>
 
-          {/* Notes */}
-          {report.notes && (
-            <div className="border-t border-dashed border-[var(--border)] pt-3">
-              <p className="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)] mb-1">{z.notes}</p>
-              <p className="text-xs text-[var(--text-secondary)]">{report.notes}</p>
-            </div>
-          )}
+        {/* Footer */}
+        <div className="border-t border-[var(--border)] px-5 py-3 flex justify-end gap-2">
+          <Button size="sm" variant="secondary" icon={<Printer className="w-3.5 h-3.5" />} onClick={handlePrint}>
+            {z.print}
+          </Button>
+          <Button size="sm" variant="ghost" onClick={onClose}>
+            {z.close}
+          </Button>
         </div>
       </div>
     </div>
