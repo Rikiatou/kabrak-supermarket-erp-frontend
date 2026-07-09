@@ -1677,7 +1677,7 @@ export default function POSPage() {
 
         <style>
 
-          @page { size: 80mm 297mm; margin: 0; }
+          @page { size: 80mm auto; margin: 0; }
 
           * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
@@ -1876,7 +1876,7 @@ export default function POSPage() {
 
         <style>
 
-          @page { size: 80mm 297mm; margin: 0; }
+          @page { size: 80mm auto; margin: 0; }
 
           * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
