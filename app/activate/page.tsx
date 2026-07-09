@@ -40,7 +40,8 @@ function ActivateContent() {
       setSuccess(true);
       setTimeout(() => router.replace("/login"), 1500);
     } else {
-      setError("Invalid, expired, or unreachable. Check your key and try again.");
+      const detail = (window as any).__licenseError || "";
+      setError(detail ? `Activation failed: ${detail}` : "Invalid, expired, or unreachable. Check your key and try again.");
     }
 
     setLoading(false);

@@ -67,6 +67,8 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
       return true;
     } catch (err: any) {
       console.error("License activation error:", err?.message || err);
+      // Stocker l'erreur pour que la page activate puisse l'afficher
+      (window as any).__licenseError = err?.message || "Unknown error";
       return false;
     }
   }, []);

@@ -114,29 +114,47 @@ export class LicenseValidator {
 
   // Valider une clé de licence auprès du serveur
   static async validate(licenseKey: string): Promise<LicenseValidationResponse> {
-    // Utiliser GET au lieu de POST (le proxy Next.js a parfois des soucis avec les POST body)
-    const statusRes = await fetch(`${API_URL}/licenses/${encodeURIComponent(licenseKey)}/status`, {
-      headers: { "Content-Type": "application/json" },
-    });
+    const key = encodeURIComponent(licenseKey);
 
-    if (!statusRes.ok) {
-      const error = await statusRes.json().catch(() => ({ message: "Licence introuvable" }));
-      throw new Error(error.message || `Erreur ${statusRes.status}`);
+    // Essayer via le proxy /api d'abord, puis fallback direct sur le backend
+    const urls = [
+      `${API_URL}/licenses/${key}/status`,
+    ];
+
+    let status: any = null;
+    let lastError = "";
+
+    for (const url of urls) {
+      try {
+        const res = await fetch(url, { headers: { Accept: "application/json" } });
+        if (res.ok) {
+          status = await res.json();
+          break;
+        } else {
+          lastError = `Status ${res.status}`;
+        }
+      } catch (e: any) {
+        lastError = e?.message || "Network error";
+      }
     }
 
-    const status = await statusRes.json();
+    if (!status) {
+      throw new Error(`Licence introuvable (${lastError})`);
+    }
 
     // Récupérer la config
-    const configRes = await fetch(`${API_URL}/licenses/${encodeURIComponent(licenseKey)}/config`, {
-      headers: { "Content-Type": "application/json" },
-    });
-    const config = configRes.ok ? await configRes.json() : null;
+    let config: any = null;
+    try {
+      const configRes = await fetch(`${API_URL}/licenses/${key}/config`, { headers: { Accept: "application/json" } });
+      if (configRes.ok) config = await configRes.json();
+    } catch {}
 
     // Récupérer les magasins
-    const storesRes = await fetch(`${API_URL}/licenses/${encodeURIComponent(licenseKey)}/stores`, {
-      headers: { "Content-Type": "application/json" },
-    });
-    const stores = storesRes.ok ? await storesRes.json() : [];
+    let stores: any[] = [];
+    try {
+      const storesRes = await fetch(`${API_URL}/licenses/${key}/stores`, { headers: { Accept: "application/json" } });
+      if (storesRes.ok) stores = await storesRes.json();
+    } catch {}
 
     const now = new Date();
     const expiresAt = new Date(status.expiresAt);
