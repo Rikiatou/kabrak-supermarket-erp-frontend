@@ -15,6 +15,7 @@ import {
   Boxes,
   RotateCcw,
   Gift,
+  TrendingDown,
 } from "lucide-react";
 import {
   BarChart,
