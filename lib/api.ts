@@ -539,8 +539,12 @@ export interface ApiPurchaseOrder {
 }
 
 export const purchaseOrdersApi = {
-  list: (status?: string) =>
-    fetchAPI<ApiPurchaseOrder[]>(`/purchase-orders${status ? `?status=${status}` : ""}`),
+  list: async (status?: string): Promise<ApiPurchaseOrder[]> => {
+    const res = await fetchAPI<{ data: ApiPurchaseOrder[]; total: number; page: number; limit: number; totalPages: number }>(
+      `/purchase-orders?limit=1000${status ? `&status=${status}` : ""}`
+    );
+    return Array.isArray(res) ? res : (res?.data ?? []);
+  },
   get: (id: string) => fetchAPI<ApiPurchaseOrder>(`/purchase-orders/${id}`),
   create: (data: { supplierId: string; expectedDate: string; notes?: string; items: Array<{ productId: string; quantity: number; unitCost: number }> }) =>
     fetchAPI<ApiPurchaseOrder>(`/purchase-orders`, { method: "POST", body: JSON.stringify(data) }),
