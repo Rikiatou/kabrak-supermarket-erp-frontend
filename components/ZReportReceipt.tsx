@@ -55,33 +55,33 @@ export function ZReportReceipt({
       `<div style="display:flex;justify-content:space-between;padding:1px 0;${bold ? "font-weight:bold;" : ""}"><span>${label}</span><span>${value}</span></div>`;
 
     let html = `
-      <div style="text-align:center;margin-bottom:4px">
-        <div style="font-size:16px;font-weight:bold;letter-spacing:2px">${z.title}</div>
-        <div style="font-size:11px">${report.registerName}</div>
+      <div style="text-align:center;margin-bottom:6px">
+        <div style="font-size:20px;font-weight:bold;letter-spacing:2px">${z.title}</div>
+        <div style="font-size:14px">${report.registerName}</div>
       </div>
-      <div style="border-top:1px dashed #000;padding-top:4px">
+      <div style="border-top:1px dashed #000;padding-top:5px">
         ${row(z.operator, report.employeeName)}
         ${row(z.opened, formatDateTime(report.openedAt))}
         ${row(z.closed, formatDateTime(report.closedAt))}
       </div>
-      <div style="border-top:1px dashed #000;margin-top:4px;padding-top:4px">
+      <div style="border-top:1px dashed #000;margin-top:5px;padding-top:5px">
         ${row(z.grossSales, formatCurrency(report.grossSales))}
         ${totalDiscount > 0 ? row("- " + z.totalDiscount, formatCurrency(totalDiscount)) : ""}
-        <div style="border-top:1px solid #000;margin-top:2px;padding-top:2px">
+        <div style="border-top:1px solid #000;margin-top:3px;padding-top:3px">
           ${row(z.netSales, formatCurrency(report.netSales), true)}
         </div>
       </div>
-      <div style="border-top:1px dashed #000;margin-top:4px;padding-top:4px">
-        <div style="font-weight:bold;text-transform:uppercase;font-size:10px;margin-bottom:2px">${z.receiptsByMethod}</div>
+      <div style="border-top:1px dashed #000;margin-top:5px;padding-top:5px">
+        <div style="font-weight:bold;text-transform:uppercase;font-size:13px;margin-bottom:3px">${z.receiptsByMethod}</div>
         ${row(z.cash, formatCurrency(rbm.cash))}
         ${rbm.mobile > 0 ? row(z.mobile, formatCurrency(rbm.mobile)) : ""}
         ${(rbm as any).orange > 0 ? row(z.orange || "Orange Money", formatCurrency((rbm as any).orange)) : ""}
         ${rbm.card > 0 ? row(z.card, formatCurrency(rbm.card)) : ""}
-        <div style="border-top:1px solid #000;margin-top:2px;padding-top:2px">
+        <div style="border-top:1px solid #000;margin-top:3px;padding-top:3px">
           ${row(z.totalReceipts, formatCurrency(report.totalReceipts), true)}
         </div>
       </div>
-      <div style="border-top:1px dashed #000;margin-top:4px;padding-top:4px">
+      <div style="border-top:1px dashed #000;margin-top:5px;padding-top:5px">
         ${row(z.openingCash, formatCurrency(report.openingCash))}
         ${row(z.customerCount, String(report.customerCount))}
       </div>`;
@@ -111,7 +111,7 @@ export function ZReportReceipt({
             @page { size: 80mm auto; margin: 0; }
             * { -webkit-print-color-adjust: exact; print-color-adjust: exact; box-sizing: border-box; }
             html, body { width: 80mm; max-width: 80mm; min-width: 80mm; margin: 0; padding: 0; background: #fff; }
-            body { padding: 2mm 2mm 4mm; font-family: 'Courier New', monospace; color: #000; font-size: 10px; line-height: 1.35; font-weight: bold; }
+            body { padding: 2mm 2mm 4mm; font-family: 'Courier New', monospace; color: #000; font-size: 13px; line-height: 1.5; font-weight: bold; }
             body > div > div { max-width: 76mm; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
             @media print {
               html, body { width: 80mm; max-width: 80mm; min-width: 80mm; padding: 2mm 2mm 4mm; overflow: hidden; background: #fff; }
