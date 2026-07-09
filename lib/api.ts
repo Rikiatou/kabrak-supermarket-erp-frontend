@@ -1,7 +1,7 @@
 // Client API pour connecter le frontend Next.js au backend NestJS
 // Backend: http://localhost:3000/api
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
 
 // Helper pour les requêtes
 async function fetchAPI<T>(
