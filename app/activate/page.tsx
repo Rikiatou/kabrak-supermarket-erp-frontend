@@ -11,7 +11,7 @@ function ActivateContent() {
   const searchParams = useSearchParams();
   const { activate, license, isExpired, daysRemaining } = useLicense();
 
-  const [licenseKey, setLicenseKey] = useState("KABRAK-STD-2024-EASYSHOP-DEMO01");
+  const [licenseKey, setLicenseKey] = useState("KABRAK-STD-2026-EASYSHOP-030669");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
