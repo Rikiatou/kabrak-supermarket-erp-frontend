@@ -110,7 +110,7 @@ export default function StocksPage() {
   const [restockNote, setRestockNote] = useState("");
   // Edit modal
   const [editProduct, setEditProduct] = useState<Product | null>(null);
-  const [editForm, setEditForm] = useState({ name: "", price: "", costPrice: "", stock: "", minStock: "", category: "", barcode: "", sku: "", unit: "unit" });
+  const [editForm, setEditForm] = useState({ name: "", price: "", costPrice: "", wholesalePrice: "", packQuantity: "", packBarcode: "", stock: "", minStock: "", category: "", barcode: "", sku: "", unit: "unit" });
   const { setMarkdown, setting: settingMarkdown } = useSetMarkdown();
   const { removeMarkdown, removing: removingMarkdown } = useRemoveMarkdown();
 
@@ -252,6 +252,9 @@ export default function StocksPage() {
       name: product.name,
       price: String(product.price),
       costPrice: String(product.costPrice),
+      wholesalePrice: product.wholesalePrice ? String(product.wholesalePrice) : "",
+      packQuantity: product.packQuantity ? String(product.packQuantity) : "",
+      packBarcode: product.packBarcode || "",
       stock: String(product.stock),
       minStock: String(product.minStock),
       category: product.category || "",
@@ -270,6 +273,9 @@ export default function StocksPage() {
         name: editForm.name,
         price: Number(editForm.price),
         costPrice: Number(editForm.costPrice),
+        wholesalePrice: editForm.wholesalePrice ? Number(editForm.wholesalePrice) : null,
+        packQuantity: editForm.packQuantity ? Number(editForm.packQuantity) : null,
+        packBarcode: editForm.packBarcode || null,
         stock: Number(editForm.stock),
         minStock: Number(editForm.minStock),
         category: editForm.category,
@@ -815,6 +821,37 @@ export default function StocksPage() {
                   type="number"
                   value={editForm.costPrice}
                   onChange={(e) => setEditForm({ ...editForm, costPrice: e.target.value })}
+                  className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]"
+                />
+              </div>
+              {/* Pack fields */}
+              <div>
+                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Wholesale Price (pack)</label>
+                <input
+                  type="number"
+                  value={editForm.wholesalePrice}
+                  onChange={(e) => setEditForm({ ...editForm, wholesalePrice: e.target.value })}
+                  placeholder="0 = no pack"
+                  className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Pack Quantity (units/pack)</label>
+                <input
+                  type="number"
+                  value={editForm.packQuantity}
+                  onChange={(e) => setEditForm({ ...editForm, packQuantity: e.target.value })}
+                  placeholder="0 = no pack"
+                  className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]"
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">Pack Barcode (optional)</label>
+                <input
+                  type="text"
+                  value={editForm.packBarcode}
+                  onChange={(e) => setEditForm({ ...editForm, packBarcode: e.target.value })}
+                  placeholder="Leave empty if pack has no barcode"
                   className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]"
                 />
               </div>

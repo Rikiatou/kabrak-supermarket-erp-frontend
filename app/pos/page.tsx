@@ -1670,7 +1670,7 @@ export default function POSPage() {
         const total = effPrice * item.quantity;
 
         return `<tr>
-          <td colspan="2" style="font-size:10px;padding-top:3px">
+          <td colspan="2" style="font-size:14px;padding-top:3px">
             <div style="font-weight:bold">${barcode} ${name}</div>
             <div style="display:flex;justify-content:space-between;padding-left:4px">
               <span>${item.quantity}.00 @ ${effPrice.toLocaleString("fr-CM")}</span>
@@ -1719,9 +1719,9 @@ export default function POSPage() {
 
           html, body { width: 76mm; max-width: 76mm; min-width: 76mm; margin: 0 auto; padding: 0; overflow: hidden; background: #fff; }
 
-          body { padding: 2mm 2mm 4mm; font-family: 'Courier New', monospace; color: #000; font-size: 13px; line-height: 1.4; font-weight: bold; }
+          body { padding: 2mm 2mm 4mm; font-family: 'Courier New', monospace; color: #000; font-size: 16px; line-height: 1.5; font-weight: bold; }
 
-          h1 { font-size: 15px; text-align: center; margin: 0 0 2px; font-weight: bold; }
+          h1 { font-size: 18px; text-align: center; margin: 0 0 2px; font-weight: bold; }
 
           .center { text-align: center; }
 
@@ -1731,11 +1731,11 @@ export default function POSPage() {
 
           td { padding: 1px 0; vertical-align: top; font-weight: bold; }
 
-          .total { font-size: 15px; font-weight: bold; }
+          .total { font-size: 18px; font-weight: bold; }
 
           .right { text-align: right; }
 
-          .small { font-size: 11px; font-weight: bold; }
+          .small { font-size: 14px; font-weight: bold; }
 
           @media print {
 
@@ -1886,13 +1886,13 @@ export default function POSPage() {
 
         return `<tr>
 
-          <td style="font-size:11px;vertical-align:top">${item.product?.name || "Product"}</td>
+          <td style="font-size:14px;vertical-align:top">${item.product?.name || "Product"}</td>
 
-          <td style="text-align:center;font-size:11px;vertical-align:top">${item.quantity}</td>
+          <td style="text-align:center;font-size:14px;vertical-align:top">${item.quantity}</td>
 
-          <td style="text-align:right;font-size:11px;vertical-align:top">${formatCurrency(unitPrice)}</td>
+          <td style="text-align:right;font-size:14px;vertical-align:top">${formatCurrency(unitPrice)}</td>
 
-          <td style="text-align:right;font-size:11px;vertical-align:top">${formatCurrency(unitPrice * item.quantity)}</td>
+          <td style="text-align:right;font-size:14px;vertical-align:top">${formatCurrency(unitPrice * item.quantity)}</td>
 
         </tr>`;
 
@@ -1918,9 +1918,9 @@ export default function POSPage() {
 
           html, body { width: 76mm; max-width: 76mm; min-width: 76mm; margin: 0 auto; padding: 0; overflow: hidden; background: #fff; }
 
-          body { padding: 2mm 2mm 4mm; font-family: 'Courier New', monospace; color: #000; font-size: 13px; line-height: 1.4; font-weight: bold; }
+          body { padding: 2mm 2mm 4mm; font-family: 'Courier New', monospace; color: #000; font-size: 16px; line-height: 1.5; font-weight: bold; }
 
-          h1 { font-size: 15px; text-align: center; margin: 0 0 2px; font-weight: bold; }
+          h1 { font-size: 18px; text-align: center; margin: 0 0 2px; font-weight: bold; }
 
           .center { text-align: center; }
 
@@ -1930,11 +1930,11 @@ export default function POSPage() {
 
           td { padding: 1px 0; vertical-align: top; font-weight: bold; }
 
-          .total { font-size: 15px; font-weight: bold; }
+          .total { font-size: 18px; font-weight: bold; }
 
           .right { text-align: right; }
 
-          .small { font-size: 11px; font-weight: bold; }
+          .small { font-size: 14px; font-weight: bold; }
 
           @media print {
 
