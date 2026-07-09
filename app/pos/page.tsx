@@ -58,6 +58,8 @@ import {
 
   Monitor,
 
+  MoreVertical,
+
 } from "lucide-react";
 
 
@@ -342,6 +344,8 @@ export default function POSPage() {
   });
 
   const [showHeldCarts, setShowHeldCarts] = useState(false);
+
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
 
   const [usbDisplayConnected, setUsbDisplayConnected] = useState(false);
 
@@ -2002,43 +2006,43 @@ export default function POSPage() {
 
       {/* POS Topbar  plein ecran, pas de sidebar */}
 
-      <div className="h-11 bg-white border-b border-[#e5e7eb] flex items-center px-5 gap-4 shrink-0 shadow-sm">
+      <div className="h-10 bg-white border-b border-[#e5e7eb] flex items-center px-3 gap-3 shrink-0 shadow-sm">
 
         <button
 
           onClick={() => router.push("/dashboard")}
 
-          className="w-7 h-7 flex items-center justify-center rounded-lg text-[#6b7280] hover:bg-[#f3f4f6] hover:text-[#111827] transition-colors"
+          className="w-6 h-6 flex items-center justify-center rounded-lg text-[#6b7280] hover:bg-[#f3f4f6] hover:text-[#111827] transition-colors shrink-0"
 
           title={t.nav.dashboard}
 
         >
 
-          <ChevronLeft className="w-5 h-5" />
+          <ChevronLeft className="w-4 h-4" />
 
         </button>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2 shrink-0">
 
-          <div className="w-7 h-7 rounded-lg bg-[#16a34a] flex items-center justify-center">
+          <div className="w-6 h-6 rounded-lg bg-[#16a34a] flex items-center justify-center">
 
-            <span className="text-white text-[13px] font-black">K</span>
+            <span className="text-white text-[11px] font-black">K</span>
 
           </div>
 
-          <span className="text-[14px] font-bold text-[#111827] tracking-tight">KABRAK <span className="text-[#16a34a]">POS</span></span>
+          <span className="text-[13px] font-bold text-[#111827] tracking-tight hidden sm:block">KABRAK <span className="text-[#16a34a]">POS</span></span>
 
         </div>
 
-        <div className="w-px h-4 bg-[#e5e7eb]" />
+        <div className="w-px h-4 bg-[#e5e7eb] shrink-0" />
 
-        <span className="text-[13px] font-medium text-[#6b7280]">{user?.firstName} {user?.lastName}</span>
+        <span className="text-[12px] font-medium text-[#6b7280] truncate hidden md:block">{user?.firstName} {user?.lastName}</span>
 
-        <div className="flex items-center gap-2 ml-auto">
+        <div className="flex items-center gap-1.5 ml-auto">
 
           {pendingTxCount > 0 && (
 
-            <span className="text-[11px] bg-amber-50 text-amber-700 border border-amber-200 rounded-md px-2 py-0.5 font-medium">
+            <span className="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 rounded-md px-1.5 py-0.5 font-medium shrink-0">
 
               {t.pos.pendingCount.replace("{n}", String(pendingTxCount))}
 
@@ -2048,7 +2052,7 @@ export default function POSPage() {
 
           {syncMsg && (
 
-            <span className="text-[11px] bg-[#f0fdf4] text-[#15803d] border border-[#86efac] rounded-md px-2 py-0.5 font-medium">
+            <span className="text-[10px] bg-[#f0fdf4] text-[#15803d] border border-[#86efac] rounded-md px-1.5 py-0.5 font-medium shrink-0">
 
               {syncMsg}
 
@@ -2056,11 +2060,11 @@ export default function POSPage() {
 
           )}
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1 shrink-0">
 
             <span className={`w-2 h-2 rounded-full ${isOnline ? "bg-[#16a34a]" : "bg-amber-400 animate-pulse"}`} />
 
-            <span className="text-[12px] text-[#9ca3af]">{isOnline ? t.pos.online : t.pos.offline}</span>
+            <span className="text-[11px] text-[#9ca3af] hidden sm:block">{isOnline ? t.pos.online : t.pos.offline}</span>
 
           </div>
 
@@ -2068,13 +2072,13 @@ export default function POSPage() {
 
             onClick={() => { reloadRecentTransactions(); setShowHistoryModal(true); }}
 
-            className="h-7 px-3 text-[12px] font-medium text-[#6b7280] hover:bg-[#f3f4f6] rounded-lg transition-colors flex items-center gap-1.5"
+            className="h-6 px-2 text-[11px] font-medium text-[#6b7280] hover:bg-[#f3f4f6] rounded-lg transition-colors flex items-center gap-1 shrink-0"
 
           >
 
-            <History className="w-3.5 h-3.5" />
+            <History className="w-3 h-3" />
 
-            {t.pos.history}
+            <span className="hidden sm:block">{t.pos.history}</span>
 
           </button>
 
@@ -2112,9 +2116,9 @@ export default function POSPage() {
 
 
 
-        {/* LEFT  Panier (65%) */}
+        {/* LEFT  Panier (55%) */}
 
-        <div className="w-[65%] flex flex-col bg-white border-r border-[#e5e7eb] shrink-0">
+        <div className="w-[55%] flex flex-col bg-white border-r border-[#e5e7eb] shrink-0">
 
 
 
@@ -2196,13 +2200,13 @@ export default function POSPage() {
 
               {/* Cart header */}
 
-              <div className="px-5 py-3.5 border-b border-[#f3f4f6] flex items-center justify-between shrink-0">
+              <div className="px-4 py-2.5 border-b border-[#f3f4f6] flex items-center justify-between shrink-0">
 
                 <div>
 
-                  <h2 className="text-[16px] font-bold text-[#111827]">{t.pos.currentOrder}</h2>
+                  <h2 className="text-[14px] font-bold text-[#111827]">{t.pos.currentOrder}</h2>
 
-                  <p className="text-[12px] text-[#9ca3af] tabular-nums">
+                  <p className="text-[11px] text-[#9ca3af] tabular-nums">
 
                     {cart.reduce((s, i) => s + i.quantity, 0)} {t.pos.itemsArticle}
 
@@ -2210,7 +2214,7 @@ export default function POSPage() {
 
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
 
                   <button
 
@@ -2218,7 +2222,7 @@ export default function POSPage() {
 
                     className={cn(
 
-                      "h-8 px-3 text-[12px] font-medium rounded-lg flex items-center gap-1.5 transition-colors border",
+                      "h-7 px-2.5 text-[11px] font-medium rounded-lg flex items-center gap-1 transition-colors border shrink-0",
 
                       selectedCustomer
 
@@ -2230,7 +2234,7 @@ export default function POSPage() {
 
                   >
 
-                    <Users className="w-3.5 h-3.5" />
+                    <Users className="w-3 h-3" />
 
                     {selectedCustomer ? selectedCustomer.firstName : t.pos.customer}
 
@@ -2242,11 +2246,11 @@ export default function POSPage() {
 
                       onClick={holdCart}
 
-                      className="h-8 px-3 text-[12px] font-medium text-amber-600 hover:bg-amber-50 rounded-lg flex items-center gap-1.5 transition-colors border border-amber-200"
+                      className="h-7 px-2.5 text-[11px] font-medium text-amber-600 hover:bg-amber-50 rounded-lg flex items-center gap-1 transition-colors border border-amber-200 shrink-0"
 
                     >
 
-                      <PauseCircle className="w-3.5 h-3.5" /> {t.pos.hold}
+                      <PauseCircle className="w-3 h-3" /> {t.pos.hold}
 
                     </button>
 
@@ -2258,11 +2262,11 @@ export default function POSPage() {
 
                       onClick={() => setShowHeldCarts(true)}
 
-                      className="relative h-8 px-3 text-[12px] font-medium text-blue-600 hover:bg-blue-50 rounded-lg flex items-center gap-1.5 transition-colors border border-blue-200"
+                      className="relative h-7 px-2.5 text-[11px] font-medium text-blue-600 hover:bg-blue-50 rounded-lg flex items-center gap-1 transition-colors border border-blue-200 shrink-0"
 
                     >
 
-                      <ListRestart className="w-3.5 h-3.5" /> {t.pos.recall}
+                      <ListRestart className="w-3 h-3" /> {t.pos.recall}
 
                       <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
 
@@ -2274,75 +2278,95 @@ export default function POSPage() {
 
                   )}
 
-                  <button
-
-                    onClick={usbDisplayConnected ? disconnectUsbDisplay : connectUsbDisplay}
-
-                    title={usbDisplayConnected ? t.pos.usbDisconnect : t.pos.usbConnect}
-
-                    className={cn(
-
-                      "h-8 px-3 text-[12px] font-medium rounded-lg flex items-center gap-1.5 transition-colors border",
-
-                      usbDisplayConnected
-
-                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-
-                        : "bg-slate-50 text-slate-500 border-slate-200 hover:border-slate-300"
-
-                    )}
-
-                  >
-
-                    <Monitor className="w-3.5 h-3.5" />
-
-                    {usbDisplayConnected ? `${t.pos.usb} ●` : t.pos.usb}
-
-                  </button>
-
-                  <button
-
-                    onClick={() => router.push("/returns")}
-
-                    className="h-8 px-3 text-[12px] font-medium text-orange-600 hover:bg-orange-50 rounded-lg flex items-center gap-1.5 transition-colors border border-orange-200"
-
-                    title="Retours client"
-
-                  >
-
-                    <RotateCcw className="w-3.5 h-3.5" /> Returns
-
-                  </button>
-
-                  <button
-
-                    onClick={() => router.push("/cadeaux")}
-
-                    className="h-8 px-3 text-[12px] font-medium text-purple-600 hover:bg-purple-50 rounded-lg flex items-center gap-1.5 transition-colors border border-purple-200"
-
-                    title="Cadeaux"
-
-                  >
-
-                    <Gift className="w-3.5 h-3.5" /> Gifts
-
-                  </button>
-
                   {cart.length > 0 && (
 
                     <button
 
                       onClick={clearCart}
 
-                      className="h-8 px-3 text-[12px] font-medium text-red-400 hover:bg-red-50 rounded-lg flex items-center gap-1.5 transition-colors border border-[#fecaca]"
+                      className="h-7 px-2.5 text-[11px] font-medium text-red-400 hover:bg-red-50 rounded-lg flex items-center gap-1 transition-colors border border-[#fecaca] shrink-0"
 
                     >
 
-                      <Trash2 className="w-3.5 h-3.5" /> {t.pos.clearCart}
+                      <Trash2 className="w-3 h-3" /> {t.pos.clearCart}
 
                     </button>
 
                   )}
+
+                  {/* Menu More pour Returns, Gifts, USB */}
+
+                  <div className="relative shrink-0">
+
+                    <button
+
+                      onClick={() => setShowMoreMenu(!showMoreMenu)}
+
+                      className="h-7 px-2.5 text-[11px] font-medium text-slate-600 hover:bg-slate-100 rounded-lg flex items-center gap-1 transition-colors border border-slate-200"
+
+                    >
+
+                      <MoreVertical className="w-3 h-3" />
+
+                    </button>
+
+                    {showMoreMenu && (
+
+                      <>
+
+                        <div className="fixed inset-0 z-40" onClick={() => setShowMoreMenu(false)} />
+
+                        <div className="absolute right-0 top-9 z-50 bg-white rounded-xl shadow-lg border border-[#e5e7eb] py-1 min-w-[140px]">
+
+                          <button
+
+                            onClick={() => { router.push("/returns"); setShowMoreMenu(false); }}
+
+                            className="w-full text-left px-3 py-2 text-[12px] font-medium text-orange-600 hover:bg-orange-50 flex items-center gap-2"
+
+                          >
+
+                            <RotateCcw className="w-3.5 h-3.5" /> Returns
+
+                          </button>
+
+                          <button
+
+                            onClick={() => { router.push("/cadeaux"); setShowMoreMenu(false); }}
+
+                            className="w-full text-left px-3 py-2 text-[12px] font-medium text-purple-600 hover:bg-purple-50 flex items-center gap-2"
+
+                          >
+
+                            <Gift className="w-3.5 h-3.5" /> Gifts
+
+                          </button>
+
+                          <button
+
+                            onClick={() => { usbDisplayConnected ? disconnectUsbDisplay() : connectUsbDisplay(); setShowMoreMenu(false); }}
+
+                            className={cn(
+
+                              "w-full text-left px-3 py-2 text-[12px] font-medium flex items-center gap-2",
+
+                              usbDisplayConnected ? "text-emerald-700 hover:bg-emerald-50" : "text-slate-600 hover:bg-slate-50"
+
+                            )}
+
+                          >
+
+                            <Monitor className="w-3.5 h-3.5" /> {usbDisplayConnected ? `${t.pos.usb} ●` : t.pos.usb}
+
+                          </button>
+
+                        </div>
+
+                      </>
+
+                    )}
+
+                  </div>
 
                 </div>
 
@@ -2386,13 +2410,13 @@ export default function POSPage() {
 
                           key={item.product.id}
 
-                          className={cn("flex items-center gap-4 px-5 py-4", isExpired && "bg-amber-50/40")}
+                          className={cn("flex items-center gap-3 px-4 py-2.5", isExpired && "bg-amber-50/40")}
 
                         >
 
                           <div className="flex-1 min-w-0">
 
-                            <p className="text-[15px] font-semibold text-[#111827] truncate flex items-center gap-2">
+                            <p className="text-[13px] font-semibold text-[#111827] truncate flex items-center gap-1.5">
 
                               {item.product.name}
 
@@ -2402,7 +2426,7 @@ export default function POSPage() {
 
                             </p>
 
-                            <p className="text-[13px] text-[#9ca3af] tabular-nums mt-0.5">
+                            <p className="text-[11px] text-[#9ca3af] tabular-nums mt-0.5">
 
                               {hasMarkdown ? (
 
@@ -2424,29 +2448,29 @@ export default function POSPage() {
 
                           <div className="flex items-center gap-2 shrink-0">
 
-                            <button onClick={() => updateQty(item.product.id, -1)} className="w-9 h-9 rounded-lg bg-[#f3f4f6] hover:bg-[#e5e7eb] flex items-center justify-center transition-colors">
+                            <button onClick={() => updateQty(item.product.id, -1)} className="w-7 h-7 rounded-lg bg-[#f3f4f6] hover:bg-[#e5e7eb] flex items-center justify-center transition-colors">
 
-                              <Minus className="w-4 h-4 text-[#374151]" />
-
-                            </button>
-
-                            <span className="w-9 text-center text-[17px] font-bold text-[#111827] tabular-nums">{item.quantity}</span>
-
-                            <button onClick={() => updateQty(item.product.id, 1)} className="w-9 h-9 rounded-lg bg-[#f3f4f6] hover:bg-[#e5e7eb] flex items-center justify-center transition-colors disabled:opacity-30">
-
-                              <Plus className="w-4 h-4 text-[#374151]" />
+                              <Minus className="w-3.5 h-3.5 text-[#374151]" />
 
                             </button>
 
-                            <button onClick={() => removeItem(item.product.id)} className="w-9 h-9 rounded-lg hover:bg-red-50 flex items-center justify-center text-[#d1d5db] hover:text-red-500 transition-colors">
+                            <span className="w-7 text-center text-[14px] font-bold text-[#111827] tabular-nums">{item.quantity}</span>
 
-                              <Trash2 className="w-4 h-4" />
+                            <button onClick={() => updateQty(item.product.id, 1)} className="w-7 h-7 rounded-lg bg-[#f3f4f6] hover:bg-[#e5e7eb] flex items-center justify-center transition-colors disabled:opacity-30">
+
+                              <Plus className="w-3.5 h-3.5 text-[#374151]" />
+
+                            </button>
+
+                            <button onClick={() => removeItem(item.product.id)} className="w-7 h-7 rounded-lg hover:bg-red-50 flex items-center justify-center text-[#d1d5db] hover:text-red-500 transition-colors">
+
+                              <Trash2 className="w-3.5 h-3.5" />
 
                             </button>
 
                           </div>
 
-                          <p className="text-[16px] font-bold text-[#111827] tabular-nums w-28 text-right shrink-0">
+                          <p className="text-[14px] font-bold text-[#111827] tabular-nums w-24 text-right shrink-0">
 
                             {formatCurrency(effPrice * item.quantity)}
 
@@ -2470,7 +2494,7 @@ export default function POSPage() {
 
               <div className="border-t border-[#e5e7eb] bg-[#fafafa] shrink-0">
 
-                <div className="px-5 pt-4 pb-2 flex items-center gap-3">
+                <div className="px-4 pt-3 pb-2 flex items-center gap-2">
 
                   <Tag className="w-4 h-4 text-[#9ca3af] shrink-0" />
 
@@ -2492,7 +2516,7 @@ export default function POSPage() {
 
                     placeholder={t.pos.discountPlaceholder}
 
-                    className="flex-1 border border-[#e5e7eb] rounded-lg px-3 py-2 text-[13px] font-semibold text-rose-600 tabular-nums outline-none focus:border-rose-400 bg-white"
+                    className="flex-1 border border-[#e5e7eb] rounded-lg px-2 py-1.5 text-[12px] font-semibold text-rose-600 tabular-nums outline-none focus:border-rose-400 bg-white"
 
                   />
 
@@ -2504,9 +2528,9 @@ export default function POSPage() {
 
                 </div>
 
-                <div className="px-5 pb-4">
+                <div className="px-4 pb-3">
 
-                  <div className="flex justify-between text-[13px] text-[#9ca3af] mb-1.5">
+                  <div className="flex justify-between text-[12px] text-[#9ca3af] mb-1">
 
                     <span>{t.pos.subtotal}</span>
 
@@ -2516,7 +2540,7 @@ export default function POSPage() {
 
                   {discount > 0 && (
 
-                    <div className="flex justify-between text-[13px] text-rose-500 mb-1.5">
+                    <div className="flex justify-between text-[12px] text-rose-500 mb-1">
 
                       <span>{t.pos.discount}{cashierDiscountReason ? ` (${cashierDiscountReason})` : ""}</span>
 
@@ -2526,11 +2550,11 @@ export default function POSPage() {
 
                   )}
 
-                  <div className="flex justify-between items-baseline pt-3 border-t border-[#e5e7eb]">
+                  <div className="flex justify-between items-baseline pt-2 border-t border-[#e5e7eb]">
 
-                    <span className="text-[15px] font-bold text-[#374151] uppercase tracking-wide">{t.pos.total}</span>
+                    <span className="text-[13px] font-bold text-[#374151] uppercase tracking-wide">{t.pos.total}</span>
 
-                    <span className="text-[44px] font-black text-[#16a34a] tabular-nums leading-none">
+                    <span className="text-[28px] font-black text-[#16a34a] tabular-nums leading-none">
 
                       {formatCurrency(total)}
 
@@ -2552,7 +2576,7 @@ export default function POSPage() {
 
                 )}
 
-                <div className="px-5 pb-5">
+                <div className="px-4 pb-3">
 
                   <button
 
@@ -2560,11 +2584,11 @@ export default function POSPage() {
 
                     onClick={() => setCheckoutStep("payment")}
 
-                    className="w-full h-14 bg-[#16a34a] hover:bg-[#15803d] active:scale-[0.99] text-white text-[18px] font-bold rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_4px_14px_rgba(22,163,74,.3)] flex items-center justify-center gap-2"
+                    className="w-full h-12 bg-[#16a34a] hover:bg-[#15803d] active:scale-[0.99] text-white text-[15px] font-bold rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_4px_14px_rgba(22,163,74,.3)] flex items-center justify-center gap-2"
 
                   >
 
-                    <ChevronRight className="w-5 h-5" />
+                    <ChevronRight className="w-4 h-4" />
 
                     {t.pos.encaisser}
 
@@ -2590,9 +2614,9 @@ export default function POSPage() {
 
           {/* Grande barre de recherche/scanner */}
 
-          <div className="px-5 pt-5 pb-3">
+          <div className="px-3 pt-3 pb-2">
 
-            <div className="flex items-center gap-2.5 bg-white border-2 border-[#e5e7eb] rounded-2xl px-4 py-3 focus-within:border-[#16a34a] focus-within:ring-4 focus-within:ring-[#16a34a]/10 transition-all shadow-sm">
+            <div className="flex items-center gap-2 bg-white border-2 border-[#e5e7eb] rounded-xl px-3 py-2 focus-within:border-[#16a34a] focus-within:ring-2 focus-within:ring-[#16a34a]/10 transition-all shadow-sm">
 
               <Search className="w-5 h-5 text-[#9ca3af] shrink-0" />
 
@@ -2610,7 +2634,7 @@ export default function POSPage() {
 
                 placeholder={t.pos.scanOrSearch}
 
-                className="flex-1 bg-transparent text-[16px] text-[#111827] placeholder:text-[#9ca3af] outline-none"
+                className="flex-1 bg-transparent text-[14px] text-[#111827] placeholder:text-[#9ca3af] outline-none"
 
                 autoFocus
 
@@ -2630,11 +2654,11 @@ export default function POSPage() {
 
                 onClick={() => setShowScanner(true)}
 
-                className="ml-1 h-9 px-3 bg-[#f0fdf4] border border-[#86efac] rounded-xl text-[13px] font-semibold text-[#15803d] flex items-center gap-1.5 hover:bg-[#dcfce7] transition-colors shrink-0"
+                className="ml-1 h-8 px-2 bg-[#f0fdf4] border border-[#86efac] rounded-xl text-[12px] font-semibold text-[#15803d] flex items-center gap-1 hover:bg-[#dcfce7] transition-colors shrink-0"
 
               >
 
-                <ScanLine className="w-4 h-4" /> {t.pos.camera}
+                <ScanLine className="w-3.5 h-3.5" /> <span className="hidden lg:block">{t.pos.camera}</span>
 
               </button>
 
@@ -2702,7 +2726,7 @@ export default function POSPage() {
 
                         className={cn(
 
-                          "w-full text-left px-4 py-3 flex items-center gap-3 border-b border-[#f3f4f6] last:border-0 transition-colors",
+                          "w-full text-left px-3 py-2 flex items-center gap-2 border-b border-[#f3f4f6] last:border-0 transition-colors",
 
                           outOfStock
 
@@ -2718,7 +2742,7 @@ export default function POSPage() {
 
                       >
 
-                        <div className="w-10 h-10 bg-[#f3f4f6] rounded-lg flex items-center justify-center text-[14px] font-bold text-[#9ca3af] shrink-0">
+                        <div className="w-8 h-8 bg-[#f3f4f6] rounded-lg flex items-center justify-center text-[12px] font-bold text-[#9ca3af] shrink-0">
 
                           {product.name.charAt(0)}
 
@@ -2726,13 +2750,13 @@ export default function POSPage() {
 
                         <div className="flex-1 min-w-0">
 
-                          <p className="text-[14px] font-semibold text-[#111827] truncate">
+                          <p className="text-[13px] font-semibold text-[#111827] truncate">
 
                             {product.name}
 
                           </p>
 
-                          <p className="text-[12px] text-[#9ca3af]">
+                          <p className="text-[11px] text-[#9ca3af]">
 
                             {product.barcode || product.sku || ""}
 
@@ -2752,7 +2776,7 @@ export default function POSPage() {
 
                         <span className={cn(
 
-                          "text-[15px] font-bold tabular-nums shrink-0",
+                          "text-[13px] font-bold tabular-nums shrink-0",
 
                           hasActiveMarkdown(product) ? "text-red-600" : "text-[#16a34a]"
 
