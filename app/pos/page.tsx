@@ -28,6 +28,8 @@ import {
 
   RotateCcw,
 
+  Gift,
+
   CheckCircle2,
 
   Tag,
@@ -2286,6 +2288,34 @@ export default function POSPage() {
 
                   </button>
 
+                  <button
+
+                    onClick={() => router.push("/returns")}
+
+                    className="h-8 px-3 text-[12px] font-medium text-orange-600 hover:bg-orange-50 rounded-lg flex items-center gap-1.5 transition-colors border border-orange-200"
+
+                    title="Retours client"
+
+                  >
+
+                    <RotateCcw className="w-3.5 h-3.5" /> Retours
+
+                  </button>
+
+                  <button
+
+                    onClick={() => router.push("/cadeaux")}
+
+                    className="h-8 px-3 text-[12px] font-medium text-purple-600 hover:bg-purple-50 rounded-lg flex items-center gap-1.5 transition-colors border border-purple-200"
+
+                    title="Cadeaux"
+
+                  >
+
+                    <Gift className="w-3.5 h-3.5" /> Cadeaux
+
+                  </button>
+
                   {cart.length > 0 && (
 
                     <button
@@ -2371,6 +2401,10 @@ export default function POSPage() {
                                 <>{formatCurrency(effPrice)} x {item.quantity}</>
 
                               )}
+
+                              <span className={cn("ml-2 text-[11px] font-medium", item.product.stock <= 0 ? "text-red-500" : item.product.stock <= (item.product.minStock || 5) ? "text-amber-500" : "text-emerald-500")}>
+                                Stock: {item.product.stock}
+                              </span>
 
                             </p>
 
