@@ -3,7 +3,7 @@
 //           cache-first for fonts/images (stable assets).
 // NEVER intercept: API calls, Next.js RSC payloads, page navigation, cross-origin requests.
 
-const CACHE_NAME = "kabrak-v6";
+const CACHE_NAME = "kabrak-v7";
 
 // Assets that change on every deploy — always fetch fresh, cache as offline fallback
 const NETWORK_FIRST_EXT = [".js", ".css"];
