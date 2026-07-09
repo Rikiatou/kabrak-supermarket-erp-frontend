@@ -40,8 +40,17 @@ function ActivateContent() {
       setSuccess(true);
       setTimeout(() => router.replace("/login"), 1500);
     } else {
+      // Récupérer l'erreur détaillée
       const detail = (window as any).__licenseError || "";
       setError(detail ? `Activation failed: ${detail}` : "Invalid, expired, or unreachable. Check your key and try again.");
+      // Aussi tester directement fetch pour voir si le proxy marche
+      try {
+        const testRes = await fetch(`/api/licenses/${encodeURIComponent(licenseKey.trim().toUpperCase())}/status`);
+        const testText = await testRes.text();
+        setError(`Proxy test: ${testRes.status} ${testText.substring(0, 200)}`);
+      } catch (testErr: any) {
+        setError(`Fetch error: ${testErr?.message || testErr} | License error: ${detail}`);
+      }
     }
 
     setLoading(false);
