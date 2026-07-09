@@ -108,7 +108,7 @@ export default function CadeauxPage() {
 
   // Ajouter un produit à la liste des cadeaux
   const addGiftItem = () => {
-    const product = selectedProductData;
+    const product = selectedProduct || selectedProductData;
     if (!selectedProductId || !product) {
       toast(t.gifts.selectProductRequired, "warning");
       return;
@@ -383,7 +383,7 @@ export default function CadeauxPage() {
                         <span className="text-[12px] text-emerald-600 ml-auto">Stock: {selectedProduct.stock}</span>
                       </div>
                     )}
-                    {productSearch && !selectedProductId && filteredProducts.length > 0 && (
+                    {!selectedProductId && filteredProducts.length > 0 && (
                       <div className="mt-1 border border-[var(--border)] rounded-xl overflow-hidden">
                         {filteredProducts.map((p) => (
                           <button

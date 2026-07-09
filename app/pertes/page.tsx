@@ -127,7 +127,7 @@ export default function PertesPage() {
     : [];
 
   const handleAddLossItem = () => {
-    const product = selectedProductData;
+    const product = selectedProductData || (searchResults.find(p => p.id === selectedProduct) || bestsellers.find(p => p.id === selectedProduct));
     if (!product || quantity < 1) return;
 
     if (quantity > product.stock) {
@@ -580,7 +580,7 @@ export default function PertesPage() {
                     className="w-full pl-9 pr-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)]"
                   />
                 </div>
-                {search && (
+                {(search || !selectedProduct) && filteredProducts.length > 0 && (
                   <div className="mt-1.5 max-h-40 overflow-y-auto border border-[var(--border)] rounded-xl divide-y divide-[var(--border-subtle)]">
                     {filteredProducts.map((p) => (
                       <button

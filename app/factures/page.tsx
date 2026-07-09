@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   FileText,
   Download,
@@ -22,12 +22,14 @@ import { useI18n } from "@/lib/i18n/context";
 import { useToast } from "@/components/ui/Toast";
 import { formatCurrency, cn } from "@/lib/utils";
 import { exportToCSV } from "@/lib/export";
-import { useInvoices, useCreateInvoice, useUpdateInvoiceStatus, useAddPayment } from "@/lib/hooks/useApi";
+import { useInvoices, useCreateInvoice, useUpdateInvoiceStatus, useAddPayment, useServerProductSearch } from "@/lib/hooks/useApi";
 import type { ApiInvoicePayment } from "@/lib/api";
+import { useLicense } from "@/lib/license/context";
 import jsPDF from "jspdf";
 import QRCode from "qrcode";
 
 interface InvoiceItem {
+  productId?: string;
   description: string;
   quantity: number;
   unitPrice: number;
@@ -127,11 +129,15 @@ const paymentMethodLabels: Record<string, string> = {
 export default function FacturesPage() {
   const { t } = useI18n();
   const { toast } = useToast();
+  const { config: licenseConfig } = useLicense();
   const { data: apiInvoices, reload } = useInvoices();
   const { create: createInvoice, creating: creatingInvoice } = useCreateInvoice();
   const { update: updateStatus } = useUpdateInvoiceStatus();
   const { addPayment, adding: addingPayment } = useAddPayment();
+  const { results: productResults, search: searchProducts, loading: productLoading } = useServerProductSearch();
   const [search, setSearch] = useState("");
+  const [productSearch, setProductSearch] = useState("");
+  const [showProductDropdown, setShowProductDropdown] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [paymentInvoice, setPaymentInvoice] = useState<Invoice | null>(null);
@@ -175,11 +181,32 @@ export default function FacturesPage() {
   const [clientEmail, setClientEmail] = useState("");
   const [items, setItems] = useState<InvoiceItem[]>([{ description: "", quantity: 1, unitPrice: 0, total: 0 }]);
 
+  // Recherche de produits pour la facture
+  useEffect(() => {
+    if (productSearch.trim()) {
+      searchProducts(productSearch);
+    }
+  }, [productSearch, searchProducts]);
+
   const filtered = invoices.filter(
     (i) =>
       i.number.toLowerCase().includes(search.toLowerCase()) ||
       i.clientName.toLowerCase().includes(search.toLowerCase())
   );
+
+  // Ajouter un produit depuis la recherche à la facture
+  const addProductToInvoice = (product: any) => {
+    const newItem: InvoiceItem = {
+      productId: product.id,
+      description: product.name,
+      quantity: 1,
+      unitPrice: product.price,
+      total: product.price,
+    };
+    setItems([...items, newItem]);
+    setProductSearch("");
+    setShowProductDropdown(false);
+  };
 
   const updateItem = (idx: number, field: keyof InvoiceItem, value: string | number) => {
     const newItems = [...items];
@@ -208,6 +235,7 @@ export default function FacturesPage() {
         description: it.description,
         quantity: it.quantity,
         unitPrice: it.unitPrice,
+        productId: it.productId || undefined,
       })),
     });
     if (result) {
@@ -221,6 +249,8 @@ export default function FacturesPage() {
     setClientPhone("");
     setClientEmail("");
     setItems([{ description: "", quantity: 1, unitPrice: 0, total: 0 }]);
+    setProductSearch("");
+    setShowProductDropdown(false);
   };
 
   const openPaymentModal = (invoice: Invoice) => {
@@ -309,14 +339,17 @@ export default function FacturesPage() {
     pdf.rect(0, 0, pageWidth, 40, "F");
 
     // Logo / Company name
+    const storeName = licenseConfig?.supermarketName || "KABRAK RETAIL";
+    const storeAddress = licenseConfig?.address || "";
+    const storePhone = licenseConfig?.phone || "";
     pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(22);
     pdf.setFont("helvetica", "bold");
-    pdf.text("KABRAK MARKET", margin, 20);
+    pdf.text(storeName, margin, 20);
     pdf.setFontSize(10);
     pdf.setFont("helvetica", "normal");
-    pdf.text("Supermarket Pro - Yaoundé, Cameroun", margin, 28);
-    pdf.text("Tel: +237 6XX XXX XXX | N° RC: CM/YDE/2024/B/123", margin, 34);
+    if (storeAddress) pdf.text(storeAddress, margin, 28);
+    if (storePhone) pdf.text(`Tel: ${storePhone}`, margin, 34);
 
     // Invoice title
     pdf.setTextColor(30, 64, 175);
@@ -407,8 +440,9 @@ export default function FacturesPage() {
     pdf.setFontSize(8);
     pdf.setFont("helvetica", "normal");
     pdf.text("Merci pour votre confiance!", pageWidth / 2, y + 30, { align: "center" });
-    pdf.text("KABRAK Supermarket Pro - SIRET: CM-2024-12345 - Tel: +237 6XX XXX XXX", pageWidth / 2, y + 36, { align: "center" });
-    pdf.text("Conditions de paiement: 30 jours. Litiges: Tribunal de Commerce de Yaoundé.", pageWidth / 2, y + 42, { align: "center" });
+    const footerParts = [storeName, storePhone ? `Tel: ${storePhone}` : null].filter(Boolean).join(" - ");
+    if (footerParts) pdf.text(footerParts, pageWidth / 2, y + 36, { align: "center" });
+    pdf.text("Conditions de paiement: 30 jours.", pageWidth / 2, y + 42, { align: "center" });
 
     // Signature area
     pdf.setDrawColor(180, 180, 180);
@@ -420,14 +454,14 @@ export default function FacturesPage() {
   };
 
   const sendWhatsApp = (invoice: Invoice) => {
-    const msg = `Bonjour ${invoice.clientName},%0A%0AVoici votre facture ${invoice.number} de KABRAK MARKET.%0A%0AMontant total: ${formatCurrency(invoice.total)}%0ADate: ${new Date(invoice.date).toLocaleDateString("fr-FR")}%0A%0AMerci pour votre confiance!`;
+    const msg = `Bonjour ${invoice.clientName},%0A%0AVoici votre facture ${invoice.number} de ${licenseConfig?.supermarketName || "KABRAK RETAIL"}.%0A%0AMontant total: ${formatCurrency(invoice.total)}%0ADate: ${new Date(invoice.date).toLocaleDateString("fr-FR")}%0A%0AMerci pour votre confiance!`;
     window.open(`https://wa.me/${invoice.clientPhone.replace(/[^0-9]/g, "")}?text=${msg}`, "_blank");
     toast(`WhatsApp ouvert pour ${invoice.clientName}`, "info");
   };
 
   const sendEmail = (invoice: Invoice) => {
-    const subject = `Facture ${invoice.number} - KABRAK MARKET`;
-    const body = `Bonjour ${invoice.clientName},\n\nVeuillez trouver ci-joint votre facture ${invoice.number}.\n\nMontant total: ${formatCurrency(invoice.total)}\nDate: ${new Date(invoice.date).toLocaleDateString("fr-FR")}\n\nMerci pour votre confiance.\n\nKABRAK MARKET`;
+    const subject = `Facture ${invoice.number} - ${licenseConfig?.supermarketName || "KABRAK RETAIL"}`;
+    const body = `Bonjour ${invoice.clientName},\n\nVeuillez trouver ci-joint votre facture ${invoice.number}.\n\nMontant total: ${formatCurrency(invoice.total)}\nDate: ${new Date(invoice.date).toLocaleDateString("fr-FR")}\n\nMerci pour votre confiance.\n\n${licenseConfig?.supermarketName || "KABRAK RETAIL"}`;
     window.location.href = `mailto:${invoice.clientEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     toast(`Email préparé pour ${invoice.clientEmail}`, "info");
   };
@@ -579,15 +613,55 @@ export default function FacturesPage() {
                 <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">Articles</label>
                 <button onClick={addItem} className="text-xs text-[var(--brand)] font-medium hover:underline">+ Ajouter une ligne</button>
               </div>
+
+              {/* Recherche de produits depuis la DB */}
+              <div className="relative mb-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
+                  <input
+                    type="text"
+                    value={productSearch}
+                    onChange={(e) => { setProductSearch(e.target.value); setShowProductDropdown(true); }}
+                    onFocus={() => setShowProductDropdown(true)}
+                    placeholder="Rechercher un produit pour l'ajouter..."
+                    className="w-full pl-9 pr-3 py-2 border border-[var(--border)] rounded-lg text-sm outline-none focus:border-[var(--brand)]"
+                  />
+                </div>
+                {showProductDropdown && productSearch.trim() && productResults.length > 0 && (
+                  <div className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto bg-white border border-[var(--border)] rounded-lg shadow-lg">
+                    {productResults.slice(0, 8).map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => addProductToInvoice(p)}
+                        className="w-full text-left px-3 py-2 hover:bg-[var(--surface-hover)] text-sm flex justify-between items-center border-b border-[var(--border-subtle)] last:border-0"
+                      >
+                        <div>
+                          <span className="font-medium text-[var(--text-primary)]">{p.name}</span>
+                          {p.barcode && <span className="text-xs text-[var(--text-muted)] ml-2">{p.barcode}</span>}
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs text-[var(--text-muted)]">Stock: {p.stock}</span>
+                          <span className="font-semibold text-[var(--text-primary)] tabular-nums">{formatCurrency(p.price)}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <div className="space-y-2">
                 {items.map((item, idx) => (
                   <div key={idx} className="flex gap-2 items-start">
-                    <input
-                      value={item.description}
-                      onChange={(e) => updateItem(idx, "description", e.target.value)}
-                      placeholder="Description"
-                      className="flex-1 px-3 py-2 border border-[var(--border)] rounded-lg text-sm outline-none focus:border-[var(--brand)]"
-                    />
+                    <div className="flex-1 relative">
+                      <input
+                        value={item.description}
+                        onChange={(e) => updateItem(idx, "description", e.target.value)}
+                        placeholder="Description"
+                        className={`w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-[var(--brand)] ${item.productId ? "border-emerald-300 bg-emerald-50/30" : "border-[var(--border)]"}`}
+                      />
+                      {item.productId && (
+                        <span className="absolute -top-1.5 right-2 text-[8px] font-bold bg-emerald-500 text-white px-1.5 py-0.5 rounded">DB</span>
+                      )}
+                    </div>
                     <input
                       type="number"
                       value={item.quantity}
