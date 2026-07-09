@@ -226,7 +226,12 @@ export default function AchatsPage() {
     }
   }, [t, toast]);
 
-  const deliveryGrandTotal = deliveryLines.reduce((s, l) => s + l.qty * l.unitPrice, 0);
+  const deliveryGrandTotal = deliveryLines.reduce((s, l) => {
+    if (l.receiveInPacks && l.productPackQuantity) {
+      return s + l.packQty * l.unitPrice;
+    }
+    return s + l.qty * l.unitPrice;
+  }, 0);
 
   const resetDeliveryForm = () => {
     setDeliveryRef(""); setDeliveryDate(new Date().toISOString().split("T")[0]);
@@ -257,13 +262,20 @@ export default function AchatsPage() {
         expectedDate: deliveryDate,
         invoiceNumber: deliveryRef || undefined,
         notes: deliveryRef ? `Bordereau ref: ${deliveryRef}` : undefined,
-        items: validLines.map((l) => ({
-          productId: l.productId,
-          quantity: l.qty,
-          unitCost: l.unitPrice,
-          sellPrice: l.sellPrice > 0 ? l.sellPrice : undefined,
-          expiryDate: l.expiryDate || undefined,
-        })),
+        items: validLines.map((l) => {
+          // En mode PACK: unitPrice = prix du carton, sellPrice = prix du carton
+          // Le backend attend le prix par UNITÉ → diviser par packQuantity
+          const isPack = l.receiveInPacks && l.productPackQuantity && l.productPackQuantity > 1;
+          const unitCost = isPack ? Math.round(l.unitPrice / l.productPackQuantity!) : l.unitPrice;
+          const unitSellPrice = isPack && l.sellPrice > 0 ? Math.round(l.sellPrice / l.productPackQuantity!) : l.sellPrice;
+          return {
+            productId: l.productId,
+            quantity: l.qty, // déjà en unités
+            unitCost,
+            sellPrice: unitSellPrice > 0 ? unitSellPrice : undefined,
+            expiryDate: l.expiryDate || undefined,
+          };
+        }),
       });
       // Créer un lot (batch) pour chaque ligne avec date d'expiration
       for (const l of validLines) {
@@ -781,7 +793,9 @@ export default function AchatsPage() {
 
                 <div className="space-y-2">
                   {deliveryLines.map((line, i) => {
-                    const lineTotal = line.qty * line.unitPrice;
+                    const lineTotal = line.receiveInPacks && line.productPackQuantity
+                      ? line.packQty * line.unitPrice
+                      : line.qty * line.unitPrice;
                     return (
                       <div key={i} className="border border-[var(--border)] rounded-lg p-2 space-y-1.5">
                         {/* Ligne 1: Produit — recherche server-side (tous les produits) + bouton nouveau produit */}
@@ -895,15 +909,15 @@ export default function AchatsPage() {
                             type="number" min="0" value={line.unitPrice}
                             onChange={(e) => updateDeliveryLine(i, "unitPrice", parseFloat(e.target.value) || 0)}
                             className="border border-[var(--border)] rounded-lg px-2 py-1.5 text-xs text-right outline-none focus:border-[var(--brand)] tabular-nums"
-                            placeholder={t.achats.buyPricePh}
-                            title={t.achats.colBuyPrice}
+                            placeholder={line.receiveInPacks ? "Prix/carton" : t.achats.buyPricePh}
+                            title={line.receiveInPacks ? "Prix d'achat d'1 carton" : t.achats.colBuyPrice}
                           />
                           <input
                             type="number" min="0" value={line.sellPrice}
                             onChange={(e) => updateDeliveryLine(i, "sellPrice", parseFloat(e.target.value) || 0)}
                             className="border border-[var(--border)] rounded-lg px-2 py-1.5 text-xs text-right outline-none focus:border-[var(--brand)] tabular-nums"
-                            placeholder={t.achats.sellPricePh}
-                            title={t.achats.colSellPrice}
+                            placeholder={line.receiveInPacks ? "Vente/carton" : t.achats.sellPricePh}
+                            title={line.receiveInPacks ? "Prix de vente d'1 carton" : t.achats.colSellPrice}
                           />
                           <div className="text-xs font-semibold text-[var(--text-primary)] text-right tabular-nums px-1">
                             {lineTotal > 0 ? formatCurrency(lineTotal) : "—"}

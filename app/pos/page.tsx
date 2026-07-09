@@ -838,7 +838,7 @@ export default function POSPage() {
 
 
 
-  const updateQty = (productId: string, delta: number) => {
+  const updateQty = (productId: string, delta: number, sellMode?: string) => {
 
     setCart((prev) =>
 
@@ -846,7 +846,7 @@ export default function POSPage() {
 
         .map((i) =>
 
-          i.product.id === productId
+          i.product.id === productId && (i as any).sellMode === (sellMode || "unit")
 
             ? { ...i, quantity: Math.max(0, i.quantity + delta) }
 
@@ -862,9 +862,9 @@ export default function POSPage() {
 
 
 
-  const removeItem = (productId: string) => {
+  const removeItem = (productId: string, sellMode?: string) => {
 
-    setCart((prev) => prev.filter((i) => i.product.id !== productId));
+    setCart((prev) => prev.filter((i) => !(i.product.id === productId && (i as any).sellMode === (sellMode || "unit"))));
 
   };
 
@@ -2474,7 +2474,7 @@ export default function POSPage() {
 
                           <div className="flex items-center gap-2 shrink-0">
 
-                            <button onClick={() => updateQty(item.product.id, -1)} className="w-7 h-7 rounded-lg bg-[#f3f4f6] hover:bg-[#e5e7eb] flex items-center justify-center transition-colors">
+                            <button onClick={() => updateQty(item.product.id, -1, (item as any).sellMode)} className="w-7 h-7 rounded-lg bg-[#f3f4f6] hover:bg-[#e5e7eb] flex items-center justify-center transition-colors">
 
                               <Minus className="w-3.5 h-3.5 text-[#374151]" />
 
@@ -2482,13 +2482,13 @@ export default function POSPage() {
 
                             <span className="w-7 text-center text-[14px] font-bold text-[#111827] tabular-nums">{item.quantity}</span>
 
-                            <button onClick={() => updateQty(item.product.id, 1)} className="w-7 h-7 rounded-lg bg-[#f3f4f6] hover:bg-[#e5e7eb] flex items-center justify-center transition-colors disabled:opacity-30">
+                            <button onClick={() => updateQty(item.product.id, 1, (item as any).sellMode)} className="w-7 h-7 rounded-lg bg-[#f3f4f6] hover:bg-[#e5e7eb] flex items-center justify-center transition-colors disabled:opacity-30">
 
                               <Plus className="w-3.5 h-3.5 text-[#374151]" />
 
                             </button>
 
-                            <button onClick={() => removeItem(item.product.id)} className="w-7 h-7 rounded-lg hover:bg-red-50 flex items-center justify-center text-[#d1d5db] hover:text-red-500 transition-colors">
+                            <button onClick={() => removeItem(item.product.id, (item as any).sellMode)} className="w-7 h-7 rounded-lg hover:bg-red-50 flex items-center justify-center text-[#d1d5db] hover:text-red-500 transition-colors">
 
                               <Trash2 className="w-3.5 h-3.5" />
 

@@ -78,6 +78,7 @@ export function NewProductModal({ onClose, onSave, prefillBarcode }: NewProductM
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState(false);
+  const [stockMode, setStockMode] = useState<"unit" | "pack">("unit");
   const barcodeRef = useRef<HTMLInputElement>(null);
 
   const set = (field: keyof FormData) => (
@@ -102,6 +103,10 @@ export function NewProductModal({ onClose, onSave, prefillBarcode }: NewProductM
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
+    // Si elle a saisi le stock en cartons, convertir en unités
+    const stockInUnits = stockMode === "pack" && form.packQuantity
+      ? Number(form.stock) * Number(form.packQuantity)
+      : Number(form.stock);
     onSave({
       sku: form.sku,
       name: form.name,
@@ -111,7 +116,7 @@ export function NewProductModal({ onClose, onSave, prefillBarcode }: NewProductM
       wholesalePrice: form.wholesalePrice ? Number(form.wholesalePrice) : undefined,
       packQuantity: form.packQuantity ? Number(form.packQuantity) : undefined,
       packBarcode: form.packBarcode || undefined,
-      stock: Number(form.stock),
+      stock: stockInUnits,
       minStock: Number(form.minStock),
       unit: form.unit,
       barcode: form.barcode,
@@ -267,9 +272,47 @@ export function NewProductModal({ onClose, onSave, prefillBarcode }: NewProductM
                   </p>
                   <div className="grid grid-cols-3 gap-4">
                     <Field label={t.forms.initialStock} error={errors.stock} required>
-                      <input type="number" value={form.stock} onChange={set("stock")}
-                        placeholder="0" min="0"
-                        className={inputClass(!!errors.stock)} />
+                      {/* Si packQuantity est rempli, afficher le toggle unit/pack */}
+                      {form.packQuantity && Number(form.packQuantity) > 1 ? (
+                        <div className="flex flex-col gap-1">
+                          <div className="flex gap-0.5">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setStockMode("unit");
+                                // Convertir: si elle était en pack, garder la valeur telle quelle (c'est déjà en unités)
+                              }}
+                              className={`flex-1 text-[9px] font-bold py-0.5 rounded ${stockMode === "unit" ? "bg-[#16a34a] text-white" : "bg-slate-100 text-slate-500"}`}
+                            >
+                              UNIT
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setStockMode("pack");
+                                // Convertir: si elle était en unité, diviser par packQuantity
+                                if (form.stock && Number(form.stock) > 0) {
+                                  const packs = Math.floor(Number(form.stock) / Number(form.packQuantity));
+                                  setForm((prev) => ({ ...prev, stock: String(packs) }));
+                                }
+                              }}
+                              className={`flex-1 text-[9px] font-bold py-0.5 rounded ${stockMode === "pack" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}
+                            >
+                              PACK
+                            </button>
+                          </div>
+                          <input type="number" value={form.stock} onChange={set("stock")}
+                            placeholder="0" min="0"
+                            className={inputClass(!!errors.stock)} />
+                          {stockMode === "pack" && (
+                            <span className="text-[9px] text-blue-600 font-medium">= {Number(form.stock || 0) * Number(form.packQuantity || 0)} units</span>
+                          )}
+                        </div>
+                      ) : (
+                        <input type="number" value={form.stock} onChange={set("stock")}
+                          placeholder="0" min="0"
+                          className={inputClass(!!errors.stock)} />
+                      )}
                     </Field>
                     <Field label={t.forms.minStock} error={errors.minStock} required>
                       <input type="number" value={form.minStock} onChange={set("minStock")}
