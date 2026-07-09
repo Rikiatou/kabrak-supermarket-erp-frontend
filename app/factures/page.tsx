@@ -221,8 +221,8 @@ export default function FacturesPage() {
   const removeItem = (idx: number) => setItems(items.filter((_, i) => i !== idx));
 
   const subtotal = items.reduce((s, i) => s + i.total, 0);
-  const tax = Math.round(subtotal * 0.155);
-  const total = subtotal + tax;
+  const tax = 0;
+  const total = subtotal;
 
   const handleCreate = async () => {
     if (!clientName || items.length === 0) return;
@@ -423,16 +423,13 @@ export default function FacturesPage() {
     pdf.setFontSize(10);
     pdf.text("Sous-total:", margin + 95, y);
     pdf.text(formatCurrency(invoice.subtotal), pageWidth - margin - 5, y, { align: "right" });
-    y += 8;
-    pdf.text("TVA (15.5%):", margin + 95, y);
-    pdf.text(formatCurrency(invoice.tax), pageWidth - margin - 5, y, { align: "right" });
     y += 10;
     pdf.setFillColor(30, 64, 175);
     pdf.rect(margin + 90, y - 6, pageWidth - margin - 90, 12, "F");
     pdf.setTextColor(255, 255, 255);
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(12);
-    pdf.text("TOTAL TTC:", margin + 95, y + 2);
+    pdf.text("TOTAL:", margin + 95, y + 2);
     pdf.text(formatCurrency(invoice.total), pageWidth - margin - 5, y + 2, { align: "right" });
 
     // Footer
@@ -693,12 +690,8 @@ export default function FacturesPage() {
                 <span>Sous-total</span>
                 <span className="tabular-nums">{formatCurrency(subtotal)}</span>
               </div>
-              <div className="flex justify-between text-[var(--text-muted)]">
-                <span>TVA (15.5%)</span>
-                <span className="tabular-nums">{formatCurrency(tax)}</span>
-              </div>
               <div className="flex justify-between font-bold text-base pt-1 border-t border-[var(--border)]">
-                <span>Total TTC</span>
+                <span>Total</span>
                 <span className="tabular-nums text-[var(--brand)]">{formatCurrency(total)}</span>
               </div>
             </div>
