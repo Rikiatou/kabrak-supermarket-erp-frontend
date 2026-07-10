@@ -1407,9 +1407,15 @@ export default function POSPage() {
 
 
 
-    // Pour le paiement mixte, on enregistre comme "cash" si cash dominant, sinon "card"
+    // Pour le paiement mixte, on enregistre "split" avec breakdown détaillé
     // Pour orange, on enregistre "orange" directement
-    const recordedMethod = isSplit ? (splitPayment.cash > 0 ? "cash" : splitPayment.orange > 0 ? "orange" : "card") : paymentMethod;
+    const recordedMethod = isSplit ? "split" : paymentMethod;
+    const splitBreakdown = isSplit ? JSON.stringify({
+      cash: splitPayment.cash || 0,
+      card: splitPayment.card || 0,
+      mobile: splitPayment.mobile || 0,
+      orange: splitPayment.orange || 0,
+    }) : undefined;
 
 
 
@@ -1462,6 +1468,8 @@ export default function POSPage() {
       cashGiven: Math.round(effectiveCashGiven),
 
       change: Math.round(effectiveChange),
+
+      splitBreakdown,
 
       customerId: selectedCustomer?.id,
 
@@ -3819,7 +3827,7 @@ function PaymentPanel({
 
                 >
 
-                  <Icon className="w-5 h-5" />
+                  <Icon className={m === "orange" ? "w-5 h-5 text-orange-500" : "w-5 h-5"} />
 
                   {labels[m]}
 
