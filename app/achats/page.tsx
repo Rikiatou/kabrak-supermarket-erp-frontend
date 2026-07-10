@@ -208,9 +208,9 @@ export default function AchatsPage() {
         unit: data.unit,
         expiryDate: data.expiryDate || undefined,
       });
-      // Ajouter le produit créé à la liste du bordereau
+      // Ajouter le produit créé à la liste du bordereau avec la quantité saisie dans le modal
       setDeliveryLines((l) => [...l, {
-        productId: created.id, productLabel: `${created.name} (${created.sku})`, qty: 1,
+        productId: created.id, productLabel: `${created.name} (${created.sku})`, qty: data.stock || 1,
         unitPrice: created.costPrice || 0,
         sellPrice: created.price || 0,
         expiryDate: created.expiryDate ? created.expiryDate.split("T")[0] : "",

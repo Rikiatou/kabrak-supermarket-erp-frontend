@@ -927,6 +927,7 @@ export interface ApiInvoice {
   date: string;
   dueDate?: string;
   subtotal: number;
+  discount: number;
   taxRate: number;
   tax: number;
   total: number;
@@ -964,6 +965,7 @@ export const invoicesApi = {
     customerId?: string;
     dueDate?: string;
     notes?: string;
+    discount?: number;
     items: Array<{ description: string; quantity: number; unitPrice: number; productId?: string }>;
   }) => fetchAPI<ApiInvoice>(`/invoices`, { method: "POST", body: JSON.stringify(data) }),
   addPayment: (id: string, data: { amount: number; method: string; note?: string }) =>

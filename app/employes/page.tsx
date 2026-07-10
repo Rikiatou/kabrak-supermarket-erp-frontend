@@ -617,7 +617,7 @@ function EmployeeDetailPanel({
           <Button className="flex-1" size="md" onClick={() => setEditingEmployee(employee)}>
             {t.common.edit}
           </Button>
-          {canDelete && employee.role !== "boss" && (
+          {canDelete && employee.id !== user?.id && (
             <Button
               variant="danger"
               size="md"

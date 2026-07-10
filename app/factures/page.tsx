@@ -46,6 +46,7 @@ interface Invoice {
   clientEmail: string;
   items: InvoiceItem[];
   subtotal: number;
+  discount: number;
   tax: number;
   total: number;
   paidAmount: number;
@@ -162,6 +163,7 @@ export default function FacturesPage() {
           total: it.total,
         })),
         subtotal: inv.subtotal,
+        discount: inv.discount ?? 0,
         tax: inv.tax,
         total: inv.total,
         paidAmount: inv.paidAmount ?? 0,
@@ -220,9 +222,11 @@ export default function FacturesPage() {
   const addItem = () => setItems([...items, { description: "", quantity: 1, unitPrice: 0, total: 0 }]);
   const removeItem = (idx: number) => setItems(items.filter((_, i) => i !== idx));
 
+  const [discount, setDiscount] = useState(0);
+
   const subtotal = items.reduce((s, i) => s + i.total, 0);
   const tax = 0;
-  const total = subtotal;
+  const total = Math.max(0, subtotal - discount);
 
   const handleCreate = async () => {
     if (!clientName || items.length === 0) return;
@@ -237,6 +241,7 @@ export default function FacturesPage() {
         unitPrice: it.unitPrice,
         productId: it.productId || undefined,
       })),
+      discount: discount > 0 ? discount : undefined,
     });
     if (result) {
       toast(`${t.factures.invoiceCreated}: ${result.number}`, "success");
@@ -423,7 +428,14 @@ export default function FacturesPage() {
     pdf.setFontSize(10);
     pdf.text(`${t.factures.subtotal}:`, margin + 95, y);
     pdf.text(formatCurrency(invoice.subtotal), pageWidth - margin - 5, y, { align: "right" });
-    y += 10;
+    y += 7;
+    if (invoice.discount && invoice.discount > 0) {
+      pdf.text(`${t.factures.discount || "Remise"}:`, margin + 95, y);
+      pdf.text(`- ${formatCurrency(invoice.discount)}`, pageWidth - margin - 5, y, { align: "right" });
+      y += 10;
+    } else {
+      y += 3;
+    }
     pdf.setFillColor(30, 64, 175);
     pdf.rect(margin + 90, y - 6, pageWidth - margin - 90, 12, "F");
     pdf.setTextColor(255, 255, 255);
@@ -695,6 +707,17 @@ export default function FacturesPage() {
               <div className="flex justify-between text-[var(--text-muted)]">
                 <span>{t.factures.subtotal}</span>
                 <span className="tabular-nums">{formatCurrency(subtotal)}</span>
+              </div>
+              <div className="flex items-center justify-between text-[var(--text-muted)]">
+                <span>{t.factures.discount || "Remise"}</span>
+                <input
+                  type="number"
+                  min="0"
+                  value={discount || ""}
+                  onChange={(e) => setDiscount(Math.max(0, Number(e.target.value)))}
+                  placeholder="0"
+                  className="w-32 text-right border border-[var(--border)] rounded-lg px-2 py-1 text-sm tabular-nums focus:border-[var(--brand)] outline-none"
+                />
               </div>
               <div className="flex justify-between font-bold text-base pt-1 border-t border-[var(--border)]">
                 <span>{t.factures.total}</span>
