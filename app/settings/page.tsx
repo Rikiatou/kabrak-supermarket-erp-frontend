@@ -21,6 +21,9 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import type { ClientConfig } from "@/lib/license/types";
+import { useSyncStatus } from "@/lib/hooks/useApi";
+import { syncApi } from "@/lib/api";
+import { RefreshCw, Cloud, CloudOff, CheckCircle, AlertCircle } from "lucide-react";
 
 export default function SettingsPage() {
   const { config, license, updateConfig, refreshConfig, stores } = useLicense();
@@ -92,7 +95,7 @@ export default function SettingsPage() {
         }
       );
 
-      if (!res.ok) throw new Error("Upload failed");
+      if (!res.ok) throw new Error(t.settings.alertUploadError || "Upload failed");
 
       const data = await res.json();
       handleChange("logoUrl", data.logoUrl);
@@ -119,7 +122,7 @@ export default function SettingsPage() {
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } else {
-      alert("Erreur lors de la sauvegarde. Vérifiez votre connexion et que vous êtes connecté.");
+      alert(t.settings.saveError || "Save error. Check your connection.");
     }
     setSaving(false);
   };
@@ -599,6 +602,9 @@ export default function SettingsPage() {
         </div>
       )}
 
+      {/* Sync Status (boss only) */}
+      {canEdit && <SyncStatusSection />}
+
       {/* Read-only notice */}
       {!canEdit && (
         <div className="text-center text-sm text-slate-400">
@@ -607,5 +613,99 @@ export default function SettingsPage() {
       )}
     </div>
     </AppShell>
+  );
+}
+
+function SyncStatusSection() {
+  const { t } = useI18n();
+  const { data: sync, loading, reload } = useSyncStatus();
+  const [forcing, setForcing] = useState(false);
+
+  const handleForce = async () => {
+    setForcing(true);
+    try {
+      await syncApi.force();
+      reload();
+    } catch {}
+    setForcing(false);
+  };
+
+  if (loading && !sync) return null;
+
+  const isOnline = sync?.online;
+  const pending = (sync?.pendingTransactions ?? 0) + (sync?.pendingStock ?? 0);
+  const failed = sync?.failedCount ?? 0;
+
+  return (
+    <div className="bg-white border border-[var(--border)] rounded-2xl p-5 shadow-[var(--shadow-sm)]">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 bg-indigo-50 rounded-xl flex items-center justify-center">
+            {isOnline ? <Cloud className="w-5 h-5 text-indigo-600" /> : <CloudOff className="w-5 h-5 text-slate-400" />}
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+              {t.settings.syncTitle || "Synchronisation Cloud"}
+            </h3>
+            <p className="text-xs text-[var(--text-muted)]">
+              {isOnline
+                ? (t.settings.syncOnline || "En ligne")
+                : (t.settings.syncOffline || "Hors ligne")}
+            </p>
+          </div>
+        </div>
+        <Button
+          variant="secondary"
+          size="sm"
+          icon={<RefreshCw className={`w-4 h-4 ${forcing ? "animate-spin" : ""}`} />}
+          onClick={handleForce}
+          disabled={forcing || !isOnline}
+        >
+          {t.settings.syncForce || "Forcer sync"}
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3">
+        <div className="text-center p-3 bg-slate-50 rounded-xl">
+          <p className="text-xs text-[var(--text-muted)] mb-1">
+            {t.settings.syncPending || "En attente"}
+          </p>
+          <p className={`text-lg font-bold ${pending > 0 ? "text-amber-600" : "text-emerald-600"}`}>
+            {pending}
+          </p>
+        </div>
+        <div className="text-center p-3 bg-slate-50 rounded-xl">
+          <p className="text-xs text-[var(--text-muted)] mb-1">
+            {t.settings.syncFailed || "Échecs"}
+          </p>
+          <p className={`text-lg font-bold ${failed > 0 ? "text-red-600" : "text-emerald-600"}`}>
+            {failed}
+          </p>
+        </div>
+        <div className="text-center p-3 bg-slate-50 rounded-xl">
+          <p className="text-xs text-[var(--text-muted)] mb-1">
+            {t.settings.syncLast || "Dernière sync"}
+          </p>
+          <p className="text-sm font-semibold text-[var(--text-primary)]">
+            {sync?.lastSync
+              ? new Date(sync.lastSync).toLocaleTimeString()
+              : "—"}
+          </p>
+        </div>
+      </div>
+
+      {failed > 0 && (
+        <div className="mt-3 flex items-center gap-2 text-xs text-amber-600 bg-amber-50 p-2 rounded-lg">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          {t.settings.syncFailedWarn || "Des éléments n'ont pas pu être synchronisés. Cliquez sur 'Forcer sync' pour réessayer."}
+        </div>
+      )}
+      {pending === 0 && failed === 0 && isOnline && (
+        <div className="mt-3 flex items-center gap-2 text-xs text-emerald-600 bg-emerald-50 p-2 rounded-lg">
+          <CheckCircle className="w-4 h-4 shrink-0" />
+          {t.settings.syncAllGood || "Tout est synchronisé."}
+        </div>
+      )}
+    </div>
   );
 }

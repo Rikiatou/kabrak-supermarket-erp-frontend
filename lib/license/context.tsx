@@ -140,24 +140,25 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
   // Mettre à jour la config
   const updateConfig = useCallback(
     async (updates: Partial<ClientConfig>): Promise<boolean> => {
-      // Mode sans licence (mono-magasin) : sauvegarder en localStorage uniquement
-      if (!license) {
-        const currentCfg = LicenseValidator.getConfig();
-        const merged = { ...currentCfg, ...updates } as ClientConfig;
-        LicenseValidator.saveConfigLocal(merged);
-        setConfig(merged);
-        return true;
-      }
-      try {
-        const cfg = await LicenseValidator.updateConfig(license.licenseKey, updates);
-        if (cfg) {
-          setConfig(cfg);
-          return true;
+      // 1. Toujours sauvegarder en localStorage d'abord (garantie que ça marche)
+      const currentCfg = LicenseValidator.getConfig();
+      const merged = { ...currentCfg, ...updates } as ClientConfig;
+      LicenseValidator.saveConfigLocal(merged);
+      setConfig(merged);
+
+      // 2. Si on a une licence, tenter de sync vers le backend (best-effort)
+      if (license) {
+        try {
+          const cfg = await LicenseValidator.updateConfig(license.licenseKey, updates);
+          if (cfg) {
+            setConfig(cfg);
+          }
+        } catch (e) {
+          // L'API a échoué mais on a déjà sauvegardé en localStorage — c'est OK
+          console.warn("Config sync to backend failed (saved locally):", e);
         }
-        return false;
-      } catch {
-        return false;
       }
+      return true;
     },
     [license]
   );

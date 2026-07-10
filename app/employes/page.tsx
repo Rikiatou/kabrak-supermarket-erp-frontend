@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/Button";
 import { useI18n } from "@/lib/i18n/context";
 import { useToast } from "@/components/ui/Toast";
 import { NewEmployeeModal } from "@/components/forms/NewEmployeeModal";
+import { EditEmployeeModal } from "@/components/forms/EditEmployeeModal";
 import { useEmployees } from "@/lib/hooks/useApi";
 import { employeesApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth/context";
@@ -122,6 +123,7 @@ export default function EmployesPage() {
   const [filterStatus, setFilterStatus] = useState("Tous");
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [showNewEmployee, setShowNewEmployee] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [saving, setSaving] = useState(false);
 
   // Convertir les employés API au format frontend
@@ -182,6 +184,46 @@ export default function EmployesPage() {
       void _pin;
       const newEmp: Employee = { ...rest, id: `e${Date.now()}`, status: "active", hoursThisWeek: 0 };
       setEmployees((prev) => [newEmp, ...prev]);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleEditEmployee = async (id: string, data: Partial<{
+    firstName: string; lastName: string; role: string; department: string;
+    phone: string; email: string; status: string;
+  }>) => {
+    setSaving(true);
+    try {
+      await employeesApi.update(id, {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        role: data.role,
+        department: data.department,
+        phone: data.phone,
+        email: data.email || undefined,
+        status: data.status,
+      });
+      // Mettre à jour localement
+      setEmployees((prev) => prev.map((e) =>
+        e.id === id
+          ? { ...e, ...data, role: data.role as Employee["role"], status: data.status as Employee["status"] }
+          : e
+      ));
+      if (selectedEmployee?.id === id) {
+        setSelectedEmployee({ ...selectedEmployee, ...data, role: data.role as Employee["role"], status: data.status as Employee["status"] });
+      }
+      reloadEmployees();
+      toast(`${data.firstName} ${data.lastName} ${t.common.saved}`, "success");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Update failed";
+      toast(msg, "warning");
+      // Mettre à jour localement quand même
+      setEmployees((prev) => prev.map((e) =>
+        e.id === id
+          ? { ...e, ...data, role: data.role as Employee["role"], status: data.status as Employee["status"] }
+          : e
+      ));
     } finally {
       setSaving(false);
     }
@@ -387,6 +429,13 @@ export default function EmployesPage() {
           onSave={handleNewEmployee}
         />
       )}
+      {editingEmployee && (
+        <EditEmployeeModal
+          employee={editingEmployee}
+          onClose={() => setEditingEmployee(null)}
+          onSave={handleEditEmployee}
+        />
+      )}
     </AppShell>
   );
 }
@@ -431,7 +480,7 @@ function EmployeeDetailPanel({
       toast(`${employee.firstName} ${employee.lastName} deleted`, "success");
       onDeleted();
     } catch (e: unknown) {
-      toast(e instanceof Error ? e.message : "Delete failed", "warning");
+      toast(e instanceof Error ? e.message : (t.employes.deleteError || "Delete failed"), "warning");
     } finally {
       setDeleting(false);
     }
@@ -565,7 +614,7 @@ function EmployeeDetailPanel({
           <Button variant="secondary" className="flex-1" size="md" icon={<Calendar className="w-4 h-4" />} onClick={() => router.push("/planning")}>
             {t.employes.schedule}
           </Button>
-          <Button className="flex-1" size="md" onClick={() => toast(`${t.common.edit} — ${employee.firstName} ${employee.lastName}`, "info")}>
+          <Button className="flex-1" size="md" onClick={() => setEditingEmployee(employee)}>
             {t.common.edit}
           </Button>
           {canDelete && employee.role !== "boss" && (
@@ -576,7 +625,7 @@ function EmployeeDetailPanel({
               onClick={handleDelete}
               disabled={deleting}
             >
-              {deleting ? "..." : "Delete"}
+              {deleting ? "..." : t.common.delete}
             </Button>
           )}
         </div>

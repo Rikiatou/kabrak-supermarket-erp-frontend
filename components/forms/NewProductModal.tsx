@@ -247,19 +247,19 @@ export function NewProductModal({ onClose, onSave, prefillBarcode }: NewProductM
                       </div>
                     )}
                     {/* Pack/Wholesale pricing */}
-                    <Field label="Wholesale Price (pack)">
+                    <Field label={t.stocks.wholesalePrice || "Wholesale Price (pack)"}>
                       <input type="number" value={form.wholesalePrice} onChange={set("wholesalePrice")}
                         placeholder="0 (optional)" min="0"
                         className={inputClass(false)} />
                     </Field>
-                    <Field label="Pack Quantity (units per pack)">
+                    <Field label={t.stocks.packQuantity || "Pack Quantity (units per pack)"}>
                       <input type="number" value={form.packQuantity} onChange={set("packQuantity")}
                         placeholder="0 (optional)" min="1"
                         className={inputClass(false)} />
                     </Field>
-                    <Field label="Pack Barcode (optional)" span={2}>
+                    <Field label={t.stocks.packBarcode || "Pack Barcode (optional)"} span={2}>
                       <input type="text" value={form.packBarcode} onChange={set("packBarcode")}
-                        placeholder="Leave empty if pack has no barcode"
+                        placeholder={t.stocks.packBarcodePh || "Leave empty if pack has no barcode"}
                         className={inputClass(false)} />
                     </Field>
                   </div>

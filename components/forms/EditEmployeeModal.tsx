@@ -12,27 +12,32 @@ const ROLES: Employee["role"][] = ["boss", "cashier", "stockist", "accountant"];
 type FormData = {
   firstName: string;
   lastName: string;
-  role: Employee["role"] | "";
+  role: Employee["role"];
   department: string;
   phone: string;
   email: string;
-  hireDate: string;
+  status: Employee["status"];
 };
 
-const empty: FormData = {
-  firstName: "", lastName: "", role: "", department: "",
-  phone: "", email: "", hireDate: "",
-};
-
-interface NewEmployeeModalProps {
+interface EditEmployeeModalProps {
+  employee: Employee;
   onClose: () => void;
-  onSave: (employee: Omit<Employee, "id" | "status" | "hoursThisWeek">) => void;
+  onSave: (id: string, data: Partial<FormData>) => Promise<void>;
 }
 
-export function NewEmployeeModal({ onClose, onSave }: NewEmployeeModalProps) {
+export function EditEmployeeModal({ employee, onClose, onSave }: EditEmployeeModalProps) {
   const { t } = useI18n();
-  const [form, setForm] = useState<FormData>(empty);
+  const [form, setForm] = useState<FormData>({
+    firstName: employee.firstName,
+    lastName: employee.lastName,
+    role: employee.role,
+    department: employee.department || "",
+    phone: employee.phone || "",
+    email: employee.email || "",
+    status: employee.status,
+  });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
   const set = (field: keyof FormData) => (
@@ -47,31 +52,27 @@ export function NewEmployeeModal({ onClose, onSave }: NewEmployeeModalProps) {
     if (!form.firstName.trim()) errs.firstName = t.common.required;
     if (!form.lastName.trim()) errs.lastName = t.common.required;
     if (!form.role) errs.role = t.common.required;
-    if (!form.department.trim()) errs.department = t.common.required;
     if (!form.phone.trim()) errs.phone = t.common.required;
-    if (!form.email.trim()) errs.email = t.common.required;
-    if (!form.hireDate) errs.hireDate = t.common.required;
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
-    onSave({
-      firstName: form.firstName,
-      lastName: form.lastName,
-      role: form.role as Employee["role"],
-      department: form.department,
-      phone: form.phone,
-      email: form.email,
-      hireDate: form.hireDate,
-    });
-    setSaved(true);
-    setTimeout(() => {
-      setSaved(false);
-      onClose();
-    }, 1400);
+    setSaving(true);
+    try {
+      await onSave(employee.id, form);
+      setSaved(true);
+      setTimeout(() => {
+        setSaved(false);
+        onClose();
+      }, 1400);
+    } catch (err) {
+      console.error("Edit employee error:", err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const initials = form.firstName && form.lastName
@@ -90,7 +91,7 @@ export function NewEmployeeModal({ onClose, onSave }: NewEmployeeModalProps) {
                 <Users className="w-5 h-5 text-indigo-600" />
               </div>
               <h2 className="text-base font-semibold text-[var(--text-primary)]">
-                {t.forms.newEmployee}
+                {t.common.edit}
               </h2>
             </div>
             <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors">
@@ -109,22 +110,20 @@ export function NewEmployeeModal({ onClose, onSave }: NewEmployeeModalProps) {
             <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
               <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
 
-                {/* Avatar preview */}
                 <div className="flex items-center gap-4">
                   <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center text-white text-xl font-bold shrink-0">
                     {initials}
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-[var(--text-primary)]">
-                      {form.firstName || "First name"} {form.lastName || "Last name"}
+                      {form.firstName} {form.lastName}
                     </p>
                     <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                      {form.role ? t.employes.roles[form.role] : t.forms.selectRole}
+                      {t.employes.roles[form.role]}
                     </p>
                   </div>
                 </div>
 
-                {/* Identity */}
                 <div>
                   <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-widest mb-3">
                     {t.employes.title}
@@ -132,44 +131,44 @@ export function NewEmployeeModal({ onClose, onSave }: NewEmployeeModalProps) {
                   <div className="grid grid-cols-2 gap-4">
                     <Field label={t.forms.firstName} error={errors.firstName} required>
                       <input type="text" value={form.firstName} onChange={set("firstName")}
-                        placeholder="Amina" className={inputClass(!!errors.firstName)} />
+                        className={inputClass(!!errors.firstName)} />
                     </Field>
                     <Field label={t.forms.lastName} error={errors.lastName} required>
                       <input type="text" value={form.lastName} onChange={set("lastName")}
-                        placeholder="Bello" className={inputClass(!!errors.lastName)} />
+                        className={inputClass(!!errors.lastName)} />
                     </Field>
                     <Field label={t.forms.role} error={errors.role} required>
                       <select value={form.role} onChange={set("role")} className={inputClass(!!errors.role)}>
-                        <option value="">{t.forms.selectRole}</option>
                         {ROLES.map((r) => (
                           <option key={r} value={r}>{t.employes.roles[r]}</option>
                         ))}
                       </select>
                     </Field>
-                    <Field label={t.forms.dept} error={errors.department} required>
+                    <Field label={t.forms.dept}>
                       <input type="text" value={form.department} onChange={set("department")}
-                        placeholder={t.forms.deptPh} className={inputClass(!!errors.department)} />
+                        placeholder={t.forms.deptPh} className={inputClass(false)} />
                     </Field>
                   </div>
                 </div>
 
-                {/* Contact */}
                 <div>
                   <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-widest mb-3">
-                    {t.employes.contact || "Contact"}
+                    {t.employes.title}
                   </p>
                   <div className="grid grid-cols-2 gap-4">
                     <Field label={t.forms.phone} error={errors.phone} required>
                       <input type="tel" value={form.phone} onChange={set("phone")}
                         placeholder="+237 6 XX XX XX XX" className={inputClass(!!errors.phone)} />
                     </Field>
-                    <Field label={t.forms.email} error={errors.email} required>
+                    <Field label={t.forms.email}>
                       <input type="email" value={form.email} onChange={set("email")}
-                        placeholder="prenom.nom@kabrak.cm" className={inputClass(!!errors.email)} />
+                        placeholder="prenom.nom@kabrak.cm" className={inputClass(false)} />
                     </Field>
-                    <Field label={t.forms.hireDate} error={errors.hireDate} required span={2}>
-                      <input type="date" value={form.hireDate} onChange={set("hireDate")}
-                        className={inputClass(!!errors.hireDate)} />
+                    <Field label={t.employes.status} span={2}>
+                      <select value={form.status} onChange={set("status")} className={inputClass(false)}>
+                        <option value="active">{t.employes.statusActive}</option>
+                        <option value="inactive">{t.employes.statusInactive}</option>
+                      </select>
                     </Field>
                   </div>
                 </div>
@@ -177,7 +176,9 @@ export function NewEmployeeModal({ onClose, onSave }: NewEmployeeModalProps) {
 
               <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[var(--border)] shrink-0">
                 <Button type="button" variant="secondary" onClick={onClose}>{t.common.cancel}</Button>
-                <Button type="submit" icon={<CheckCircle2 className="w-4 h-4" />}>{t.common.save}</Button>
+                <Button type="submit" disabled={saving} icon={<CheckCircle2 className="w-4 h-4" />}>
+                  {saving ? "..." : t.common.save}
+                </Button>
               </div>
             </form>
           )}

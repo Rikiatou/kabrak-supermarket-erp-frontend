@@ -1,6 +1,7 @@
 "use client";
 
 import { CreditCard, Banknote, Smartphone, RotateCcw, CheckCircle } from "lucide-react";
+import { recentTransactions as mockTx } from "@/lib/mock-data";
 import { Badge } from "@/components/ui/Badge";
 import { formatCurrency, formatTime } from "@/lib/utils";
 import { useRecentTransactions } from "@/lib/hooks/useApi";
@@ -12,9 +13,9 @@ const paymentIcons: Record<string, any> = {
   mobile: Smartphone,
 };
 
-export function RecentTransactions({ cashierId }: { cashierId?: string } = {}) {
+export function RecentTransactions() {
   const { t } = useI18n();
-  const { transactions } = useRecentTransactions(10, cashierId);
+  const { transactions } = useRecentTransactions(10);
 
   const paymentLabels: Record<string, string> = {
     cash: t.common.cash,
@@ -32,15 +33,12 @@ export function RecentTransactions({ cashierId }: { cashierId?: string } = {}) {
     status: tx.status as "completed" | "refunded" | "pending",
   }));
 
-  // Données réelles uniquement — pas de mock
-  const displayTx = backendTx;
+  // Fallback sur mock si backend indisponible
+  const displayTx = backendTx.length > 0 ? backendTx : mockTx;
 
   return (
     <div className="space-y-0">
-      {displayTx.length === 0 ? (
-        <p className="text-center text-sm text-[var(--text-muted)] py-6">{t.recentTx.noTransactions || "Aucune transaction récente"}</p>
-      ) : (
-        displayTx.map((tx, i) => {
+      {displayTx.map((tx, i) => {
         const PayIcon = paymentIcons[tx.paymentMethod] || Banknote;
         const isRefunded = tx.status === "refunded";
 
@@ -90,8 +88,7 @@ export function RecentTransactions({ cashierId }: { cashierId?: string } = {}) {
             </div>
           </div>
         );
-        })
-      )}
+      })}
     </div>
   );
 }

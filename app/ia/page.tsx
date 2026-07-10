@@ -38,10 +38,10 @@ import { useStockForecast, useAiRecommendations, useMarkdownSuggestions, useSetM
 import type { ApiMarkdownSuggestion } from "@/lib/api";
 
 const urgencyConfig = {
-  critical: { color: "bg-red-100 text-red-700", border: "border-red-200" },
-  warning: { color: "bg-amber-100 text-amber-700", border: "border-amber-200" },
-  ok: { color: "bg-emerald-100 text-emerald-700", border: "border-emerald-200" },
-  overstock: { color: "bg-blue-100 text-blue-700", border: "border-blue-200" },
+  critical: { label: "Critique", color: "bg-red-100 text-red-700", border: "border-red-200" },
+  warning: { label: "Attention", color: "bg-amber-100 text-amber-700", border: "border-amber-200" },
+  ok: { label: "OK", color: "bg-emerald-100 text-emerald-700", border: "border-emerald-200" },
+  overstock: { label: "Surstock", color: "bg-blue-100 text-blue-700", border: "border-blue-200" },
 };
 
 const priorityConfig: Record<string, { color: string; bg: string; icon: any; iconColor: string }> = {
@@ -50,28 +50,28 @@ const priorityConfig: Record<string, { color: string; bg: string; icon: any; ico
   low: { color: "border-l-blue-500", bg: "bg-blue-50", icon: Lightbulb, iconColor: "text-blue-600" },
 };
 
-const typeConfig: Record<string, { icon: any; color: string }> = {
-  stockout: { icon: Package, color: "text-red-600" },
-  overstock: { icon: TrendingUp, color: "text-blue-600" },
-  expiry: { icon: Clock, color: "text-amber-600" },
-  profit: { icon: TrendingUp, color: "text-emerald-600" },
+const typeConfig: Record<string, { label: string; icon: any; color: string }> = {
+  stockout: { label: "Rupture", icon: Package, color: "text-red-600" },
+  overstock: { label: "Surstock", icon: TrendingUp, color: "text-blue-600" },
+  expiry: { label: "Expiration", icon: Clock, color: "text-amber-600" },
+  profit: { label: "Rentabilité", icon: TrendingUp, color: "text-emerald-600" },
 };
 
-// Fallback data if backend is unreachable
+// Données de fallback si le backend ne répond pas
 const mockForecast = [
-  { name: "Mineral Water 1.5L", sku: "EAU-001", category: "Beverages", stock: 45, minStock: 20, unit: "pc", sold30Days: 320, dailyVelocity: 10.7, daysUntilOut: 4, recommendedOrder: 150, urgency: "critical" },
-  { name: "Scented Rice 5kg", sku: "RIZ-005", category: "Grocery", stock: 28, minStock: 15, unit: "sack", sold30Days: 180, dailyVelocity: 6.0, daysUntilOut: 4, recommendedOrder: 84, urgency: "critical" },
-  { name: "Granulated Sugar 1kg", sku: "SUC-001", category: "Grocery", stock: 85, minStock: 30, unit: "pc", sold30Days: 240, dailyVelocity: 8.0, daysUntilOut: 10, recommendedOrder: 112, urgency: "warning" },
-  { name: "Vegetable Oil 1L", sku: "HUI-001", category: "Grocery", stock: 120, minStock: 40, unit: "pc", sold30Days: 90, dailyVelocity: 3.0, daysUntilOut: 40, recommendedOrder: 42, urgency: "ok" },
-  { name: "Marseille Soap", sku: "SAV-001", category: "Household", stock: 350, minStock: 50, unit: "pc", sold30Days: 30, dailyVelocity: 1.0, daysUntilOut: 350, recommendedOrder: 0, urgency: "overstock" },
+  { name: "Eau Minérale 1.5L", sku: "EAU-001", category: "Boissons", stock: 45, minStock: 20, unit: "pièce", sold30Days: 320, dailyVelocity: 10.7, daysUntilOut: 4, recommendedOrder: 150, urgency: "critical" },
+  { name: "Riz Parfumé 5kg", sku: "RIZ-005", category: "Épicerie", stock: 28, minStock: 15, unit: "sac", sold30Days: 180, dailyVelocity: 6.0, daysUntilOut: 4, recommendedOrder: 84, urgency: "critical" },
+  { name: "Sucre Granulé 1kg", sku: "SUC-001", category: "Épicerie", stock: 85, minStock: 30, unit: "pièce", sold30Days: 240, dailyVelocity: 8.0, daysUntilOut: 10, recommendedOrder: 112, urgency: "warning" },
+  { name: "Huile Végétale 1L", sku: "HUI-001", category: "Épicerie", stock: 120, minStock: 40, unit: "pièce", sold30Days: 90, dailyVelocity: 3.0, daysUntilOut: 40, recommendedOrder: 42, urgency: "ok" },
+  { name: "Savon de Marseille", sku: "SAV-001", category: "Ménager", stock: 350, minStock: 50, unit: "pièce", sold30Days: 30, dailyVelocity: 1.0, daysUntilOut: 350, recommendedOrder: 0, urgency: "overstock" },
 ];
 
 const mockRecommendations = [
-  { type: "stockout", priority: "high", title: "Stockout imminent: Mineral Water 1.5L", message: "Stock will run out in 4 days. Order 150 units recommended.", action: "Order 150 units" },
-  { type: "stockout", priority: "high", title: "Stockout imminent: Scented Rice 5kg", message: "Stock will run out in 4 days. Order 84 sacks recommended.", action: "Order 84 sacks" },
-  { type: "expiry", priority: "high", title: "Expiry: Natural Yogurt 500g", message: "Expires in 5 days. Stock: 40 units. Apply a discount.", action: "Apply -20%" },
-  { type: "overstock", priority: "low", title: "Overstock: Marseille Soap", message: "Stock for 350 days. Launch a promotion to accelerate sales.", action: "Launch promotion" },
-  { type: "profit", priority: "low", title: "Top margin: Arabica Coffee 250g", message: "62% margin (1500 FCFA/unit). Feature at checkout.", action: "Feature at checkout" },
+  { type: "stockout", priority: "high", title: "Rupture imminente: Eau Minérale 1.5L", message: "Le stock sera épuisé dans 4 jours. Commander 150 pièces recommandé.", action: "Commander 150 pièces" },
+  { type: "stockout", priority: "high", title: "Rupture imminente: Riz Parfumé 5kg", message: "Le stock sera épuisé dans 4 jours. Commander 84 sacs recommandé.", action: "Commander 84 sacs" },
+  { type: "expiry", priority: "high", title: "Expiration: Yaourt Nature 500g", message: "Expire dans 5 jours. Stock: 40 unités. Appliquer une remise.", action: "Appliquer -20%" },
+  { type: "overstock", priority: "low", title: "Surstock: Savon de Marseille", message: "Stock pour 350 jours. Lancer une promotion pour accélérer les ventes.", action: "Lancer promotion" },
+  { type: "profit", priority: "low", title: "Top marge: Café Arabica 250g", message: "Marge de 62% (1500 FCFA/unité). Mettre en avant en caisse.", action: "Mettre en avant" },
 ];
 
 export default function IaPage() {
@@ -83,35 +83,7 @@ export default function IaPage() {
   const { setMarkdown, setting: settingMarkdown } = useSetMarkdown();
   const [applyingId, setApplyingId] = useState<string | null>(null);
 
-  const urgencyLabels: Record<string, string> = {
-    critical: t.ia.urgencyCritical,
-    warning: t.ia.urgencyWarning,
-    ok: t.ia.urgencyOk,
-    overstock: t.ia.urgencyOverstock,
-  };
-  const typeLabels: Record<string, string> = {
-    stockout: t.ia.typeStockout,
-    overstock: t.ia.typeOverstock,
-    expiry: t.ia.typeExpiry,
-    profit: t.ia.typeProfit,
-  };
-  const priorityLabels: Record<string, string> = {
-    high: t.ia.priorityHigh,
-    medium: t.ia.priorityMedium,
-    low: t.ia.priorityLow,
-  };
-  const mdPriorityLabels: Record<string, string> = {
-    critical: t.ia.mdPriorityCritical,
-    high: t.ia.mdPriorityHigh,
-    medium: t.ia.mdPriorityMedium,
-  };
-  const reasonLabels: Record<string, string> = {
-    expiry: t.ia.expired,
-    near_expiry: t.ia.nearExpiry,
-    clearance: t.ia.clearance,
-  };
-
-  const forecast = forecastData?.forecasts?.length ? forecastData.forecasts : mockForecast;
+  const forecast = forecastData?.forecasts ?? [];
   const summary = forecastData?.summary || {
     total: forecast.length,
     critical: forecast.filter((f: any) => f.urgency === "critical").length,
@@ -119,17 +91,17 @@ export default function IaPage() {
     overstock: forecast.filter((f: any) => f.urgency === "overstock").length,
     recommendedOrdersValue: forecast.reduce((s: number, f: any) => s + f.recommendedOrder * 500, 0),
   };
-  const recommendations = recData?.length ? recData : mockRecommendations;
+  const recommendations = recData ?? [];
 
   const handleRefresh = () => {
     reloadForecast();
     reloadRecs();
     reloadMarkdown();
-    toast(t.ia.analysisUpdated, "info");
+    toast(t.ai.refreshed || "AI analysis updated", "info");
   };
 
   const handleAction = (rec: any) => {
-    toast(`${t.ia.actionLabel} ${rec.action}`, "info");
+    toast(`Action: ${rec.action}`, "info");
   };
 
   const handleApplyMarkdown = async (suggestion: ApiMarkdownSuggestion) => {
@@ -140,16 +112,16 @@ export default function IaPage() {
       markdownNote: `Suggestion IA: ${suggestion.markdownPercent}% de remise`,
     });
     if (result) {
-      toast(`${t.ia.markdownApplied} ${suggestion.name} → ${formatCurrency(suggestion.suggestedMarkdownPrice)} (-${suggestion.markdownPercent}%)`, "success");
+      toast(`${t.ai.markdownApplied || "Markdown applied"}: ${suggestion.name} → ${formatCurrency(suggestion.suggestedMarkdownPrice)} (-${suggestion.markdownPercent}%)`, "success");
       reloadMarkdown();
     } else {
-      toast(t.ia.markdownError, "warning");
+      toast(t.ai.markdownError || "Error applying markdown", "warning");
     }
     setApplyingId(null);
   };
 
   return (
-    <AppShell title={t.ia.title} subtitle={t.ia.subtitle}>
+    <AppShell title={t.ai.title || "AI"} subtitle={t.ai.subtitle || "Stock forecasts and recommendations"}>
       <div className="space-y-5">
         {/* Header avec refresh */}
         <div className="flex items-center justify-between">
@@ -158,9 +130,9 @@ export default function IaPage() {
               <Brain className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t.ia.predictiveAnalysis}</h2>
+              <h2 className="text-sm font-semibold text-[var(--text-primary)]">Analyse prédictive</h2>
               <p className="text-xs text-[var(--text-muted)]">
-                {summary.total} {t.ia.productsAnalyzed}
+                {summary.total} produits analysés
               </p>
             </div>
           </div>
@@ -170,7 +142,7 @@ export default function IaPage() {
             icon={<RefreshCw className={cn("w-3.5 h-3.5", forecastLoading && "animate-spin")} />}
             onClick={handleRefresh}
           >
-            {t.common.refresh}
+            Actualiser
           </Button>
         </div>
 
@@ -179,34 +151,34 @@ export default function IaPage() {
           <Card className={cn("p-4 border-l-4", urgencyConfig.critical.border)}>
             <div className="flex items-center gap-2 mb-1">
               <AlertTriangle className="w-4 h-4 text-red-600" />
-              <span className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide">{t.ia.critical}</span>
+              <span className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide">Critiques</span>
             </div>
             <p className="text-2xl font-bold text-red-600 tabular-nums">{summary.critical}</p>
-            <p className="text-[11px] text-[var(--text-muted)] mt-0.5">{t.ia.criticalSub}</p>
+            <p className="text-[11px] text-[var(--text-muted)] mt-0.5">Rupture &lt; 3 jours</p>
           </Card>
           <Card className={cn("p-4 border-l-4", urgencyConfig.warning.border)}>
             <div className="flex items-center gap-2 mb-1">
               <Clock className="w-4 h-4 text-amber-600" />
-              <span className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide">{t.ia.alerts}</span>
+              <span className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide">Alertes</span>
             </div>
             <p className="text-2xl font-bold text-amber-600 tabular-nums">{summary.warning}</p>
-            <p className="text-[11px] text-[var(--text-muted)] mt-0.5">{t.ia.alertsSub}</p>
+            <p className="text-[11px] text-[var(--text-muted)] mt-0.5">Rupture &lt; 7 jours</p>
           </Card>
           <Card className={cn("p-4 border-l-4", urgencyConfig.overstock.border)}>
             <div className="flex items-center gap-2 mb-1">
               <TrendingUp className="w-4 h-4 text-blue-600" />
-              <span className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide">{t.ia.overstock}</span>
+              <span className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide">Surstock</span>
             </div>
             <p className="text-2xl font-bold text-blue-600 tabular-nums">{summary.overstock}</p>
-            <p className="text-[11px] text-[var(--text-muted)] mt-0.5">{t.ia.overstockSub}</p>
+            <p className="text-[11px] text-[var(--text-muted)] mt-0.5">Stock &gt; 60 jours</p>
           </Card>
           <Card className="p-4 border-l-4 border-l-emerald-200">
             <div className="flex items-center gap-2 mb-1">
               <ShoppingCart className="w-4 h-4 text-emerald-600" />
-              <span className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide">{t.ia.toOrder}</span>
+              <span className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide">À commander</span>
             </div>
             <p className="text-2xl font-bold text-emerald-600 tabular-nums">{formatCurrency(summary.recommendedOrdersValue)}</p>
-            <p className="text-[11px] text-[var(--text-muted)] mt-0.5">{t.ia.estimatedValue}</p>
+            <p className="text-[11px] text-[var(--text-muted)] mt-0.5">Valeur estimée</p>
           </Card>
         </div>
 
@@ -214,7 +186,7 @@ export default function IaPage() {
         <div>
           <div className="flex items-center gap-2 mb-3">
             <Zap className="w-4 h-4 text-amber-500" />
-            <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t.ia.smartRecs}</h3>
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">Recommandations intelligentes</h3>
             <Badge variant="neutral">{recommendations.length}</Badge>
           </div>
           <div className="space-y-2">
@@ -232,7 +204,7 @@ export default function IaPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <span className={cn("text-[10px] font-bold uppercase tracking-wide", typeCfg.color)}>
-                          {typeLabels[rec.type] || typeLabels.stockout}
+                          {typeCfg.label}
                         </span>
                         <span className={cn(
                           "text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded",
@@ -240,7 +212,7 @@ export default function IaPage() {
                           rec.priority === "medium" ? "bg-amber-200 text-amber-800" :
                           "bg-blue-200 text-blue-800"
                         )}>
-                          {priorityLabels[rec.priority] || priorityLabels.low}
+                          {rec.priority === "high" ? "Urgent" : rec.priority === "medium" ? "Moyen" : "Info"}
                         </span>
                       </div>
                       <p className="text-sm font-semibold text-[var(--text-primary)] mb-1">{rec.title}</p>
@@ -266,20 +238,20 @@ export default function IaPage() {
         <div>
           <div className="flex items-center gap-2 mb-3">
             <Package className="w-4 h-4 text-[var(--brand)]" />
-            <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t.ia.stockForecast}</h3>
-            <span className="text-xs text-[var(--text-muted)]">{t.ia.last30Days}</span>
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">Prévisions de stock</h3>
+            <span className="text-xs text-[var(--text-muted)]">- 30 jours de données</span>
           </div>
           <Card className="overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-[var(--border)] bg-[var(--background)]">
-                    <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">{t.ia.colProduct}</th>
-                    <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3 hidden sm:table-cell">{t.ia.colStock}</th>
-                    <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">{t.ia.colVelocity}</th>
-                    <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">{t.ia.colDaysUntilOut}</th>
-                    <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3 hidden md:table-cell">{t.ia.colSuggestedOrder}</th>
-                    <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">{t.ia.colStatus}</th>
+                    <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Produit</th>
+                    <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3 hidden sm:table-cell">Stock</th>
+                    <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Vélocité/j</th>
+                    <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Épuisé dans</th>
+                    <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3 hidden md:table-cell">Commande sugg.</th>
+                    <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Statut</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -299,7 +271,7 @@ export default function IaPage() {
                         </td>
                         <td className="px-4 py-3 text-center">
                           {item.daysUntilOut === null ? (
-                            <span className="text-xs text-[var(--text-muted)]">{t.common.na}</span>
+                            <span className="text-xs text-[var(--text-muted)]">N/A</span>
                           ) : (
                             <span className={cn(
                               "text-sm font-bold tabular-nums",
@@ -307,7 +279,7 @@ export default function IaPage() {
                               item.daysUntilOut <= 7 ? "text-amber-600" :
                               "text-[var(--text-secondary)]"
                             )}>
-                              {item.daysUntilOut}{t.ia.daysShort}
+                              {item.daysUntilOut}j
                             </span>
                           )}
                         </td>
@@ -320,7 +292,7 @@ export default function IaPage() {
                         </td>
                         <td className="px-4 py-3 text-center">
                           <span className={cn("inline-flex px-2 py-0.5 rounded-md text-xs font-medium", urgency.color)}>
-                            {urgencyLabels[item.urgency as string] || urgencyLabels.ok}
+                            {urgency.label}
                           </span>
                         </td>
                       </tr>
@@ -341,9 +313,9 @@ export default function IaPage() {
                   <TrendingDown className="w-4 h-4 text-amber-600" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t.ia.markdownSuggestions}</h3>
+                  <h3 className="text-sm font-semibold text-[var(--text-primary)]">Suggestions de markdown</h3>
                   <p className="text-xs text-[var(--text-muted)]">
-                    {markdownData.summary.total} {t.ia.productsCount} · {t.ia.potentialLoss} {formatCurrency(markdownData.summary.totalPotentialLoss)}
+                    {markdownData.summary.total} produit(s) · Perte potentielle: {formatCurrency(markdownData.summary.totalPotentialLoss)}
                   </p>
                 </div>
               </div>
@@ -353,7 +325,7 @@ export default function IaPage() {
                 icon={<RefreshCw className={cn("w-3.5 h-3.5", markdownLoading && "animate-spin")} />}
                 onClick={reloadMarkdown}
               >
-                {t.common.refresh}
+                Actualiser
               </Button>
             </div>
 
@@ -362,13 +334,13 @@ export default function IaPage() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-[var(--border)] bg-[var(--background)]">
-                      <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">{t.ia.colProduct}</th>
-                      <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3 hidden md:table-cell">{t.ia.colExpiration}</th>
-                      <th className="text-right text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">{t.ia.colCurrentPrice}</th>
-                      <th className="text-right text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">{t.ia.colSuggestedPrice}</th>
-                      <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3 hidden sm:table-cell">{t.ia.colDiscount}</th>
-                      <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">{t.ia.colPriority}</th>
-                      <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">{t.ia.colAction}</th>
+                      <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Produit</th>
+                      <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3 hidden md:table-cell">Expiration</th>
+                      <th className="text-right text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Prix actuel</th>
+                      <th className="text-right text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Prix suggéré</th>
+                      <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3 hidden sm:table-cell">Remise</th>
+                      <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Priorité</th>
+                      <th className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -378,13 +350,18 @@ export default function IaPage() {
                         high: "bg-amber-100 text-amber-700",
                         medium: "bg-blue-100 text-blue-700",
                       };
+                      const reasonLabels: Record<string, string> = {
+                        expiry: "Expiré",
+                        near_expiry: "Exp. proche",
+                        clearance: "Destockage",
+                      };
                       return (
                         <tr key={s.productId} className="border-b border-[var(--border-subtle)] hover:bg-[var(--surface-hover)] transition-colors">
                           <td className="px-4 py-3">
                             <div>
                               <p className="text-sm font-medium text-[var(--text-primary)]">{s.name}</p>
                               <p className="text-xs text-[var(--text-muted)]">
-                                {s.category} · {t.ia.colStock}: {s.stock} {s.unit} · {reasonLabels[s.reason] || s.reason}
+                                {s.category} · Stock: {s.stock} {s.unit} · {reasonLabels[s.reason] || s.reason}
                               </p>
                             </div>
                           </td>
@@ -395,7 +372,7 @@ export default function IaPage() {
                                 s.daysToExpiry <= 0 ? "text-red-600" :
                                 s.daysToExpiry <= 7 ? "text-amber-600" : "text-[var(--text-muted)]"
                               )}>
-                                {s.daysToExpiry <= 0 ? t.ia.expired : `D-${s.daysToExpiry}`}
+                                {s.daysToExpiry <= 0 ? "Expiré" : `J-${s.daysToExpiry}`}
                               </span>
                             ) : (
                               <span className="text-xs text-[var(--text-muted)]">—</span>
@@ -412,7 +389,7 @@ export default function IaPage() {
                           </td>
                           <td className="px-4 py-3 text-center">
                             <span className={cn("inline-flex px-2 py-0.5 rounded-md text-xs font-medium", priorityColors[s.priority])}>
-                              {mdPriorityLabels[s.priority] || mdPriorityLabels.medium}
+                              {s.priority === "critical" ? "Critique" : s.priority === "high" ? "Haute" : "Moyenne"}
                             </span>
                           </td>
                           <td className="px-4 py-3 text-center">
@@ -426,7 +403,7 @@ export default function IaPage() {
                               ) : (
                                 <CheckCircle2 className="w-3 h-3" />
                               )}
-                              {t.common.apply}
+                              Appliquer
                             </button>
                           </td>
                         </tr>

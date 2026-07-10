@@ -252,47 +252,47 @@ export default function RapportsPage() {
     return { totalLosses, totalLossValue, byType };
   }, [filteredLosses]);
 
-  // Fallback to mock if backend returns nothing
-  const sales = salesReport ?? mockSalesReport;
-  const categories = byCategory && byCategory.length > 0 ? byCategory : mockByCategory;
-  const employees = byEmployee && byEmployee.length > 0 ? byEmployee : mockByEmployee;
-  const top = topProducts && topProducts.length > 0 ? topProducts : mockTopProducts;
-  const profitData = profit ?? mockProfit;
-  const inventoryData = inventory ?? mockInventory;
+  // Utiliser les vraies données de l'API, pas de mock
+  const sales = salesReport ?? { totalRevenue: 0, transactionCount: 0, avgBasket: 0, byDay: [] };
+  const categories = byCategory ?? [];
+  const employees = byEmployee ?? [];
+  const top = topProducts ?? [];
+  const profitData = profit ?? { totalRevenue: 0, totalCost: 0, grossProfit: 0, marginRate: 0 };
+  const inventoryData = inventory ?? { totalValue: 0, totalItems: 0, lowStock: 0, byCategory: [] };
 
   const marginPct = profitData.marginRate ?? (profitData.totalRevenue > 0 ? (profitData.grossProfit / profitData.totalRevenue) * 100 : 0);
 
   const kpis = [
     {
-      label: "CA total",
+      label: t.rapports.totalRevenue || "CA total",
       value: formatCurrency(sales.totalRevenue),
       icon: DollarSign,
       delta: +8.4,
       sublabel: `${startDate} → ${endDate}`,
     },
     {
-      label: "Transactions",
-      value: sales.transactionCount.toLocaleString("fr-FR"),
+      label: t.rapports.transactions || "Transactions",
+      value: sales.transactionCount.toLocaleString(),
       icon: ShoppingCart,
       delta: +11.7,
-      sublabel: "sur la période",
+      sublabel: `${startDate} → ${endDate}`,
     },
     {
-      label: "Panier moyen",
+      label: t.rapports.avgBasket || "Panier moyen",
       value: formatCurrency(sales.avgBasket),
       icon: TrendingUp,
       delta: +3.2,
-      sublabel: "par transaction",
+      sublabel: t.rapports.perTransaction || "per transaction",
     },
     {
-      label: "Bénéfice brut",
+      label: t.rapports.grossProfit || "Bénéfice brut",
       value: formatCurrency(profitData.grossProfit),
       icon: BarChart2,
       delta: +5.1,
-      sublabel: `Coût : ${formatCurrency(profitData.totalCost)}`,
+      sublabel: `${t.rapports.cost || "Cost"}: ${formatCurrency(profitData.totalCost)}`,
     },
     {
-      label: "Marge %",
+      label: `${t.rapports.marginRate || "Marge"} %`,
       value: `${marginPct.toFixed(1)}%`,
       icon: Percent,
       delta: marginPct >= 30 ? +2.4 : -1.2,
@@ -302,7 +302,7 @@ export default function RapportsPage() {
 
   const handleExportPDF = () => {
     printSection("rapports-content");
-    toast("Impression en cours...", "info");
+    toast(t.rapports.printing || "Printing...", "info");
   };
   const handleExportExcel = () => {
     // Exporter les top produits en CSV
@@ -322,9 +322,9 @@ export default function RapportsPage() {
           { key: "Marge", label: "Marge" },
         ],
       );
-      toast("Export Excel téléchargé", "success");
+      toast(t.rapports.exportDone || "Export downloaded", "success");
     } else {
-      toast("Aucune donnée à exporter", "warning");
+      toast(t.rapports.noData || "No data to export", "warning");
     }
   };
 

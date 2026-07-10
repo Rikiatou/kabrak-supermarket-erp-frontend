@@ -27,6 +27,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { formatCurrency, cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/context";
+import { useAuth } from "@/lib/auth/context";
 import { useToast } from "@/components/ui/Toast";
 import {
   useProfitLoss,
@@ -248,6 +249,8 @@ function AddExpenseModal({ open, onClose, onSubmit, submitting }: AddExpenseModa
 export default function ComptabilitePage() {
   const { t } = useI18n();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const canSeeProfit = user?.role === "boss";
 
   // Date range state
   const [startDate, setStartDate] = useState(defaultStartDate());
@@ -284,14 +287,14 @@ export default function ComptabilitePage() {
   const categoryLabel = (key: string) => categoryLabels[key] ?? key;
   const paymentMethodLabel = (key: string) => paymentMethodLabels[key] ?? key;
 
-  // Derived data with fallbacks
-  const pl = profitLossData ?? { totalRevenue: 34_100_000, totalExpenses: 22_900_000, netProfit: 11_200_000, expenseBreakdown: [] };
+  // Derived data — utiliser les vraies données de l'API, pas de mock
+  const pl = profitLossData ?? { totalRevenue: 0, totalExpenses: 0, netProfit: 0, expenseBreakdown: [] };
 
   const monthlyData = useMemo(() => {
     if (monthlyDataRaw && monthlyDataRaw.length > 0) {
       return monthlyDataRaw.map((m) => ({ month: MONTH_NAMES[m.month - 1] ?? String(m.month), revenue: m.revenue, expenses: m.expenses, profit: m.profit }));
     }
-    return mockMonthlyData;
+    return [];
   }, [monthlyDataRaw]);
 
   const expenseBreakdown = useMemo(() => {
@@ -301,11 +304,11 @@ export default function ComptabilitePage() {
     if (profitLossData?.expenseBreakdown && profitLossData.expenseBreakdown.length > 0) {
       return profitLossData.expenseBreakdown.map((b) => ({ name: categoryLabel(b.category), value: b.amount, percentage: 0 }));
     }
-    return mockExpenseBreakdown.map((b) => ({ name: categoryLabel(b.category), value: b.amount, percentage: b.percentage }));
+    return [];
   }, [breakdownData, profitLossData, t]);
 
   const expenses = useMemo(() => {
-    return expensesData && expensesData.length > 0 ? expensesData : mockExpenses;
+    return expensesData ?? [];
   }, [expensesData]);
 
   // KPI calculations
@@ -377,7 +380,7 @@ export default function ComptabilitePage() {
             icon: <TrendingDown className="w-5 h-5 text-red-500" />,
             iconBg: "bg-[var(--danger-light)]",
           },
-          {
+          ...(canSeeProfit ? [{
             label: t.comptabilite.netProfitLabel,
             value: netProfit,
             delta: profitDelta,
@@ -391,7 +394,7 @@ export default function ComptabilitePage() {
             isPercent: true,
             icon: <TrendingUp className="w-5 h-5 text-indigo-600" />,
             iconBg: "bg-[var(--info-light)]",
-          },
+          }] : []),
         ].map(({ label, value, delta, icon, iconBg, isPercent }) => (
           <div key={label} className="bg-white border border-[var(--border)] rounded-2xl p-5 shadow-[var(--shadow-sm)]">
             <div className="flex items-start justify-between mb-4">
@@ -433,7 +436,7 @@ export default function ComptabilitePage() {
               <Tooltip content={<CustomTooltip />} />
               <Area type="monotone" dataKey="revenue" stroke="#1a56db" strokeWidth={2} fill="url(#revGrad)" dot={false} />
               <Area type="monotone" dataKey="expenses" stroke="#ef4444" strokeWidth={2} fill="none" dot={false} />
-              <Area type="monotone" dataKey="profit" stroke="#10b981" strokeWidth={2} fill="url(#profGrad)" dot={false} />
+              {canSeeProfit && <Area type="monotone" dataKey="profit" stroke="#10b981" strokeWidth={2} fill="url(#profGrad)" dot={false} />}
             </AreaChart>
           </ResponsiveContainer>
         </Card>
@@ -469,7 +472,7 @@ export default function ComptabilitePage() {
           action={
             <Button variant="primary" size="sm" onClick={() => setModalOpen(true)}>
               <Plus className="w-4 h-4 mr-1.5" />
-              Add expense
+              {t.comptabilite.addExpense}
             </Button>
           }
         />
@@ -501,7 +504,7 @@ export default function ComptabilitePage() {
                   </td>
                   <td className="px-5 py-3">
                     <Badge variant={e.status === "paid" ? "success" : "warning"}>
-                      {e.status === "paid" ? "Paid" : e.status === "pending" ? "Pending" : e.status}
+                      {e.status === "paid" ? t.comptabilite.statusPaid : e.status === "pending" ? t.comptabilite.statusPending : e.status}
                     </Badge>
                   </td>
                 </tr>
