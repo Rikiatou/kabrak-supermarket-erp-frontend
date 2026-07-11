@@ -272,7 +272,7 @@ export default function RapportsPage() {
     },
     {
       label: t.rapports.transactions || "Transactions",
-      value: sales.transactionCount.toLocaleString(),
+      value: (sales.transactionCount ?? 0).toLocaleString(),
       icon: ShoppingCart,
       delta: +11.7,
       sublabel: `${startDate} → ${endDate}`,
@@ -534,10 +534,10 @@ export default function RapportsPage() {
                           <span className="font-medium text-[var(--text-primary)]">{e.firstName} {e.lastName}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-2.5 text-right tabular-nums text-[var(--text-secondary)]">{e.transactions}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums text-[var(--text-secondary)]">{e.transactions ?? 0}</td>
                       <td className="px-4 py-2.5 text-right tabular-nums font-semibold text-[var(--text-primary)]">{formatCurrency(e.revenue)}</td>
                       <td className="px-4 py-2.5 text-right tabular-nums text-[var(--text-muted)]">
-                        {formatCurrency(e.transactions > 0 ? e.revenue / e.transactions : 0)}
+                        {formatCurrency((e.transactions ?? 0) > 0 ? (e.revenue ?? 0) / e.transactions : 0)}
                       </td>
                     </tr>
                   ))
@@ -555,7 +555,7 @@ export default function RapportsPage() {
           {[
             {
               label: "Nombre de produits",
-              value: inventoryData.productCount.toLocaleString("fr-FR"),
+              value: (inventoryData.productCount ?? 0).toLocaleString("fr-FR"),
               icon: Package,
               color: "text-blue-600",
               bg: "bg-blue-50",

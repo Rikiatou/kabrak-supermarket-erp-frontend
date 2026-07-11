@@ -1,6 +1,7 @@
 "use client";
 
-import { Printer, X } from "lucide-react";
+import { useState } from "react";
+import { Printer, X, Package } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useI18n } from "@/lib/i18n/context";
 import { formatCurrency } from "@/lib/utils";
@@ -25,6 +26,7 @@ export function ZReportReceipt({
   onClose: () => void;
 }) {
   const { t } = useI18n();
+  const [showArticlesModal, setShowArticlesModal] = useState(false);
   const z = t.caisses?.zReport || {
     title: "Z-REPORT",
     closingReport: "RAPPORT DE CLÔTURE",
@@ -50,6 +52,74 @@ export function ZReportReceipt({
   const rbm = report.receiptsByMethod ?? { cash: 0, card: 0, mobile: 0, orange: 0, split: 0, invoice: 0 } as any;
   const totalDiscount = report.totalDiscount ?? 0;
   const hasInvoice = (rbm as any).invoice > 0;
+
+  const handlePrintArticles = () => {
+    if (!report.soldProducts || report.soldProducts.length === 0) return;
+    const storeName = (report as any).storeName || "KABRAK RETAIL";
+
+    let itemsHtml = "";
+    for (const p of report.soldProducts) {
+      const name = (p as any).productName || p.productId;
+      itemsHtml += `<div style="display:flex;justify-content:space-between;font-size:11px;padding:1px 0;border-bottom:1px dashed #000">
+        <span>${name.substring(0, 28)}</span>
+        <span>x${p.quantity} ${formatCurrency(p.total)}</span>
+      </div>`;
+    }
+
+    const totalQty = report.soldProducts.reduce((s, p) => s + p.quantity, 0);
+    const totalVal = report.soldProducts.reduce((s, p) => s + p.total, 0);
+
+    const html = `
+      <div style="text-align:center;margin-bottom:4px">
+        <div style="font-size:14px;font-weight:bold">${storeName}</div>
+        <div style="font-size:12px;font-weight:bold">ARTICLES VENDUS</div>
+        <div style="font-size:11px">${report.employeeName}</div>
+        <div style="font-size:11px">${report.openedAt ? new Date(report.openedAt).toLocaleDateString("fr-FR") : ""}</div>
+      </div>
+      <div style="border-top:1px dashed #000;padding-top:4px">
+        ${itemsHtml}
+      </div>
+      <div style="border-top:1px solid #000;margin-top:3px;padding-top:3px">
+        <div style="display:flex;justify-content:space-between;font-weight:bold;font-size:12px">
+          <span>TOTAL</span>
+          <span>x${totalQty} ${formatCurrency(totalVal)}</span>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:8px;font-size:10px">*** END ***</div>`;
+
+    const printFrame = document.createElement("iframe");
+    printFrame.style.position = "fixed";
+    printFrame.style.right = "0";
+    printFrame.style.bottom = "0";
+    printFrame.style.width = "0";
+    printFrame.style.height = "0";
+    printFrame.style.border = "0";
+    document.body.appendChild(printFrame);
+
+    const printDoc = printFrame.contentWindow?.document || printFrame.contentDocument;
+    if (!printDoc) {
+      if (printFrame.parentNode) document.body.removeChild(printFrame);
+      return;
+    }
+
+    printDoc.write(`
+      <html><head><title>Articles vendus</title>
+      <style>
+        @page { size: 80mm auto; margin: 0; }
+        * { -webkit-print-color-adjust: exact; print-color-adjust: exact; box-sizing: border-box; }
+        html, body { width: 80mm; max-width: 80mm; margin: 0; padding: 0; background: #fff; }
+        body { padding: 2mm 2mm 4mm; font-family: 'Courier New', monospace; color: #000; font-size: 12px; line-height: 1.4; font-weight: bold; }
+      </style></head><body>${html}</body></html>
+    `);
+    printDoc.close();
+    printFrame.contentWindow?.focus();
+    setTimeout(() => {
+      printFrame.contentWindow?.print();
+      setTimeout(() => {
+        if (printFrame.parentNode) document.body.removeChild(printFrame);
+      }, 1000);
+    }, 500);
+  };
 
   const handlePrint = () => {
     const row = (label: string, value: string, bold = false) =>
@@ -262,64 +332,13 @@ export function ZReportReceipt({
           </div>
         </div>
 
-        {/* Sold products detail */}
-        {report.soldProducts && report.soldProducts.length > 0 && (
-          <div className="border-t border-[var(--border)] px-5 py-3 max-h-[300px] overflow-y-auto">
-            <p className="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)] mb-2">
-              Articles vendus ({report.soldProducts.length})
-            </p>
-            <div className="space-y-1">
-              {report.soldProducts.map((p, i) => {
-                const name = report.transactions
-                  ?.flatMap((t) => t.items || [])
-                  .find((it) => it.productId === p.productId)?.productName || p.productId;
-                return (
-                  <div key={i} className="flex justify-between text-xs py-0.5 border-b border-dashed border-[var(--border-subtle)] last:border-0">
-                    <span className="truncate flex-1 mr-2">{name}</span>
-                    <span className="tabular-nums text-[var(--text-muted)]">x{p.quantity}</span>
-                    <span className="tabular-nums font-semibold ml-3 w-20 text-right">{formatCurrency(p.total)}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Transactions detail */}
-        {report.transactions && report.transactions.length > 0 && (
-          <div className="border-t border-[var(--border)] px-5 py-3 max-h-[250px] overflow-y-auto">
-            <p className="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)] mb-2">
-              Transactions ({report.transactions.length})
-            </p>
-            <div className="space-y-1.5">
-              {report.transactions.map((tx) => (
-                <div key={tx.id} className="text-xs border-b border-dashed border-[var(--border-subtle)] last:border-0 pb-1.5">
-                  <div className="flex justify-between font-medium">
-                    <span>{tx.transactionNumber}</span>
-                    <span className="tabular-nums">{formatCurrency(tx.total)}</span>
-                  </div>
-                  <div className="flex justify-between text-[var(--text-muted)]">
-                    <span>{new Date(tx.date).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })} · {tx.paymentMethod}</span>
-                    <span>{tx.items?.length || 0} article(s)</span>
-                  </div>
-                  {tx.items && tx.items.length > 0 && (
-                    <div className="mt-1 pl-2 space-y-0.5">
-                      {tx.items.map((it, j) => (
-                        <div key={j} className="flex justify-between text-[11px] text-[var(--text-secondary)]">
-                          <span className="truncate flex-1 mr-2">{it.productName || it.productId}</span>
-                          <span className="tabular-nums">x{it.quantity} · {formatCurrency(it.total)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Footer */}
         <div className="border-t border-[var(--border)] px-5 py-3 flex justify-end gap-2">
+          {report.soldProducts && report.soldProducts.length > 0 && (
+            <Button size="sm" variant="secondary" icon={<Package className="w-3.5 h-3.5" />} onClick={() => setShowArticlesModal(true)}>
+              Articles vendus ({report.soldProducts.length})
+            </Button>
+          )}
           <Button size="sm" variant="secondary" icon={<Printer className="w-3.5 h-3.5" />} onClick={handlePrint}>
             {z.print}
           </Button>
@@ -328,6 +347,55 @@ export function ZReportReceipt({
           </Button>
         </div>
       </div>
+
+      {/* Articles vendus modal - separate from Z-report */}
+      {showArticlesModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowArticlesModal(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-white border-b border-[var(--border)] px-5 py-3 flex items-center justify-between z-10">
+              <div>
+                <h2 className="text-sm font-bold uppercase tracking-wide">Articles vendus</h2>
+                <p className="text-xs text-[var(--text-muted)]">{report.employeeName} · {report.soldProducts?.length || 0} article(s)</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="secondary" icon={<Printer className="w-3.5 h-3.5" />} onClick={handlePrintArticles}>
+                  Imprimer
+                </Button>
+                <button onClick={() => setShowArticlesModal(false)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            <div className="overflow-y-auto px-5 py-3 flex-1">
+              <table className="w-full text-xs">
+                <thead className="sticky top-0 bg-white">
+                  <tr className="border-b border-[var(--border)]">
+                    <th className="text-left py-2 font-semibold text-[var(--text-muted)] uppercase">Produit</th>
+                    <th className="text-right py-2 font-semibold text-[var(--text-muted)] uppercase">Qté</th>
+                    <th className="text-right py-2 font-semibold text-[var(--text-muted)] uppercase">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {report.soldProducts?.map((p, i) => (
+                    <tr key={i} className="border-b border-dashed border-[var(--border-subtle)]">
+                      <td className="py-2 text-[var(--text-primary)]">{(p as any).productName || p.productId}</td>
+                      <td className="py-2 text-right tabular-nums text-[var(--text-muted)]">x{p.quantity}</td>
+                      <td className="py-2 text-right tabular-nums font-semibold">{formatCurrency(p.total)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-[var(--border)]">
+                    <td className="py-2 font-bold">Total</td>
+                    <td className="py-2 text-right tabular-nums font-bold">{report.soldProducts?.reduce((s, p) => s + p.quantity, 0) || 0}</td>
+                    <td className="py-2 text-right tabular-nums font-bold">{formatCurrency(report.soldProducts?.reduce((s, p) => s + p.total, 0) || 0)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

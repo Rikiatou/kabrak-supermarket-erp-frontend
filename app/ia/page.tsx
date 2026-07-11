@@ -89,9 +89,11 @@ export default function IaPage() {
     critical: forecast.filter((f: any) => f.urgency === "critical").length,
     warning: forecast.filter((f: any) => f.urgency === "warning").length,
     overstock: forecast.filter((f: any) => f.urgency === "overstock").length,
-    recommendedOrdersValue: forecast.reduce((s: number, f: any) => s + f.recommendedOrder * 500, 0),
+    recommendedOrdersValue: forecast.reduce((s: number, f: any) => s + (f.recommendedOrder ?? 0) * 500, 0),
   };
   const recommendations = recData ?? [];
+  const markdownSuggestions = markdownData?.suggestions ?? [];
+  const markdownSummary = markdownData?.summary || { total: 0, totalPotentialLoss: 0 };
 
   const handleRefresh = () => {
     reloadForecast();
@@ -305,7 +307,7 @@ export default function IaPage() {
         </div>
 
         {/* Markdown suggestions */}
-        {markdownData && markdownData.suggestions.length > 0 && (
+        {markdownSuggestions.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -315,7 +317,7 @@ export default function IaPage() {
                 <div>
                   <h3 className="text-sm font-semibold text-[var(--text-primary)]">Suggestions de markdown</h3>
                   <p className="text-xs text-[var(--text-muted)]">
-                    {markdownData.summary.total} produit(s) · Perte potentielle: {formatCurrency(markdownData.summary.totalPotentialLoss)}
+                    {markdownSummary.total} produit(s) · Perte potentielle: {formatCurrency(markdownSummary.totalPotentialLoss)}
                   </p>
                 </div>
               </div>
@@ -344,7 +346,7 @@ export default function IaPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {markdownData.suggestions.map((s) => {
+                    {markdownSuggestions.map((s) => {
                       const priorityColors: Record<string, string> = {
                         critical: "bg-red-100 text-red-700",
                         high: "bg-amber-100 text-amber-700",

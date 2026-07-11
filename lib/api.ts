@@ -642,7 +642,7 @@ export interface ApiZReport {
       total: number;
     }>;
   }>;
-  soldProducts?: Array<{ productId: string; quantity: number; total: number }>;
+  soldProducts?: Array<{ productId: string; productName?: string; quantity: number; total: number }>;
 }
 
 export const shiftsApi = {
