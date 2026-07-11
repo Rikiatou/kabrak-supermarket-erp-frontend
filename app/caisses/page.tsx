@@ -886,7 +886,7 @@ export default function CaissesPage() {
                       <th className="px-4 py-2 text-left font-semibold text-xs text-[var(--text-muted)] uppercase">Caissier</th>
                       <th className="px-4 py-2 text-left font-semibold text-xs text-[var(--text-muted)] uppercase">Ouvert</th>
                       <th className="px-4 py-2 text-left font-semibold text-xs text-[var(--text-muted)] uppercase">Fermé</th>
-                      <th className="px-4 py-2 text-right font-semibold text-xs text-[var(--text-muted)] uppercase">Total</th>
+                      <th className="px-4 py-2 text-right font-semibold text-xs text-[var(--text-muted)] uppercase">Cash fermeture</th>
                       <th className="px-4 py-2 text-center font-semibold text-xs text-[var(--text-muted)] uppercase">Action</th>
                     </tr>
                   </thead>

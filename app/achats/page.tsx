@@ -196,6 +196,8 @@ export default function AchatsPage() {
   // Handler quand un produit est créé depuis le modal
   const handleProductCreated = useCallback(async (data: Omit<Product, "id">) => {
     try {
+      // IMPORTANT: Créer le produit avec stock=0
+      // Le stock sera incrémenté par createDirect (delivery save) et le batch
       const created = await productsApi.create({
         sku: data.sku || undefined,
         barcode: data.barcode || undefined,
@@ -203,7 +205,7 @@ export default function AchatsPage() {
         category: data.category,
         price: data.price,
         costPrice: data.costPrice,
-        stock: data.stock,
+        stock: 0, // Stock=0 ! Le stock sera ajouté par le delivery
         minStock: data.minStock,
         unit: data.unit,
         expiryDate: data.expiryDate || undefined,
