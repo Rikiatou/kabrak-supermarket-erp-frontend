@@ -288,7 +288,7 @@ export default function POSPage() {
 
   const [showHistoryModal, setShowHistoryModal] = useState(false);
 
-  // Facture / Avance client
+  // Invoice / Customer advance
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [unpaidInvoices, setUnpaidInvoices] = useState<any[]>([]);
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
@@ -1380,7 +1380,7 @@ export default function POSPage() {
 
   }, [cart, checkoutStep, subtotal, discount, total, selectedCustomer, locale, storeInfo.name]);
 
-  // === Facture / Avance client ===
+  // === Invoice / Customer advance ===
   const handleSearchInvoices = async () => {
     setInvoiceLoading(true);
     try {
@@ -1394,7 +1394,7 @@ export default function POSPage() {
       }
       setUnpaidInvoices(invoices);
     } catch (e) {
-      toast("Erreur recherche factures", "warning");
+      toast("Error searching invoices", "warning");
     }
     setInvoiceLoading(false);
   };
@@ -1402,9 +1402,9 @@ export default function POSPage() {
   const handlePayInvoice = async () => {
     if (!selectedInvoice) return;
     const amount = parseInt(invoicePaymentAmount) || 0;
-    if (amount <= 0) { toast("Montant invalide", "warning"); return; }
+    if (amount <= 0) { toast("Invalid amount", "warning"); return; }
     if (amount > selectedInvoice.balance) {
-      toast(`Montant > reste à payer (${selectedInvoice.balance} FCFA)`, "warning");
+      toast(`Amount > balance due (${selectedInvoice.balance} FCFA)`, "warning");
       return;
     }
     setInvoiceLoading(true);
@@ -1412,9 +1412,9 @@ export default function POSPage() {
       await invoicesApi.addPayment(selectedInvoice.id, {
         amount,
         method: invoicePaymentMethod,
-        note: `Paiement POS - ${user?.firstName || ""} ${user?.lastName || ""}`,
+        note: `POS payment - ${user?.firstName || ""} ${user?.lastName || ""}`,
       });
-      toast(`Paiement de ${formatCurrency(amount)} enregistré pour ${selectedInvoice.number}`, "success");
+      toast(`Payment of ${formatCurrency(amount)} recorded for ${selectedInvoice.number}`, "success");
       // Reset
       setSelectedInvoice(null);
       setInvoicePaymentAmount("");
@@ -1422,14 +1422,14 @@ export default function POSPage() {
       // Refresh list
       handleSearchInvoices();
     } catch (e: any) {
-      toast(e?.message || "Erreur paiement facture", "warning");
+      toast(e?.message || "Error paying invoice", "warning");
     }
     setInvoiceLoading(false);
   };
 
   const handleCreateInvoiceFromCart = async () => {
-    if (cart.length === 0) { toast("Panier vide", "warning"); return; }
-    if (!selectedCustomer) { toast("Sélectionnez un client", "warning"); return; }
+    if (cart.length === 0) { toast("Cart is empty", "warning"); return; }
+    if (!selectedCustomer) { toast("Select a customer", "warning"); return; }
     setInvoiceLoading(true);
     try {
       const invoice = await invoicesApi.create({
@@ -1444,12 +1444,12 @@ export default function POSPage() {
         })),
         discount: discount,
       });
-      toast(`Facture ${invoice.number} créée`, "success");
+      toast(`Invoice ${invoice.number} created`, "success");
       clearCart();
       setSelectedCustomer(null);
       setShowInvoiceModal(false);
     } catch (e: any) {
-      toast(e?.message || "Erreur création facture", "warning");
+      toast(e?.message || "Error creating invoice", "warning");
     }
     setInvoiceLoading(false);
   };
@@ -2367,7 +2367,7 @@ export default function POSPage() {
 
                   >
 
-                    <FileText className="w-3 h-3" /> Facture
+                    <FileText className="w-3 h-3" /> Invoice
 
                   </button>
 
@@ -3176,7 +3176,7 @@ export default function POSPage() {
         </>
       )}
 
-      {/* Modal Facture / Avance client */}
+      {/* Modal Invoice / Customer advance */}
       {showInvoiceModal && (
         <>
           <div className="fixed inset-0 bg-black/30 z-[80]" onClick={() => setShowInvoiceModal(false)} />
@@ -3185,7 +3185,7 @@ export default function POSPage() {
               <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
                 <div className="flex items-center gap-2">
                   <FileText className="w-5 h-5 text-indigo-600" />
-                  <h2 className="text-base font-bold">Facture / Avance client</h2>
+                  <h2 className="text-base font-bold">Invoice / Customer Advance</h2>
                 </div>
                 <button onClick={() => setShowInvoiceModal(false)} className="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center">
                   <X className="w-4 h-4 text-[var(--text-muted)]" />
@@ -3193,33 +3193,33 @@ export default function POSPage() {
               </div>
 
               <div className="p-4 overflow-y-auto flex-1">
-                {/* Option 1: Créer facture depuis le panier */}
+                {/* Option 1: Create invoice from cart */}
                 {cart.length > 0 && selectedCustomer && (
                   <div className="mb-4 p-3 bg-indigo-50 border border-indigo-200 rounded-xl">
-                    <p className="text-sm font-semibold text-indigo-900 mb-2">Créer une facture depuis le panier</p>
+                    <p className="text-sm font-semibold text-indigo-900 mb-2">Create invoice from cart</p>
                     <p className="text-xs text-indigo-700 mb-3">
-                      {cart.length} article(s) · {formatCurrency(total)} · Client: {selectedCustomer.firstName} {selectedCustomer.lastName}
+                      {cart.length} item(s) · {formatCurrency(total)} · Customer: {selectedCustomer.firstName} {selectedCustomer.lastName}
                     </p>
                     <button
                       onClick={handleCreateInvoiceFromCart}
                       disabled={invoiceLoading}
                       className="w-full px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center gap-1.5"
                     >
-                      <Plus className="w-3.5 h-3.5" /> Créer la facture
+                      <Plus className="w-3.5 h-3.5" /> Create Invoice
                     </button>
                   </div>
                 )}
 
-                {/* Option 2: Rechercher facture existante pour paiement */}
+                {/* Option 2: Search existing invoice for payment */}
                 <div className="border-t border-[var(--border)] pt-4">
-                  <p className="text-sm font-semibold mb-2">Rechercher une facture impayée</p>
+                  <p className="text-sm font-semibold mb-2">Search unpaid invoice</p>
                   <div className="flex gap-2 mb-3">
                     <input
                       type="text"
                       value={invoiceSearchPhone}
                       onChange={(e) => setInvoiceSearchPhone(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && handleSearchInvoices()}
-                      placeholder="Téléphone ou nom client..."
+                      placeholder="Phone or customer name..."
                       className="flex-1 px-3 py-2 text-sm border border-[var(--border)] rounded-lg outline-none focus:border-indigo-400"
                     />
                     <button
@@ -3227,11 +3227,11 @@ export default function POSPage() {
                       disabled={invoiceLoading}
                       className="px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50"
                     >
-                      {invoiceLoading ? "..." : "Rechercher"}
+                      {invoiceLoading ? "..." : "Search"}
                     </button>
                   </div>
 
-                  {/* Liste des factures impayées */}
+                  {/* Unpaid invoices list */}
                   {unpaidInvoices.length > 0 && (
                     <div className="space-y-2 max-h-48 overflow-y-auto mb-3">
                       {unpaidInvoices.map((inv) => (
@@ -3263,35 +3263,35 @@ export default function POSPage() {
                     </div>
                   )}
 
-                  {/* Formulaire de paiement */}
+                  {/* Payment form */}
                   {selectedInvoice && (
                     <div className="p-3 bg-slate-50 border border-[var(--border)] rounded-xl space-y-3">
                       <div className="flex justify-between text-sm">
-                        <span className="text-[var(--text-muted)]">Facture</span>
+                        <span className="text-[var(--text-muted)]">Invoice</span>
                         <span className="font-semibold">{selectedInvoice.number}</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-[var(--text-muted)]">Total facture</span>
+                        <span className="text-[var(--text-muted)]">Invoice total</span>
                         <span className="font-semibold tabular-nums">{formatCurrency(selectedInvoice.total)}</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-[var(--text-muted)]">Reste à payer</span>
+                        <span className="text-[var(--text-muted)]">Balance due</span>
                         <span className="font-bold tabular-nums text-red-600">{formatCurrency(selectedInvoice.balance)}</span>
                       </div>
 
                       <div>
-                        <label className="text-xs font-medium text-[var(--text-muted)] mb-1 block">Montant reçu</label>
+                        <label className="text-xs font-medium text-[var(--text-muted)] mb-1 block">Amount received</label>
                         <input
                           type="number"
                           value={invoicePaymentAmount}
                           onChange={(e) => setInvoicePaymentAmount(e.target.value)}
-                          placeholder="Montant en FCFA"
+                          placeholder="Amount in FCFA"
                           className="w-full px-3 py-2 text-sm border border-[var(--border)] rounded-lg outline-none focus:border-indigo-400"
                         />
                       </div>
 
                       <div>
-                        <label className="text-xs font-medium text-[var(--text-muted)] mb-1 block">Méthode de paiement</label>
+                        <label className="text-xs font-medium text-[var(--text-muted)] mb-1 block">Payment method</label>
                         <div className="grid grid-cols-4 gap-2">
                           {["cash", "mobile", "orange", "card"].map((m) => (
                             <button
@@ -3304,7 +3304,7 @@ export default function POSPage() {
                                   : "bg-white text-[var(--text-secondary)] border-[var(--border)] hover:bg-slate-50"
                               )}
                             >
-                              {m === "cash" ? "Espèces" : m === "mobile" ? "MoMo" : m === "orange" ? "OM" : "Carte"}
+                              {m === "cash" ? "Cash" : m === "mobile" ? "MoMo" : m === "orange" ? "OM" : "Card"}
                             </button>
                           ))}
                         </div>
@@ -3315,17 +3315,17 @@ export default function POSPage() {
                         disabled={invoiceLoading}
                         className="w-full px-3 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50"
                       >
-                        {invoiceLoading ? "..." : `Encaisser ${invoicePaymentAmount ? formatCurrency(parseInt(invoicePaymentAmount) || 0) : ""}`}
+                        {invoiceLoading ? "..." : `Collect ${invoicePaymentAmount ? formatCurrency(parseInt(invoicePaymentAmount) || 0) : ""}`}
                       </button>
                     </div>
                   )}
 
                   {unpaidInvoices.length === 0 && !invoiceLoading && invoiceSearchPhone && (
-                    <p className="text-center text-sm text-[var(--text-muted)] py-4">Aucune facture trouvée</p>
+                    <p className="text-center text-sm text-[var(--text-muted)] py-4">No invoice found</p>
                   )}
                   {!invoiceSearchPhone && unpaidInvoices.length === 0 && (
                     <p className="text-center text-sm text-[var(--text-muted)] py-4">
-                      Entrez un téléphone ou nom pour rechercher les factures impayées
+                      Enter a phone or name to search unpaid invoices
                     </p>
                   )}
                 </div>
