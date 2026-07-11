@@ -372,8 +372,8 @@ export function NewOrderModal({ onClose, onSave, defaultSupplier, allowDirectRec
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/30 backdrop-blur-[2px] z-50" onClick={onClose} />
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+      <div className="fixed inset-0 bg-black/30 backdrop-blur-[2px] z-50 lg:left-[252px]" onClick={onClose} />
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none lg:left-[252px]">
         <div className="bg-white rounded-2xl shadow-[var(--shadow-lg)] w-full max-w-2xl pointer-events-auto flex flex-col max-h-[92vh]">
 
           {/* Header */}

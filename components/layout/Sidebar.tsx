@@ -101,7 +101,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   ];
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-[252px] bg-[var(--sidebar-bg)] border-r border-[var(--sidebar-border)] flex flex-col z-40">
+    <aside className="fixed left-0 top-0 h-screen w-[252px] bg-[var(--sidebar-bg)] border-r border-[var(--sidebar-border)] flex flex-col z-[60]">
       {/* Brand header */}
       <div className="h-[60px] flex items-center px-5 border-b border-[var(--sidebar-border)] shrink-0 justify-between">
         <div className="flex items-center gap-2.5">
