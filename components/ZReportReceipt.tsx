@@ -47,10 +47,9 @@ export function ZReportReceipt({
     close: "Fermer",
   };
 
-  const rbm = report.receiptsByMethod ?? { cash: 0, card: 0, mobile: 0, orange: 0, split: 0 } as any;
+  const rbm = report.receiptsByMethod ?? { cash: 0, card: 0, mobile: 0, orange: 0, split: 0, invoice: 0 } as any;
   const totalDiscount = report.totalDiscount ?? 0;
-  const invoicePayments = (report as any).invoicePayments ?? { cash: 0, card: 0, mobile: 0, total: 0 };
-  const hasInvoice = invoicePayments.total > 0;
+  const hasInvoice = (rbm as any).invoice > 0;
 
   const handlePrint = () => {
     const row = (label: string, value: string, bold = false) =>
@@ -77,7 +76,7 @@ export function ZReportReceipt({
         <div style="font-weight:bold;text-transform:uppercase;font-size:13px;margin-bottom:3px">${z.receiptsByMethod}</div>
         ${row(z.cash, formatCurrency(rbm.cash))}
         ${rbm.card > 0 ? row(z.card, formatCurrency(rbm.card)) : ""}
-        ${hasInvoice ? row("Factures", formatCurrency(invoicePayments.total)) : ""}
+        ${hasInvoice ? row("Factures", formatCurrency((rbm as any).invoice)) : ""}
         ${rbm.mobile > 0 ? row(z.mobile, formatCurrency(rbm.mobile)) : ""}
         ${(rbm as any).orange > 0 ? row(z.orange || "Orange Money", formatCurrency((rbm as any).orange)) : ""}
         <div style="border-top:1px solid #000;margin-top:3px;padding-top:3px">
@@ -214,7 +213,7 @@ export function ZReportReceipt({
               {hasInvoice && (
                 <div className="flex justify-between text-sm">
                   <span>Factures</span>
-                  <span className="font-semibold tabular-nums">{formatCurrency(invoicePayments.total)}</span>
+                  <span className="font-semibold tabular-nums">{formatCurrency((rbm as any).invoice)}</span>
                 </div>
               )}
               {rbm.mobile > 0 && (
