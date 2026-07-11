@@ -14,6 +14,7 @@ import {
   Tag,
   Printer,
   ScanLine,
+  Trash2,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Card } from "@/components/ui/Card";
@@ -289,6 +290,25 @@ export default function StocksPage() {
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Erreur modification";
       toast(msg, "warning");
+    }
+  };
+
+  const [deleteProduct, setDeleteProduct] = useState<Product | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteProduct = async () => {
+    if (!deleteProduct) return;
+    setDeleting(true);
+    try {
+      await productsApi.delete(deleteProduct.id);
+      toast(`${deleteProduct.name} supprimé`, "success");
+      reloadProducts();
+      setDeleteProduct(null);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Erreur suppression";
+      toast(msg, "warning");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -607,6 +627,13 @@ export default function StocksPage() {
                         >
                           {t.stocks.restock}
                         </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setDeleteProduct(product); }}
+                          className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Supprimer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -906,6 +933,32 @@ export default function StocksPage() {
               <Button variant="secondary" className="flex-1" onClick={closeEditModal}>{t.common.cancel}</Button>
               <Button className="flex-1" onClick={handleEditSave}>
                 {t.common.save || "Enregistrer"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirmation modal */}
+      {deleteProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setDeleteProduct(null)}>
+          <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-red-500" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-[var(--text-primary)]">Supprimer le produit</h3>
+                <p className="text-xs text-[var(--text-muted)]">Cette action est irréversible</p>
+              </div>
+            </div>
+            <p className="text-sm text-[var(--text-secondary)] mb-4">
+              Voulez-vous vraiment supprimer <b>{deleteProduct.name}</b> ?
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button size="sm" variant="ghost" onClick={() => setDeleteProduct(null)}>Annuler</Button>
+              <Button size="sm" variant="danger" onClick={handleDeleteProduct} disabled={deleting}>
+                {deleting ? "Suppression..." : "Supprimer"}
               </Button>
             </div>
           </div>

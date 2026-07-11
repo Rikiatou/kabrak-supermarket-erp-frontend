@@ -88,6 +88,20 @@ export function ZReportReceipt({
         ${row(z.customerCount, String(report.customerCount))}
       </div>`;
 
+    // Articles vendus (ticket)
+    if (report.soldProducts && report.soldProducts.length > 0) {
+      html += `<div style="border-top:1px dashed #000;margin-top:5px;padding-top:5px">
+        <div style="font-weight:bold;text-transform:uppercase;font-size:13px;margin-bottom:3px">Articles vendus (${report.soldProducts.length})</div>`;
+      for (const p of report.soldProducts) {
+        const name = report.transactions?.flatMap((t) => t.items || []).find((it) => it.productId === p.productId)?.productName || p.productId;
+        html += `<div style="display:flex;justify-content:space-between;font-size:11px;padding:1px 0">
+          <span>${name.substring(0, 28)}</span>
+          <span>x${p.quantity} ${formatCurrency(p.total)}</span>
+        </div>`;
+      }
+      html += `</div>`;
+    }
+
     html += `<div style="text-align:center;margin-top:8px;font-size:10px">*** END ***</div><br/>`;
 
     const printFrame = document.createElement("iframe");
@@ -247,6 +261,62 @@ export function ZReportReceipt({
             </div>
           </div>
         </div>
+
+        {/* Sold products detail */}
+        {report.soldProducts && report.soldProducts.length > 0 && (
+          <div className="border-t border-[var(--border)] px-5 py-3 max-h-[300px] overflow-y-auto">
+            <p className="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)] mb-2">
+              Articles vendus ({report.soldProducts.length})
+            </p>
+            <div className="space-y-1">
+              {report.soldProducts.map((p, i) => {
+                const name = report.transactions
+                  ?.flatMap((t) => t.items || [])
+                  .find((it) => it.productId === p.productId)?.productName || p.productId;
+                return (
+                  <div key={i} className="flex justify-between text-xs py-0.5 border-b border-dashed border-[var(--border-subtle)] last:border-0">
+                    <span className="truncate flex-1 mr-2">{name}</span>
+                    <span className="tabular-nums text-[var(--text-muted)]">x{p.quantity}</span>
+                    <span className="tabular-nums font-semibold ml-3 w-20 text-right">{formatCurrency(p.total)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Transactions detail */}
+        {report.transactions && report.transactions.length > 0 && (
+          <div className="border-t border-[var(--border)] px-5 py-3 max-h-[250px] overflow-y-auto">
+            <p className="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)] mb-2">
+              Transactions ({report.transactions.length})
+            </p>
+            <div className="space-y-1.5">
+              {report.transactions.map((tx) => (
+                <div key={tx.id} className="text-xs border-b border-dashed border-[var(--border-subtle)] last:border-0 pb-1.5">
+                  <div className="flex justify-between font-medium">
+                    <span>{tx.transactionNumber}</span>
+                    <span className="tabular-nums">{formatCurrency(tx.total)}</span>
+                  </div>
+                  <div className="flex justify-between text-[var(--text-muted)]">
+                    <span>{new Date(tx.date).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })} · {tx.paymentMethod}</span>
+                    <span>{tx.items?.length || 0} article(s)</span>
+                  </div>
+                  {tx.items && tx.items.length > 0 && (
+                    <div className="mt-1 pl-2 space-y-0.5">
+                      {tx.items.map((it, j) => (
+                        <div key={j} className="flex justify-between text-[11px] text-[var(--text-secondary)]">
+                          <span className="truncate flex-1 mr-2">{it.productName || it.productId}</span>
+                          <span className="tabular-nums">x{it.quantity} · {formatCurrency(it.total)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Footer */}
         <div className="border-t border-[var(--border)] px-5 py-3 flex justify-end gap-2">

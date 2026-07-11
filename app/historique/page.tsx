@@ -269,18 +269,20 @@ export default function HistoriquePage() {
     return merged.filter((p, i, arr) => arr.findIndex((x) => x.id === p.id) === i);
   }, [searchResults, bestsellers]);
 
-  // Filtered movements (type + date range)
+  // Filtered movements (type + date range), sorted most recent first
   const filteredMovements = useMemo(() => {
-    return movements.filter((m) => {
-      if (typeFilter !== "all" && m.type !== typeFilter) return false;
-      if (dateFrom && new Date(m.createdAt) < new Date(dateFrom)) return false;
-      if (dateTo) {
-        const end = new Date(dateTo);
-        end.setHours(23, 59, 59);
-        if (new Date(m.createdAt) > end) return false;
-      }
-      return true;
-    });
+    return movements
+      .filter((m) => {
+        if (typeFilter !== "all" && m.type !== typeFilter) return false;
+        if (dateFrom && new Date(m.createdAt) < new Date(dateFrom)) return false;
+        if (dateTo) {
+          const end = new Date(dateTo);
+          end.setHours(23, 59, 59);
+          if (new Date(m.createdAt) > end) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [movements, typeFilter, dateFrom, dateTo]);
 
   // Summary totals (from ALL movements, not filtered)

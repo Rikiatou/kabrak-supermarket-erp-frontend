@@ -25,6 +25,7 @@ import {
   useReturns,
   useCreateReturn,
   useRecentTransactions,
+  useLosses,
 } from "@/lib/hooks/useApi";
 import { formatCurrency, cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth/context";
@@ -51,6 +52,7 @@ export default function PertesPage() {
   const { returns, reload: reloadReturns } = useReturns();
   const { create: createReturn, creating: creatingReturn } = useCreateReturn();
   const { transactions } = useRecentTransactions(50);
+  const { losses: dbLosses, loading: lossesLoading, reload: reloadLosses } = useLosses();
   // Produits disponibles pour lookup (résultats recherche + bestsellers, dédupliqués)
   const products = useMemo(() => {
     const merged = [...searchResults, ...bestsellers];
@@ -70,7 +72,6 @@ export default function PertesPage() {
     { value: "other", label: t.pertes.lossTypes.other, color: "text-blue-600 bg-blue-50" },
   ];
 
-  const [losses, setLosses] = useState<LossEntry[]>([]);
   const [showLossModal, setShowLossModal] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<string>("");
@@ -113,6 +114,32 @@ export default function PertesPage() {
 
   // Liste affichée = résultats server-side (ou bestsellers si pas de recherche)
   const filteredProducts = (search.trim() ? searchResults : bestsellers).slice(0, 10);
+
+  // Convertir les stock movements de la DB au format LossEntry
+  const losses: LossEntry[] = useMemo(() => {
+    return dbLosses.map((m: any) => {
+      // Parse le reason: format "type: reason" (ex: "damage: Produit cassé")
+      let type = 'other';
+      let reason = m.reason || '';
+      const match = (m.reason || '').match(/^(\w+):\s*(.*)$/);
+      if (match) {
+        type = match[1];
+        reason = match[2];
+      }
+      const qty = Math.abs(m.quantity || 0);
+      const costPrice = m.product?.costPrice || 0;
+      return {
+        id: m.id,
+        productName: m.product?.name || 'Produit supprimé',
+        productId: m.productId,
+        quantity: qty,
+        type,
+        reason,
+        value: qty * costPrice,
+        date: m.createdAt || new Date().toISOString(),
+      };
+    });
+  }, [dbLosses]);
 
   const totalLossValue = losses.reduce((s, l) => s + l.value, 0);
   const totalLossCount = losses.length;
@@ -173,30 +200,21 @@ export default function PertesPage() {
     if (lossItems.length === 0) return;
 
     setSavingLosses(true);
-    const savedEntries: LossEntry[] = [];
+    let savedCount = 0;
 
     for (const item of lossItems) {
       try {
         await adjust(item.productId, Math.max(0, item.stock - item.quantity), `${item.type}: ${item.reason}`);
-        savedEntries.push({
-          id: `LOSS-${Date.now()}-${item.productId}`,
-          productName: item.productName,
-          productId: item.productId,
-          quantity: item.quantity,
-          type: item.type,
-          reason: item.reason,
-          value: item.value,
-          date: new Date().toISOString(),
-        });
+        savedCount++;
       } catch (e) {
         toast(t.pertes.stockAdjustmentError, "warning");
       }
     }
 
-    if (savedEntries.length > 0) {
-      setLosses([...savedEntries.reverse(), ...losses]);
-      toast(`${savedEntries.length} loss(es) saved`, "warning");
+    if (savedCount > 0) {
+      toast(`${savedCount} perte(s) enregistrée(s)`, "success");
       reloadProducts();
+      reloadLosses();  // Recharger depuis la DB
     }
 
     setLossItems([]);
@@ -367,7 +385,12 @@ export default function PertesPage() {
 
             {/* Losses table */}
             <Card className="overflow-hidden">
-              {losses.length === 0 ? (
+              {lossesLoading ? (
+                <div className="flex flex-col items-center justify-center py-16 text-[var(--text-muted)]">
+                  <div className="w-8 h-8 border-2 border-[var(--border)] border-t-[var(--brand)] rounded-full animate-spin mb-3" />
+                  <p className="text-sm">Chargement des pertes...</p>
+                </div>
+              ) : losses.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-[var(--text-muted)]">
                   <AlertTriangle className="w-10 h-10 mb-3 opacity-20" />
                   <p className="text-sm font-medium">{t.pertes.noLosses}</p>
@@ -384,7 +407,7 @@ export default function PertesPage() {
                         <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">{t.pertes.reason}</th>
                         <th className="text-right text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">{t.pertes.value}</th>
                         <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">{t.pertes.date}</th>
-                        <th className="px-4 py-3"></th>
+                        <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Heure</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -402,13 +425,8 @@ export default function PertesPage() {
                           <td className="px-4 py-3 text-xs text-[var(--text-muted)]">
                             {new Date(loss.date).toLocaleDateString("en-GB")}
                           </td>
-                          <td className="px-4 py-3">
-                            <button
-                              onClick={() => setLosses(losses.filter((l) => l.id !== loss.id))}
-                              className="p-1 hover:bg-red-50 rounded-lg transition-colors"
-                            >
-                              <Trash2 className="w-3.5 h-3.5 text-[var(--text-muted)] hover:text-red-500" />
-                            </button>
+                          <td className="px-4 py-3 text-xs text-[var(--text-muted)]">
+                            {new Date(loss.date).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                           </td>
                         </tr>
                       ))}

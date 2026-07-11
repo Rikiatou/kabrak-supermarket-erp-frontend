@@ -421,6 +421,16 @@ export const stockApi = {
     return fetchAPI<PaginatedResponse<ApiStockMovement>>(`/stock/movements?${query}`);
   },
 
+  // Pertes (stock movements with type=adjustment and negative quantity)
+  listLosses: (page = 1, limit = 100) => {
+    const query = new URLSearchParams();
+    query.set("page", String(page));
+    query.set("limit", String(limit));
+    query.set("type", "adjustment");
+    query.set("negativeOnly", "true");
+    return fetchAPI<PaginatedResponse<ApiStockMovement>>(`/stock/movements?${query}`);
+  },
+
   // Créer mouvement
   createMovement: (data: {
     productId: string;
@@ -610,7 +620,7 @@ export interface ApiZReport {
   netSales: number;
   nonTaxableSales: number;
   invoicePayments?: { cash: number; card: number; mobile: number; total: number };
-  receiptsByMethod: { cash: number; card: number; mobile: number; orange: number; split: number };
+  receiptsByMethod: { cash: number; card: number; mobile: number; orange: number; split: number; invoice?: number };
   totalReceipts: number;
   changeGiven: number;
   cashReceived: number;
@@ -618,7 +628,21 @@ export interface ApiZReport {
   totalExpected: number;
   customerCount: number;
   averageSale: number;
-  transactions: Array<{ id: string; transactionNumber: string; date: string; total: number; paymentMethod: string }>;
+  transactions: Array<{
+    id: string;
+    transactionNumber: string;
+    date: string;
+    total: number;
+    paymentMethod: string;
+    items?: Array<{
+      productId: string;
+      productName?: string;
+      quantity: number;
+      unitPrice: number;
+      total: number;
+    }>;
+  }>;
+  soldProducts?: Array<{ productId: string; quantity: number; total: number }>;
 }
 
 export const shiftsApi = {

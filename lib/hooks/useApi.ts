@@ -604,6 +604,32 @@ export function useStockAdjust() {
 }
 
 // ========================================
+// HOOK: useLosses (pertes depuis stock movements)
+// ========================================
+export function useLosses() {
+  const [losses, setLosses] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const reload = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await stockApi.listLosses(1, 100);
+      setLosses(res.data || []);
+    } catch {
+      setLosses([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    reload();
+  }, [reload]);
+
+  return { losses, loading, reload };
+}
+
+// ========================================
 // HOOK: useSalesByHour (graphique dashboard)
 // ========================================
 export function useSalesByHour() {
