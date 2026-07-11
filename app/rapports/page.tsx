@@ -258,7 +258,7 @@ export default function RapportsPage() {
   const employees = byEmployee ?? [];
   const top = topProducts ?? [];
   const profitData = profit ?? { totalRevenue: 0, totalCost: 0, grossProfit: 0, marginRate: 0 };
-  const inventoryData = inventory ?? { totalValue: 0, totalItems: 0, lowStock: 0, byCategory: [] };
+  const inventoryData = inventory ?? { totalValue: 0, totalItems: 0, lowStock: 0, byCategory: [], productCount: 0, totalCostValue: 0, totalSaleValue: 0, potentialMargin: 0 };
 
   const marginPct = profitData.marginRate ?? (profitData.totalRevenue > 0 ? (profitData.grossProfit / profitData.totalRevenue) * 100 : 0);
 
