@@ -462,6 +462,104 @@ export default function FacturesPage() {
     toast(`${t.factures.pdfGenerated} ${invoice.number}.pdf`, "success");
   };
 
+  // Imprimer facture en format ticket (80mm)
+  const printInvoiceTicket = (invoice: Invoice) => {
+    const storeName = licenseConfig?.supermarketName || "KABRAK RETAIL";
+    const storeAddress = licenseConfig?.address || "";
+    const storePhone = licenseConfig?.phone || "";
+    const footerParts = licenseConfig?.receiptFooter?.split("\n").filter(Boolean) || [];
+
+    const row = (label: string, value: string, bold = false) =>
+      `<div style="display:flex;justify-content:space-between;padding:1px 0;${bold ? "font-weight:bold;" : ""}"><span>${label}</span><span>${value}</span></div>`;
+
+    let itemsHtml = "";
+    for (const item of invoice.items) {
+      itemsHtml += `
+        <div style="border-bottom:1px dashed #000;padding:2px 0">
+          <div>${item.description.substring(0, 32)}</div>
+          <div style="display:flex;justify-content:space-between;font-size:11px">
+            <span>${item.quantity} x ${formatCurrency(item.unitPrice)}</span>
+            <span style="font-weight:bold">${formatCurrency(item.total)}</span>
+          </div>
+        </div>`;
+    }
+
+    let html = `
+      <div style="text-align:center;margin-bottom:4px">
+        <div style="font-size:16px;font-weight:bold">${storeName}</div>
+        ${storeAddress ? `<div style="font-size:11px">${storeAddress}</div>` : ""}
+        ${storePhone ? `<div style="font-size:11px">Tel: ${storePhone}</div>` : ""}
+      </div>
+      <div style="border-top:1px dashed #000;padding-top:4px;text-align:center;margin-bottom:4px">
+        <div style="font-size:14px;font-weight:bold">FACTURE</div>
+        <div style="font-size:11px">N° ${invoice.number}</div>
+        <div style="font-size:11px">Date: ${new Date(invoice.date).toLocaleDateString("fr-FR")}</div>
+      </div>
+      <div style="border-top:1px dashed #000;padding-top:4px;margin-bottom:4px">
+        <div style="font-size:11px"><b>Client:</b> ${invoice.clientName}</div>
+        <div style="font-size:11px">${invoice.clientPhone}</div>
+      </div>
+      <div style="border-top:1px dashed #000;padding-top:4px">
+        ${itemsHtml}
+      </div>
+      <div style="border-top:1px dashed #000;padding-top:4px;margin-top:4px">
+        ${row("Sous-total", formatCurrency(invoice.subtotal))}
+        ${invoice.discount > 0 ? row("Remise", `- ${formatCurrency(invoice.discount)}`) : ""}
+        <div style="border-top:1px solid #000;margin-top:2px;padding-top:2px">
+          ${row("TOTAL", formatCurrency(invoice.total), true)}
+        </div>
+      </div>
+      <div style="border-top:1px dashed #000;padding-top:4px;margin-top:4px">
+        ${row("Payé", formatCurrency(invoice.paidAmount))}
+        ${row("Reste", formatCurrency(invoice.balance))}
+      </div>
+      <div style="text-align:center;margin-top:8px;font-size:10px">
+        ${footerParts.length > 0 ? footerParts.join("<br/>") : "Merci pour votre confiance!"}
+      </div>`;
+
+    const printFrame = document.createElement("iframe");
+    printFrame.style.position = "fixed";
+    printFrame.style.right = "0";
+    printFrame.style.bottom = "0";
+    printFrame.style.width = "0";
+    printFrame.style.height = "0";
+    printFrame.style.border = "0";
+    document.body.appendChild(printFrame);
+
+    const printDoc = printFrame.contentWindow?.document || printFrame.contentDocument;
+    if (!printDoc) {
+      if (printFrame.parentNode) document.body.removeChild(printFrame);
+      return;
+    }
+
+    printDoc.write(`
+      <html>
+        <head>
+          <title>Facture ${invoice.number}</title>
+          <style>
+            @page { size: 80mm auto; margin: 0; }
+            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; box-sizing: border-box; }
+            html, body { width: 80mm; max-width: 80mm; min-width: 80mm; margin: 0; padding: 0; background: #fff; }
+            body { padding: 2mm 2mm 4mm; font-family: 'Courier New', monospace; color: #000; font-size: 12px; line-height: 1.4; font-weight: bold; }
+            @media print {
+              html, body { width: 80mm; max-width: 80mm; min-width: 80mm; padding: 2mm 2mm 4mm; overflow: hidden; background: #fff; }
+              * { page-break-inside: avoid; break-inside: avoid; }
+            }
+          </style>
+        </head>
+        <body>${html}</body>
+      </html>
+    `);
+    printDoc.close();
+    printFrame.contentWindow?.focus();
+    setTimeout(() => {
+      printFrame.contentWindow?.print();
+      setTimeout(() => {
+        if (printFrame.parentNode) document.body.removeChild(printFrame);
+      }, 1000);
+    }, 500);
+  };
+
   const sendWhatsApp = (invoice: Invoice) => {
     const msg = `Bonjour ${invoice.clientName},%0A%0AVoici votre facture ${invoice.number} de ${licenseConfig?.supermarketName || "KABRAK RETAIL"}.%0A%0AMontant total: ${formatCurrency(invoice.total)}%0ADate: ${new Date(invoice.date).toLocaleDateString("fr-FR")}%0A%0AMerci pour votre confiance!`;
     window.open(`https://wa.me/${invoice.clientPhone.replace(/[^0-9]/g, "")}?text=${msg}`, "_blank");
@@ -568,9 +666,21 @@ export default function FacturesPage() {
                         <button onClick={() => openPaymentModal(invoice)} title="Suivi paiement" className="p-1.5 hover:bg-amber-50 rounded-lg transition-colors">
                           <Wallet className="w-4 h-4 text-amber-600" />
                         </button>
-                        <button onClick={() => generatePDF(invoice)} title="PDF" className="p-1.5 hover:bg-red-50 rounded-lg transition-colors">
-                          <FileText className="w-4 h-4 text-red-500" />
-                        </button>
+                        <div className="relative group">
+                          <button title="Imprimer" className="p-1.5 hover:bg-red-50 rounded-lg transition-colors">
+                            <Printer className="w-4 h-4 text-red-500" />
+                          </button>
+                          <div className="absolute right-0 top-full mt-1 hidden group-hover:block z-50 bg-white border border-[var(--border)] rounded-lg shadow-lg min-w-[140px]">
+                            <button onClick={() => generatePDF(invoice)} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 rounded-t-lg flex items-center gap-2">
+                              <FileText className="w-3.5 h-3.5 text-red-500" />
+                              PDF (A4)
+                            </button>
+                            <button onClick={() => printInvoiceTicket(invoice)} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 rounded-b-lg flex items-center gap-2">
+                              <Printer className="w-3.5 h-3.5 text-gray-600" />
+                              Ticket (80mm)
+                            </button>
+                          </div>
+                        </div>
                         <button onClick={() => sendWhatsApp(invoice)} title="WhatsApp" className="p-1.5 hover:bg-green-50 rounded-lg transition-colors">
                           <Send className="w-4 h-4 text-green-500" />
                         </button>
