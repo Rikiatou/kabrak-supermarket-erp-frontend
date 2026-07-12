@@ -167,7 +167,7 @@ export function EditEmployeeModal({ employee, onClose, onSave }: EditEmployeeMod
                       <input type="email" value={form.email} onChange={set("email")}
                         placeholder="prenom.nom@kabrak.cm" className={inputClass(false)} />
                     </Field>
-                    <Field label={t.employes.status} span={2}>
+                    <Field label="Status" span={2}>
                       <select value={form.status} onChange={set("status")} className={inputClass(false)}>
                         <option value="active">{t.employes.statusActive}</option>
                         <option value="inactive">{t.employes.statusInactive}</option>

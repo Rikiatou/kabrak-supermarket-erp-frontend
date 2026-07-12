@@ -149,7 +149,7 @@ export default function HistoriquePage() {
     if (!returnTx) return;
     const itemsToReturn = (returnTx.items || []).filter((it) => (returnQtys[it.productId] || 0) > 0);
     if (itemsToReturn.length === 0) {
-      toast("Sélectionner au moins un article à retourner", "warning");
+      toast("Select at least one item to return", "warning");
       return;
     }
     setSubmittingReturn(true);
@@ -202,6 +202,7 @@ export default function HistoriquePage() {
     expiry:     t.stocks.movementReasonExpiry,
     damage:     t.stocks.movementReasonDamage,
     theft:      t.stocks.movementReasonTheft,
+    initial:    "Initial Stock",
     other:      t.stocks.movementReasonOther,
   };
 
@@ -420,7 +421,7 @@ export default function HistoriquePage() {
           {loadingSales ? (
             <div className="p-8 text-center text-sm text-[var(--text-muted)]">...</div>
           ) : mySales.length === 0 ? (
-            <div className="p-8 text-center text-sm text-[var(--text-muted)]">{t.historique?.noSales || "Aucune vente"}</div>
+            <div className="p-8 text-center text-sm text-[var(--text-muted)]">{t.historique?.noSales || "No sales"}</div>
           ) : (
             <div className="divide-y divide-[var(--border-subtle)]">
               {mySales.map((tx) => (

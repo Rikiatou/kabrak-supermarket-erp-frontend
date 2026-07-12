@@ -270,6 +270,12 @@ export default function StocksPage() {
   const handleEditSave = async () => {
     if (!editProduct) return;
     try {
+      const newStock = Number(editForm.stock);
+      const oldStock = Number(editProduct.stock) || 0;
+      const stockChanged = newStock !== oldStock;
+
+      // Update product WITHOUT stock if stock changed (createMovement will handle it)
+      // If stock didn't change, include it normally
       await productsApi.update(editProduct.id, {
         name: editForm.name,
         price: Number(editForm.price),
@@ -277,18 +283,29 @@ export default function StocksPage() {
         wholesalePrice: editForm.wholesalePrice ? Number(editForm.wholesalePrice) : null,
         packQuantity: editForm.packQuantity ? Number(editForm.packQuantity) : null,
         packBarcode: editForm.packBarcode || null,
-        stock: Number(editForm.stock),
+        ...(stockChanged ? {} : { stock: newStock }),
         minStock: Number(editForm.minStock),
         category: editForm.category,
         barcode: editForm.barcode || undefined,
         sku: editForm.sku || undefined,
         unit: editForm.unit,
       });
-      toast(`${editProduct.name} mis à jour`, "success");
+      // Create adjustment movement if stock changed (this also updates the stock)
+      if (stockChanged) {
+        const diff = newStock - oldStock;
+        await stockApi.createMovement({
+          productId: editProduct.id,
+          type: "adjustment",
+          quantity: diff,
+          reason: "adjustment",
+          notes: `Stock edit: ${oldStock} → ${newStock}`,
+        });
+      }
+      toast(`${editProduct.name} updated`, "success");
       reloadProducts();
       closeEditModal();
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Erreur modification";
+      const msg = e instanceof Error ? e.message : "Update failed";
       toast(msg, "warning");
     }
   };
@@ -791,7 +808,7 @@ export default function StocksPage() {
                 >
                   <option value="purchase">Achat</option>
                   <option value="return">Retour</option>
-                  <option value="adjustment">Ajustement</option>
+                  <option value="adjustment">Adjustment</option>
                 </select>
               </div>
               <div>
@@ -1296,6 +1313,7 @@ function movementReasonLabel(t: ReturnType<typeof useI18n>["t"], reason?: string
     case "expiry": return t.stocks.movementReasonExpiry;
     case "damage": return t.stocks.movementReasonDamage;
     case "theft": return t.stocks.movementReasonTheft;
+    case "initial": return "Initial Stock";
     default: return t.stocks.movementReasonOther;
   }
 }
