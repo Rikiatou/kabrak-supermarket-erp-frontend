@@ -28,6 +28,7 @@ import { useStockAlerts, useStockValue, useSetMarkdown, useRemoveMarkdown, useSe
 import { useBarcodeScanner } from "@/lib/hooks/useBarcodeScanner";
 import { productsApi, stockApi, apiProductToFrontend, batchesApi } from "@/lib/api";
 import { getEffectivePrice, hasActiveMarkdown } from "@/lib/api";
+import { useAuth } from "@/lib/auth/context";
 import type { Product } from "@/lib/types";
 import type { ApiStockMovement, ApiProductBatch } from "@/lib/api";
 
@@ -63,6 +64,7 @@ function useStatusConfig(t: ReturnType<typeof useI18n>["t"]) {
 export default function StocksPage() {
   const { t } = useI18n();
   const { toast } = useToast();
+  const { user } = useAuth();
   const { results: searchResults, search: serverSearch, scanBarcode: serverScanBarcode, loading: searchLoading, refresh: reloadProducts } = useServerProductSearch();
   const { alerts: stockAlertsData } = useStockAlerts();
   const { value: stockValueData } = useStockValue();
@@ -236,6 +238,7 @@ export default function StocksPage() {
         quantity: qty,
         reason: restockReason,
         notes: restockNote || undefined,
+        createdBy: user?.id,
       });
       toast(`${t.stocks.restockAction || "Restock"}: ${restockProduct.name} +${qty}`, "success");
       reloadProducts();
@@ -299,6 +302,7 @@ export default function StocksPage() {
           quantity: diff,
           reason: "adjustment",
           notes: `Stock edit: ${oldStock} → ${newStock}`,
+          createdBy: user?.id,
         });
       }
       toast(`${editProduct.name} updated`, "success");
