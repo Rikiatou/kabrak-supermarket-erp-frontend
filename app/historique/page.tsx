@@ -133,6 +133,9 @@ export default function HistoriquePage() {
   const [returnExchangeIds, setReturnExchangeIds] = useState<Record<string, string>>({});
   const [submittingReturn, setSubmittingReturn] = useState(false);
 
+  // Sale detail modal state
+  const [detailTx, setDetailTx] = useState<ApiTransaction | null>(null);
+
   const openReturnModal = (tx: ApiTransaction) => {
     setReturnTx(tx);
     setReturnReason("defect");
@@ -425,7 +428,7 @@ export default function HistoriquePage() {
           ) : (
             <div className="divide-y divide-[var(--border-subtle)]">
               {mySales.map((tx) => (
-                <div key={tx.id} className="p-4 flex items-center gap-3 hover:bg-slate-50 transition-colors">
+                <div key={tx.id} className="p-4 flex items-center gap-3 hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => setDetailTx(tx)}>
                   <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
                     <ShoppingCart className="w-5 h-5 text-blue-600" />
                   </div>
@@ -1010,6 +1013,94 @@ export default function HistoriquePage() {
                 </button>
               </div>
 
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Sale detail modal */}
+      {detailTx && (
+        <>
+          <div className="fixed inset-0 bg-black/40 z-[70]" onClick={() => setDetailTx(null)} />
+          <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg bg-white rounded-2xl shadow-2xl z-[71] max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)] shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center">
+                  <ShoppingCart className="w-4 h-4 text-blue-600" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-bold text-[var(--text-primary)]">{detailTx.transactionNumber}</h2>
+                  <p className="text-xs text-[var(--text-muted)]">{formatDate(detailTx.date)} {formatTime(detailTx.date)}</p>
+                </div>
+              </div>
+              <button onClick={() => setDetailTx(null)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100">
+                <X className="w-4 h-4 text-[var(--text-secondary)]" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+              {/* Payment info */}
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className={cn(
+                  "text-[11px] px-2 py-1 rounded-full font-medium",
+                  detailTx.paymentMethod === "cash" ? "bg-emerald-100 text-emerald-700" :
+                  detailTx.paymentMethod === "mobile" ? "bg-purple-100 text-purple-700" :
+                  detailTx.paymentMethod === "orange" ? "bg-orange-100 text-orange-700" :
+                  "bg-blue-100 text-blue-700"
+                )}>
+                  {detailTx.paymentMethod === "orange" ? "Orange Money" : detailTx.paymentMethod}
+                </span>
+                <span className="flex items-center gap-1 text-xs text-[var(--text-muted)]">
+                  <User className="w-3 h-3" />
+                  {detailTx.cashier ? `${detailTx.cashier.firstName} ${detailTx.cashier.lastName}` : detailTx.cashierId}
+                </span>
+                <span className="text-xs text-[var(--text-muted)]">{detailTx.items?.length || 0} items</span>
+              </div>
+
+              {/* Items list */}
+              <div>
+                <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-2">Items Sold</p>
+                <div className="space-y-1.5">
+                  {(detailTx.items || []).map((item: ApiTransactionItem, i: number) => (
+                    <div key={i} className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-lg">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-[var(--text-primary)] truncate">{item.product?.name || item.name || `Item ${i + 1}`}</p>
+                        <p className="text-xs text-[var(--text-muted)]">
+                          {item.quantity} × {formatCurrency(item.unitPrice || item.price || 0)}
+                        </p>
+                      </div>
+                      <span className="text-sm font-semibold tabular-nums text-[var(--text-primary)] shrink-0 ml-2">
+                        {formatCurrency(item.total || (item.quantity * (item.unitPrice || item.price || 0)))}
+                      </span>
+                    </div>
+                  ))}
+                  {(!detailTx.items || detailTx.items.length === 0) && (
+                    <p className="text-xs text-center text-[var(--text-muted)] py-4">No items data available</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Totals */}
+              <div className="border-t border-[var(--border)] pt-3 space-y-1.5">
+                {detailTx.discount > 0 && (
+                  <div className="flex justify-between text-xs">
+                    <span className="text-[var(--text-muted)]">Discount</span>
+                    <span className="text-red-500 tabular-nums">-{formatCurrency(detailTx.discount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-sm font-bold">
+                  <span className="text-[var(--text-primary)]">Total</span>
+                  <span className="text-[var(--text-primary)] tabular-nums">{formatCurrency(detailTx.total)}</span>
+                </div>
+              </div>
+            </div>
+            <div className="px-5 py-3 border-t border-[var(--border)] shrink-0">
+              <button
+                onClick={() => { setReturnTx(detailTx); setDetailTx(null); }}
+                className="w-full flex items-center justify-center gap-2 text-sm font-medium text-orange-600 bg-orange-50 hover:bg-orange-100 py-2.5 rounded-xl transition-colors"
+              >
+                <RotateCcw className="w-4 h-4" />
+                {t.historique.returnProduct}
+              </button>
             </div>
           </div>
         </>

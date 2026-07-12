@@ -126,6 +126,17 @@ export default function AchatsPage() {
     document.addEventListener("keydown", handleEsc);
     return () => document.removeEventListener("keydown", handleEsc);
   }, [showDeliveryForm, showNewOrder, showNewSupplier, selectedSupplier, showNewProductModal]);
+
+  // Close all panels when navigating away (component unmount)
+  useEffect(() => {
+    return () => {
+      setShowDeliveryForm(false);
+      setShowNewOrder(false);
+      setShowNewSupplier(false);
+      setSelectedSupplier(null);
+      setShowNewProductModal(false);
+    };
+  }, []);
   type DeliveryLine = {
     productId: string;
     productLabel: string;    // nom affiché du produit sélectionné (recherche server-side)
@@ -679,8 +690,8 @@ export default function AchatsPage() {
       {/* Delivery Note Form panel */}
       {showDeliveryForm && (
         <>
-          <div className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-30 lg:left-[252px]" onClick={() => setShowDeliveryForm(false)} />
-          <div className="fixed right-0 top-0 h-screen w-full sm:w-[540px] bg-white shadow-[var(--shadow-lg)] z-40 lg:left-[252px] flex flex-col">
+          <div className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-30 left-[252px]" onClick={() => setShowDeliveryForm(false)} />
+          <div className="fixed right-0 top-0 h-screen w-full sm:w-[540px] bg-white shadow-[var(--shadow-lg)] z-40 left-[252px] flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
               <div className="flex items-center gap-3">
@@ -1023,8 +1034,8 @@ export default function AchatsPage() {
       {/* Supplier detail panel */}
       {selectedSupplier && (
         <>
-          <div className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-30 lg:left-[252px]" onClick={() => setSelectedSupplier(null)} />
-          <div className="fixed right-0 top-0 h-screen w-full sm:w-[380px] bg-white shadow-[var(--shadow-lg)] z-40 lg:left-[252px] flex flex-col">
+          <div className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-30 left-[252px]" onClick={() => setSelectedSupplier(null)} />
+          <div className="fixed right-0 top-0 h-screen w-full sm:w-[380px] bg-white shadow-[var(--shadow-lg)] z-40 left-[252px] flex flex-col">
             <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
               <h2 className="font-semibold text-[var(--text-primary)]">{t.achats.supplierFile}</h2>
               <button
