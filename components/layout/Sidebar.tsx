@@ -185,7 +185,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       <div className="px-3 py-3 border-t border-[var(--sidebar-border)] shrink-0">
         <div className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-[var(--surface-2)] transition-colors">
           <div className="w-8 h-8 rounded-full bg-[var(--brand-light)] flex items-center justify-center text-[var(--brand-dark)] text-[11px] font-semibold shrink-0">
-            {user ? user.firstName.charAt(0) + user.lastName.charAt(0) : "AB"}
+            {user ? (user.firstName?.charAt(0) || "") + (user.lastName?.charAt(0) || "") || "AB" : "AB"}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-[var(--text-primary)] text-[12px] font-medium truncate">

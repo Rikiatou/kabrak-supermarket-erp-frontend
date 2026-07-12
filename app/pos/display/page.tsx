@@ -75,7 +75,7 @@ export default function CustomerDisplayPage() {
       <div className="min-h-screen bg-gradient-to-br from-slate-900 to-[var(--brand)] flex flex-col items-center justify-center text-white p-8">
         <div className="text-center space-y-6">
           <div className="w-32 h-32 bg-white/20 rounded-full flex items-center justify-center mx-auto">
-            <span className="text-6xl font-bold">{storeInfo.name.charAt(0)}</span>
+            <span className="text-6xl font-bold">{storeInfo.name?.charAt(0) || "K"}</span>
           </div>
           <h1 className="text-6xl font-bold">{storeInfo.name}</h1>
           <p className="text-2xl opacity-80">{L === "fr" ? "Bienvenue" : "Welcome"}</p>

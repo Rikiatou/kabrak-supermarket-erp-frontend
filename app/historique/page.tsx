@@ -811,7 +811,7 @@ export default function HistoriquePage() {
                               <td className="px-4 py-3 text-xs text-[var(--text-secondary)] whitespace-nowrap">
                                 {movement.employee ? (
                                   <span title={movement.employee.role}>
-                                    {movement.employee.firstName} {movement.employee.lastName.charAt(0)}.
+                                    {movement.employee.firstName} {movement.employee.lastName?.charAt(0) || ""}.
                                   </span>
                                 ) : (
                                   <span className="text-[var(--text-muted)]">—</span>

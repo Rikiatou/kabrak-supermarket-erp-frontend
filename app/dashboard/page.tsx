@@ -445,11 +445,11 @@ export default function DashboardPage() {
                     <div
                       className={`w-8 h-8 rounded-full bg-gradient-to-br ${colors[emp.role] || "from-slate-400 to-slate-600"} flex items-center justify-center text-white text-xs font-bold`}
                     >
-                      {emp.firstName.charAt(0)}{emp.lastName.charAt(0)}
+                      {emp.firstName?.charAt(0) || "?"}{emp.lastName?.charAt(0) || ""}
                     </div>
                     <div>
                       <p className="text-xs font-medium text-[var(--text-primary)] leading-none">
-                        {emp.firstName} {emp.lastName.charAt(0)}.
+                        {emp.firstName} {emp.lastName?.charAt(0) || ""}.
                       </p>
                       <p className="text-[11px] text-[var(--text-muted)]">{roleLabels[emp.role] || emp.role}</p>
                     </div>

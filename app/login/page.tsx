@@ -116,7 +116,7 @@ export default function LoginPage() {
                       className="w-full flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-all text-left"
                     >
                       <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center text-white text-sm font-bold">
-                        {cashier.firstName.charAt(0)}
+                        {cashier.firstName?.charAt(0) || "?"}
                       </div>
                       <div className="flex-1">
                         <p className="text-sm font-medium text-slate-900">
@@ -139,7 +139,7 @@ export default function LoginPage() {
               {/* Profil sélectionné */}
               <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl mb-4">
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center text-white text-base font-bold">
-                  {selectedCashier.firstName.charAt(0)}
+                  {selectedCashier.firstName?.charAt(0) || "?"}
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-slate-900">

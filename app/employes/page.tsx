@@ -384,7 +384,7 @@ export default function EmployesPage() {
                         </div>
                         <div>
                           <p className="text-xs font-medium text-[var(--text-primary)]">
-                            {emp.firstName} {emp.lastName.charAt(0)}.
+                            {emp.firstName} {emp.lastName?.charAt(0) || ""}.
                           </p>
                           <p className="text-[10px] text-[var(--text-muted)]">{emp.department}</p>
                         </div>

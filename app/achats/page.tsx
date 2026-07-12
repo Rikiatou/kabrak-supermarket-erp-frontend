@@ -570,7 +570,7 @@ export default function AchatsPage() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <div className="w-7 h-7 rounded-lg bg-[var(--brand-light)] flex items-center justify-center text-[10px] font-bold text-[var(--brand)] shrink-0">
-                          {order.supplier.name.charAt(0)}
+                          {order.supplier.name?.charAt(0) || "?"}
                         </div>
                         <span className="text-sm font-medium text-[var(--text-primary)]">
                           {order.supplier.name}
@@ -645,7 +645,7 @@ export default function AchatsPage() {
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <div className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center text-[10px] font-bold text-emerald-700 shrink-0">
-                            {d.supplier.name.charAt(0)}
+                            {d.supplier.name?.charAt(0) || "?"}
                           </div>
                           <span className="text-sm font-medium text-[var(--text-primary)]">{d.supplier.name}</span>
                         </div>
@@ -984,7 +984,7 @@ export default function AchatsPage() {
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-lg font-bold text-slate-600 shrink-0">
-                  {supplier.name.charAt(0)}
+                  {supplier.name?.charAt(0) || "?"}
                 </div>
                 <StarRating rating={supplier.rating} />
               </div>
@@ -1037,7 +1037,7 @@ export default function AchatsPage() {
             <div className="flex-1 overflow-y-auto p-5 space-y-5">
               <div className="text-center">
                 <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-3xl font-bold text-slate-600 mx-auto mb-3">
-                  {selectedSupplier.name.charAt(0)}
+                  {selectedSupplier.name?.charAt(0) || "?"}
                 </div>
                 <h3 className="text-lg font-bold text-[var(--text-primary)]">{selectedSupplier.name}</h3>
                 <p className="text-xs text-[var(--text-muted)] mt-1">{selectedSupplier.contact}</p>

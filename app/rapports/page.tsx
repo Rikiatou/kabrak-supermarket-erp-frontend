@@ -529,9 +529,9 @@ export default function RapportsPage() {
                       <td className="px-4 py-2.5">
                         <div className="flex items-center gap-2">
                           <div className="w-7 h-7 rounded-full bg-[var(--brand-light)] text-[var(--brand-dark)] flex items-center justify-center text-xs font-bold">
-                            {e.firstName.charAt(0)}{e.lastName.charAt(0)}
+                            {e.firstName?.charAt(0) || "?"}{e.lastName?.charAt(0) || ""}
                           </div>
-                          <span className="font-medium text-[var(--text-primary)]">{e.firstName} {e.lastName}</span>
+                          <span className="font-medium text-[var(--text-primary)]">{e.firstName || "—"} {e.lastName || ""}</span>
                         </div>
                       </td>
                       <td className="px-4 py-2.5 text-right tabular-nums text-[var(--text-secondary)]">{e.transactions ?? 0}</td>

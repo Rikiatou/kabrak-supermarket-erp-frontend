@@ -2902,7 +2902,7 @@ export default function POSPage() {
 
                         <div className="w-8 h-8 bg-[#f3f4f6] rounded-lg flex items-center justify-center text-[12px] font-bold text-[#9ca3af] shrink-0">
 
-                          {product.name.charAt(0)}
+                          {product.name?.charAt(0) || "?"}
 
                         </div>
 
