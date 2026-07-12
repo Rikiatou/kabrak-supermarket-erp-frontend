@@ -99,7 +99,7 @@ export default function IaPage() {
     reloadForecast();
     reloadRecs();
     reloadMarkdown();
-    toast(t.ai.refreshed || "AI analysis updated", "info");
+    toast(t.ia?.analysisUpdated || "AI analysis updated", "info");
   };
 
   const handleAction = (rec: any) => {
@@ -114,16 +114,16 @@ export default function IaPage() {
       markdownNote: `Suggestion IA: ${suggestion.markdownPercent}% de remise`,
     });
     if (result) {
-      toast(`${t.ai.markdownApplied || "Markdown applied"}: ${suggestion.name} → ${formatCurrency(suggestion.suggestedMarkdownPrice)} (-${suggestion.markdownPercent}%)`, "success");
+      toast(`${t.ia?.markdownApplied || "Markdown applied"}: ${suggestion.name} → ${formatCurrency(suggestion.suggestedMarkdownPrice)} (-${suggestion.markdownPercent}%)`, "success");
       reloadMarkdown();
     } else {
-      toast(t.ai.markdownError || "Error applying markdown", "warning");
+      toast(t.ia?.markdownError || "Error applying markdown", "warning");
     }
     setApplyingId(null);
   };
 
   return (
-    <AppShell title={t.ai.title || "AI"} subtitle={t.ai.subtitle || "Stock forecasts and recommendations"}>
+    <AppShell title={t.ia?.title || "AI"} subtitle={t.ia?.subtitle || "Stock forecasts and recommendations"}>
       <div className="space-y-5">
         {/* Header avec refresh */}
         <div className="flex items-center justify-between">

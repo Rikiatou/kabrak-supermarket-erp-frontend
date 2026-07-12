@@ -170,14 +170,19 @@ export default function RapportsPage() {
 
   // Returns & Gifts data
   const [allMovements, setAllMovements] = useState<any[]>([]);
+  const [allLosses, setAllLosses] = useState<any[]>([]);
   const [loadingRG, setLoadingRG] = useState(true);
 
   useEffect(() => {
     (async () => {
       setLoadingRG(true);
       try {
-        const res = await stockApi.listMovements(1, 500);
-        setAllMovements(res.data || []);
+        const [movRes, lossRes] = await Promise.all([
+          stockApi.listMovements(1, 500),
+          stockApi.listLosses(1, 500),
+        ]);
+        setAllMovements(movRes.data || []);
+        setAllLosses(lossRes.data || []);
       } catch {
         // ignore
       } finally {
@@ -207,12 +212,11 @@ export default function RapportsPage() {
   }, [allMovements, startDateObj, endDateObj]);
 
   const filteredLosses = useMemo(() => {
-    return allMovements.filter((m: any) => {
-      if (m.type !== "adjustment") return false;
+    return allLosses.filter((m: any) => {
       const d = new Date(m.createdAt);
       return d >= startDateObj && d <= endDateObj;
     });
-  }, [allMovements, startDateObj, endDateObj]);
+  }, [allLosses, startDateObj, endDateObj]);
 
   // Returns & Gifts stats
   const returnsStats = useMemo(() => {
@@ -255,7 +259,14 @@ export default function RapportsPage() {
   // Utiliser les vraies données de l'API, pas de mock
   const sales = salesReport ?? { totalRevenue: 0, transactionCount: 0, avgBasket: 0, byDay: [] };
   const categories = byCategory ?? [];
-  const employees = byEmployee ?? [];
+  // Backend returns employeeId/employeeName/employeeNumber, normalize for frontend
+  const employees = (byEmployee ?? []).map((e: any) => ({
+    cashierId: e.cashierId || e.employeeId,
+    firstName: e.firstName || (e.employeeName ? e.employeeName.split(" ")[0] : ""),
+    lastName: e.lastName || (e.employeeName ? e.employeeName.split(" ").slice(1).join(" ") : ""),
+    transactions: e.transactions ?? 0,
+    revenue: e.revenue ?? 0,
+  }));
   const top = topProducts ?? [];
   const profitData = profit ?? { totalRevenue: 0, totalCost: 0, grossProfit: 0, marginRate: 0 };
   const inventoryData = inventory ?? { totalValue: 0, totalItems: 0, lowStock: 0, byCategory: [], productCount: 0, totalCostValue: 0, totalSaleValue: 0, potentialMargin: 0 };
@@ -264,7 +275,7 @@ export default function RapportsPage() {
 
   const kpis = [
     {
-      label: t.rapports.totalRevenue || "CA total",
+      label: t.rapports.totalRevenue || "Total Revenue",
       value: formatCurrency(sales.totalRevenue),
       icon: DollarSign,
       delta: +8.4,
@@ -278,25 +289,25 @@ export default function RapportsPage() {
       sublabel: `${startDate} → ${endDate}`,
     },
     {
-      label: t.rapports.avgBasket || "Panier moyen",
+      label: t.rapports.avgBasket || "Avg. basket",
       value: formatCurrency(sales.avgBasket),
       icon: TrendingUp,
       delta: +3.2,
       sublabel: t.rapports.perTransaction || "per transaction",
     },
     {
-      label: t.rapports.grossProfit || "Bénéfice brut",
+      label: t.rapports.grossProfit || "Gross profit",
       value: formatCurrency(profitData.grossProfit),
       icon: BarChart2,
       delta: +5.1,
       sublabel: `${t.rapports.cost || "Cost"}: ${formatCurrency(profitData.totalCost)}`,
     },
     {
-      label: `${t.rapports.marginRate || "Marge"} %`,
+      label: `${t.rapports.marginRate || "Margin"} %`,
       value: `${marginPct.toFixed(1)}%`,
       icon: Percent,
       delta: marginPct >= 30 ? +2.4 : -1.2,
-      sublabel: "marge brute",
+      sublabel: "gross margin",
     },
   ];
 
@@ -316,10 +327,10 @@ export default function RapportsPage() {
         })),
         `rapports_ventes_${startDate}_${endDate}`,
         [
-          { key: "Produit", label: "Produit" },
-          { key: "Quantite", label: "Quantité" },
-          { key: "CA", label: "Chiffre d'affaires" },
-          { key: "Marge", label: "Marge" },
+          { key: "Produit", label: "Product" },
+          { key: "Quantite", label: "Quantity" },
+          { key: "CA", label: "Revenue" },
+          { key: "Marge", label: "Margin" },
         ],
       );
       toast(t.rapports.exportDone || "Export downloaded", "success");
@@ -398,12 +409,12 @@ export default function RapportsPage() {
       {/* Charts row: Sales by day (Line) + Sales by category (Pie) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
         <Card className="lg:col-span-2">
-          <CardHeader title="Évolution du CA par jour" subtitle="Chiffre d'affaires quotidien" />
+          <CardHeader title="Revenue Evolution by Day" subtitle="Daily revenue" />
           <div className="h-72 px-2 pb-2">
             {loadingSales ? (
-              <div className="h-full flex items-center justify-center text-sm text-[var(--text-muted)]">Chargement…</div>
+              <div className="h-full flex items-center justify-center text-sm text-[var(--text-muted)]">Loading…</div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={200}>
                 <LineChart data={sales.byDay} margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
                   <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={false} />
@@ -418,12 +429,12 @@ export default function RapportsPage() {
         </Card>
 
         <Card>
-          <CardHeader title="Ventes par catégorie" subtitle="Répartition du CA" />
+          <CardHeader title="Sales by Category" subtitle="Revenue distribution" />
           <div className="h-72 px-2 pb-2">
             {loadingCat ? (
-              <div className="h-full flex items-center justify-center text-sm text-[var(--text-muted)]">Chargement…</div>
+              <div className="h-full flex items-center justify-center text-sm text-[var(--text-muted)]">Loading…</div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={200}>
                 <PieChart>
                   <Pie
                     data={categories}
@@ -449,12 +460,12 @@ export default function RapportsPage() {
 
       {/* Sales by category bar chart */}
       <Card className="mb-5">
-        <CardHeader title="Détail des ventes par catégorie" subtitle="Chiffre d'affaires et quantités" />
+        <CardHeader title="Sales by Category Detail" subtitle="Revenue and quantities" />
         <div className="h-64 px-2 pb-2">
           {loadingCat ? (
-            <div className="h-full flex items-center justify-center text-sm text-[var(--text-muted)]">Chargement…</div>
+            <div className="h-full flex items-center justify-center text-sm text-[var(--text-muted)]">Loading…</div>
           ) : (
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={200}>
               <BarChart data={categories} margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
                 <XAxis dataKey="category" tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={false} />
@@ -472,21 +483,21 @@ export default function RapportsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
         {/* Top 10 products */}
         <Card>
-          <CardHeader title="Top 10 produits" subtitle="Par chiffre d'affaires" />
+          <CardHeader title="Top 10 Products" subtitle="By revenue" />
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--border)] text-left">
                   <th className="px-4 py-2.5 text-xs font-semibold text-[var(--text-muted)]">#</th>
-                  <th className="px-4 py-2.5 text-xs font-semibold text-[var(--text-muted)]">Produit</th>
-                  <th className="px-4 py-2.5 text-xs font-semibold text-[var(--text-muted)] text-right">Qté</th>
-                  <th className="px-4 py-2.5 text-xs font-semibold text-[var(--text-muted)] text-right">CA</th>
+                  <th className="px-4 py-2.5 text-xs font-semibold text-[var(--text-muted)]">Product</th>
+                  <th className="px-4 py-2.5 text-xs font-semibold text-[var(--text-muted)] text-right">Qty</th>
+                  <th className="px-4 py-2.5 text-xs font-semibold text-[var(--text-muted)] text-right">Revenue</th>
                 </tr>
               </thead>
               <tbody>
                 {loadingTop ? (
                   <tr>
-                    <td colSpan={4} className="px-4 py-8 text-center text-sm text-[var(--text-muted)]">Chargement…</td>
+                    <td colSpan={4} className="px-4 py-8 text-center text-sm text-[var(--text-muted)]">Loading…</td>
                   </tr>
                 ) : (
                   top.map((p, i) => (
@@ -507,21 +518,21 @@ export default function RapportsPage() {
 
         {/* Sales by employee */}
         <Card>
-          <CardHeader title="Ventes par employé" subtitle="Performance des caissiers" />
+          <CardHeader title="Sales by Employee" subtitle="Cashier performance" />
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--border)] text-left">
-                  <th className="px-4 py-2.5 text-xs font-semibold text-[var(--text-muted)]">Employé</th>
+                  <th className="px-4 py-2.5 text-xs font-semibold text-[var(--text-muted)]">Employee</th>
                   <th className="px-4 py-2.5 text-xs font-semibold text-[var(--text-muted)] text-right">Transactions</th>
-                  <th className="px-4 py-2.5 text-xs font-semibold text-[var(--text-muted)] text-right">CA</th>
-                  <th className="px-4 py-2.5 text-xs font-semibold text-[var(--text-muted)] text-right">Panier moy.</th>
+                  <th className="px-4 py-2.5 text-xs font-semibold text-[var(--text-muted)] text-right">Revenue</th>
+                  <th className="px-4 py-2.5 text-xs font-semibold text-[var(--text-muted)] text-right">Avg. basket</th>
                 </tr>
               </thead>
               <tbody>
                 {loadingEmp ? (
                   <tr>
-                    <td colSpan={4} className="px-4 py-8 text-center text-sm text-[var(--text-muted)]">Chargement…</td>
+                    <td colSpan={4} className="px-4 py-8 text-center text-sm text-[var(--text-muted)]">Loading…</td>
                   </tr>
                 ) : (
                   employees.map((e) => (
@@ -550,32 +561,32 @@ export default function RapportsPage() {
 
       {/* Inventory valuation summary */}
       <Card>
-        <CardHeader title="Valorisation du stock" subtitle="Valeur d'inventaire et marge potentielle" />
+        <CardHeader title="Inventory Valuation" subtitle="Inventory value and potential margin" />
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 p-4">
           {[
             {
-              label: "Nombre de produits",
-              value: (inventoryData.productCount ?? 0).toLocaleString("fr-FR"),
+              label: "Product count",
+              value: (inventoryData.productCount ?? 0).toLocaleString(),
               icon: Package,
               color: "text-blue-600",
               bg: "bg-blue-50",
             },
             {
-              label: "Valeur de coût",
+              label: "Cost value",
               value: formatCurrency(inventoryData.totalCostValue),
               icon: Boxes,
               color: "text-amber-600",
               bg: "bg-amber-50",
             },
             {
-              label: "Valeur de vente",
+              label: "Sale value",
               value: formatCurrency(inventoryData.totalSaleValue),
               icon: DollarSign,
               color: "text-emerald-600",
               bg: "bg-emerald-50",
             },
             {
-              label: "Marge potentielle",
+              label: "Potential margin",
               value: formatCurrency(inventoryData.potentialMargin),
               icon: TrendingUp,
               color: "text-indigo-600",
@@ -594,7 +605,7 @@ export default function RapportsPage() {
           ))}
         </div>
         {loadingInv && (
-          <div className="px-4 pb-4 text-xs text-[var(--text-muted)]">Chargement de la valorisation…</div>
+          <div className="px-4 pb-4 text-xs text-[var(--text-muted)]">Loading valuation…</div>
         )}
       </Card>
       </div>
@@ -606,24 +617,24 @@ export default function RapportsPage() {
         {/* Retours clients */}
         <Card>
           <CardHeader
-            title="Retours clients"
+            title="Customer Returns"
             subtitle={`${startDate} → ${endDate}`}
             icon={<RotateCcw className="w-5 h-5 text-orange-500" />}
           />
           <div className="p-4 space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-orange-50 rounded-xl p-3">
-                <p className="text-xs text-[var(--text-muted)]">Nombre de retours</p>
+                <p className="text-xs text-[var(--text-muted)]">Returns count</p>
                 <p className="text-xl font-bold text-orange-600">{returnsStats.totalReturns}</p>
               </div>
               <div className="bg-red-50 rounded-xl p-3">
-                <p className="text-xs text-[var(--text-muted)]">Total remboursé</p>
+                <p className="text-xs text-[var(--text-muted)]">Total refunded</p>
                 <p className="text-xl font-bold text-red-600">{formatCurrency(returnsStats.totalRefunded)}</p>
               </div>
             </div>
             {Object.keys(returnsStats.byReason).length > 0 && (
               <div>
-                <p className="text-xs font-medium text-[var(--text-secondary)] mb-2">Par raison</p>
+                <p className="text-xs font-medium text-[var(--text-secondary)] mb-2">By reason</p>
                 <div className="space-y-1.5">
                   {Object.entries(returnsStats.byReason).map(([reason, count]) => (
                     <div key={reason} className="flex items-center justify-between text-xs">
@@ -636,16 +647,16 @@ export default function RapportsPage() {
             )}
             {filteredReturns.length > 0 && (
               <div className="pt-2 border-t border-[var(--border)]">
-                <p className="text-xs font-medium text-[var(--text-secondary)] mb-2">Détails</p>
+                <p className="text-xs font-medium text-[var(--text-secondary)] mb-2">Details</p>
                 <div className="max-h-40 overflow-y-auto space-y-1.5">
                   {filteredReturns.slice(0, 20).map((r: any) => (
                     <div key={r.id} className="flex items-center justify-between text-xs py-1 border-b border-[var(--border)] last:border-0">
                       <div className="min-w-0 flex-1">
                         <p className="font-medium text-[var(--text-primary)] truncate">
-                          {r.clientName || "Client"} — {r.reason}
+                          {r.clientName || "Customer"} — {r.reason}
                         </p>
                         <p className="text-[var(--text-muted)]">
-                          {new Date(r.returnDate || r.createdAt).toLocaleDateString("fr-FR")} · {r.resolution}
+                          {new Date(r.returnDate || r.createdAt).toLocaleDateString()} · {r.resolution}
                         </p>
                       </div>
                       <span className="font-bold text-red-500 tabular-nums shrink-0 ml-2">{formatCurrency(r.totalRefunded)}</span>
@@ -654,9 +665,9 @@ export default function RapportsPage() {
                 </div>
               </div>
             )}
-            {loadingRG && <p className="text-xs text-[var(--text-muted)]">Chargement…</p>}
+            {loadingRG && <p className="text-xs text-[var(--text-muted)]">Loading…</p>}
             {!loadingRG && filteredReturns.length === 0 && (
-              <p className="text-xs text-center text-[var(--text-muted)] py-4">Aucun retour sur cette période</p>
+              <p className="text-xs text-center text-[var(--text-muted)] py-4">No returns in this period</p>
             )}
           </div>
         </Card>
@@ -664,24 +675,24 @@ export default function RapportsPage() {
         {/* Pertes */}
         <Card>
           <CardHeader
-            title="Pertes"
+            title="Losses"
             subtitle={`${startDate} → ${endDate}`}
             icon={<TrendingDown className="w-5 h-5 text-red-500" />}
           />
           <div className="p-4 space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-red-50 rounded-xl p-3">
-                <p className="text-xs text-[var(--text-muted)]">Nombre de pertes</p>
+                <p className="text-xs text-[var(--text-muted)]">Losses count</p>
                 <p className="text-xl font-bold text-red-600">{lossesStats.totalLosses}</p>
               </div>
               <div className="bg-amber-50 rounded-xl p-3">
-                <p className="text-xs text-[var(--text-muted)]">Valeur estimée</p>
+                <p className="text-xs text-[var(--text-muted)]">Estimated value</p>
                 <p className="text-xl font-bold text-amber-600">{formatCurrency(lossesStats.totalLossValue)}</p>
               </div>
             </div>
             {Object.keys(lossesStats.byType).length > 0 && (
               <div>
-                <p className="text-xs font-medium text-[var(--text-secondary)] mb-2">Par type</p>
+                <p className="text-xs font-medium text-[var(--text-secondary)] mb-2">By type</p>
                 <div className="space-y-1.5">
                   {Object.entries(lossesStats.byType).map(([type, count]) => (
                     <div key={type} className="flex items-center justify-between text-xs">
@@ -694,14 +705,14 @@ export default function RapportsPage() {
             )}
             {filteredLosses.length > 0 && (
               <div className="pt-2 border-t border-[var(--border)]">
-                <p className="text-xs font-medium text-[var(--text-secondary)] mb-2">Détails</p>
+                <p className="text-xs font-medium text-[var(--text-secondary)] mb-2">Details</p>
                 <div className="max-h-40 overflow-y-auto space-y-1.5">
                   {filteredLosses.slice(0, 20).map((m: any) => (
                     <div key={m.id} className="flex items-center justify-between text-xs py-1 border-b border-[var(--border)] last:border-0">
                       <div className="min-w-0 flex-1">
-                        <p className="font-medium text-[var(--text-primary)] truncate">{m.product?.name || "Produit"}</p>
+                        <p className="font-medium text-[var(--text-primary)] truncate">{m.product?.name || "Product"}</p>
                         <p className="text-[var(--text-muted)]">
-                          {new Date(m.createdAt).toLocaleDateString("fr-FR")} · {m.reason}
+                          {new Date(m.createdAt).toLocaleDateString()} · {m.reason}
                         </p>
                       </div>
                       <span className="font-bold text-red-500 tabular-nums shrink-0 ml-2">-{Math.abs(m.quantity)}</span>
@@ -711,7 +722,7 @@ export default function RapportsPage() {
               </div>
             )}
             {!loadingRG && filteredLosses.length === 0 && (
-              <p className="text-xs text-center text-[var(--text-muted)] py-4">Aucune perte sur cette période</p>
+              <p className="text-xs text-center text-[var(--text-muted)] py-4">No losses in this period</p>
             )}
           </div>
         </Card>
@@ -719,18 +730,18 @@ export default function RapportsPage() {
         {/* Cadeaux */}
         <Card>
           <CardHeader
-            title="Cadeaux"
+            title="Gifts"
             subtitle={`${startDate} → ${endDate}`}
             icon={<Gift className="w-5 h-5 text-purple-500" />}
           />
           <div className="p-4 space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-purple-50 rounded-xl p-3">
-                <p className="text-xs text-[var(--text-muted)]">Total cadeaux</p>
+                <p className="text-xs text-[var(--text-muted)]">Total gifts</p>
                 <p className="text-xl font-bold text-purple-600">{giftsStats.totalGifts}</p>
               </div>
               <div className="bg-indigo-50 rounded-xl p-3">
-                <p className="text-xs text-[var(--text-muted)]">Valeur estimée</p>
+                <p className="text-xs text-[var(--text-muted)]">Estimated value</p>
                 <p className="text-xl font-bold text-indigo-600">{formatCurrency(giftsStats.totalGiftValue)}</p>
               </div>
             </div>
@@ -740,20 +751,20 @@ export default function RapportsPage() {
                 <p className="text-lg font-bold text-slate-700">{giftsStats.staffGifts}</p>
               </div>
               <div className="bg-slate-50 rounded-xl p-2 text-center">
-                <p className="text-xs text-[var(--text-muted)]">Autres</p>
+                <p className="text-xs text-[var(--text-muted)]">Other</p>
                 <p className="text-lg font-bold text-slate-700">{giftsStats.otherGifts}</p>
               </div>
             </div>
             {filteredGifts.length > 0 && (
               <div className="pt-2 border-t border-[var(--border)]">
-                <p className="text-xs font-medium text-[var(--text-secondary)] mb-2">Détails</p>
+                <p className="text-xs font-medium text-[var(--text-secondary)] mb-2">Details</p>
                 <div className="max-h-40 overflow-y-auto space-y-1.5">
                   {filteredGifts.slice(0, 20).map((m: any) => (
                     <div key={m.id} className="flex items-center justify-between text-xs py-1 border-b border-[var(--border)] last:border-0">
                       <div className="min-w-0 flex-1">
-                        <p className="font-medium text-[var(--text-primary)] truncate">{m.product?.name || "Produit"}</p>
+                        <p className="font-medium text-[var(--text-primary)] truncate">{m.product?.name || "Product"}</p>
                         <p className="text-[var(--text-muted)]">
-                          {new Date(m.createdAt).toLocaleDateString("fr-FR")} · {m.reason === "gift_staff" ? "Staff" : "Autre"}
+                          {new Date(m.createdAt).toLocaleDateString()} · {m.reason === "gift_staff" ? "Staff" : "Other"}
                           {m.notes ? ` · ${m.notes}` : ""}
                         </p>
                       </div>
@@ -764,7 +775,7 @@ export default function RapportsPage() {
               </div>
             )}
             {!loadingRG && filteredGifts.length === 0 && (
-              <p className="text-xs text-center text-[var(--text-muted)] py-4">Aucun cadeau sur cette période</p>
+              <p className="text-xs text-center text-[var(--text-muted)] py-4">No gifts in this period</p>
             )}
           </div>
         </Card>
