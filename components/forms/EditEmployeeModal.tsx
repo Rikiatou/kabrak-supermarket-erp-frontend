@@ -7,7 +7,7 @@ import { useI18n } from "@/lib/i18n/context";
 import { cn } from "@/lib/utils";
 import type { Employee } from "@/lib/types";
 
-const ROLES: Employee["role"][] = ["boss", "cashier", "stockist", "accountant"];
+const ROLES: Employee["role"][] = ["boss", "manager", "cashier", "stockist", "accountant"];
 
 type FormData = {
   firstName: string;
