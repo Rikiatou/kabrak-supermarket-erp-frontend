@@ -17,6 +17,7 @@ type FormData = {
   phone: string;
   email: string;
   status: Employee["status"];
+  pin: string;
 };
 
 interface EditEmployeeModalProps {
@@ -35,6 +36,7 @@ export function EditEmployeeModal({ employee, onClose, onSave }: EditEmployeeMod
     phone: employee.phone || "",
     email: employee.email || "",
     status: employee.status,
+    pin: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
@@ -53,6 +55,7 @@ export function EditEmployeeModal({ employee, onClose, onSave }: EditEmployeeMod
     if (!form.lastName.trim()) errs.lastName = t.common.required;
     if (!form.role) errs.role = t.common.required;
     if (!form.phone.trim()) errs.phone = t.common.required;
+    if (form.pin.trim() && !/^\d{4,6}$/.test(form.pin.trim())) errs.pin = "4-6 chiffres";
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -171,6 +174,19 @@ export function EditEmployeeModal({ employee, onClose, onSave }: EditEmployeeMod
                       </select>
                     </Field>
                   </div>
+                </div>
+
+                <div>
+                  <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-widest mb-3">
+                    Code PIN / Mot de passe
+                  </p>
+                  <Field label="Nouveau PIN (laisser vide pour ne pas changer)" error={errors.pin}>
+                    <input type="text" inputMode="numeric" value={form.pin} onChange={set("pin")}
+                      placeholder="Ex: 1234" maxLength={6} className={inputClass(!!errors.pin)} />
+                  </Field>
+                  <p className="text-[11px] text-[var(--text-muted)] mt-1.5">
+                    Entre un code de 4 à 6 chiffres. Ce PIN servira à l&apos;employé pour se connecter.
+                  </p>
                 </div>
               </div>
 

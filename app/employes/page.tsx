@@ -191,7 +191,7 @@ export default function EmployesPage() {
 
   const handleEditEmployee = async (id: string, data: Partial<{
     firstName: string; lastName: string; role: string; department: string;
-    phone: string; email: string; status: string;
+    phone: string; email: string; status: string; pin: string;
   }>) => {
     setSaving(true);
     try {
@@ -203,6 +203,8 @@ export default function EmployesPage() {
         phone: data.phone,
         email: data.email || undefined,
         status: data.status,
+        // Envoyer le PIN uniquement s'il a été saisi
+        ...(data.pin && data.pin.trim() ? { pin: data.pin.trim() } : {}),
       });
       // Mettre à jour localement
       setEmployees((prev) => prev.map((e) =>
@@ -419,6 +421,7 @@ export default function EmployesPage() {
           index={employees.findIndex((e) => e.id === selectedEmployee.id)}
           onClose={() => setSelectedEmployee(null)}
           onDeleted={() => { setSelectedEmployee(null); reloadEmployees(); }}
+          onEdit={(emp) => setEditingEmployee(emp)}
         />
       )}
 
@@ -452,11 +455,13 @@ function EmployeeDetailPanel({
   index,
   onClose,
   onDeleted,
+  onEdit,
 }: {
   employee: Employee;
   index: number;
   onClose: () => void;
   onDeleted: () => void;
+  onEdit: (employee: Employee) => void;
 }) {
   const { t } = useI18n();
   const { toast } = useToast();
@@ -614,7 +619,7 @@ function EmployeeDetailPanel({
           <Button variant="secondary" className="flex-1" size="md" icon={<Calendar className="w-4 h-4" />} onClick={() => router.push("/planning")}>
             {t.employes.schedule}
           </Button>
-          <Button className="flex-1" size="md" onClick={() => setEditingEmployee(employee)}>
+          <Button className="flex-1" size="md" onClick={() => onEdit(employee)}>
             {t.common.edit}
           </Button>
           {canDelete && employee.id !== user?.id && (

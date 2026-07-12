@@ -309,15 +309,24 @@ export default function HistoriquePage() {
   }, [movements]);
 
   // Running balance per row (newest-first display)
+  // IMPORTANT: baseline = stock actuel - somme de TOUS les mouvements.
+  // Ça capture le stock initial du produit (mis à la création sans mouvement),
+  // pour que la balance de la dernière ligne = le vrai stock du produit.
   const movementsWithBalance = useMemo(() => {
-    const sorted = [...filteredMovements].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-    let balance = 0;
-    const withBal = sorted.map((m) => {
+    // Balance calculée sur TOUS les mouvements (pas seulement filtrés)
+    const allSorted = [...movements].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    const netAll = allSorted.reduce((s, m) => s + m.quantity, 0);
+    const baseline = (selectedProduct?.stock ?? 0) - netAll;
+    let balance = baseline;
+    const balById: Record<string, number> = {};
+    allSorted.forEach((m) => {
       balance += m.quantity; // signed
-      return { ...m, balance };
+      balById[m.id] = balance;
     });
-    return withBal.reverse(); // newest first
-  }, [filteredMovements]);
+    // Afficher les mouvements filtrés, du plus récent au plus ancien
+    const sortedFiltered = [...filteredMovements].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return sortedFiltered.map((m) => ({ ...m, balance: balById[m.id] ?? 0 }));
+  }, [filteredMovements, movements, selectedProduct]);
 
   // Margin calculation
   const marginPct = selectedProduct && (selectedProduct.price ?? 0) > 0
