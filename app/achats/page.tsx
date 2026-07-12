@@ -84,6 +84,7 @@ export default function AchatsPage() {
   const [showNewSupplier, setShowNewSupplier] = useState(false);
   const [showNewOrder, setShowNewOrder] = useState(false);
   const [orderSupplier, setOrderSupplier] = useState<Supplier | undefined>(undefined);
+  const [detailOrder, setDetailOrder] = useState<typeof orders[0] | null>(null);
 
   // Delivery note state
   const { products: allProducts } = useProducts();
@@ -431,6 +432,7 @@ export default function AchatsPage() {
       total: o.total,
       status: o.status as OrderStatus,
       itemCount: o.items?.length || 0,
+      items: o.items || [],
     };
   });
 
@@ -571,7 +573,8 @@ export default function AchatsPage() {
                 return (
                   <tr
                     key={order.id}
-                    className="border-b border-[var(--border-subtle)] last:border-0 hover:bg-slate-50/50 transition-colors"
+                    className="border-b border-[var(--border-subtle)] last:border-0 hover:bg-slate-50/50 transition-colors cursor-pointer"
+                    onClick={() => setDetailOrder(order)}
                   >
                     <td className="px-4 py-3">
                       <span className="text-sm font-mono font-medium text-[var(--text-primary)]">
@@ -649,7 +652,7 @@ export default function AchatsPage() {
                 </thead>
                 <tbody>
                   {deliveries.map((d) => (
-                    <tr key={d.id} className="border-b border-[var(--border-subtle)] last:border-0 hover:bg-slate-50/50 transition-colors">
+                    <tr key={d.id} className="border-b border-[var(--border-subtle)] last:border-0 hover:bg-slate-50/50 transition-colors cursor-pointer" onClick={() => setDetailOrder(d)}>
                       <td className="px-4 py-3">
                         <span className="text-sm font-mono font-medium text-[var(--text-primary)]">{d.id}</span>
                       </td>
@@ -1161,6 +1164,74 @@ export default function AchatsPage() {
           onClose={() => { setShowNewProductModal(false); setPendingBarcode(""); setTimeout(() => scanInputRef.current?.focus(), 100); }}
           onSave={handleProductCreated}
         />
+      )}
+
+      {/* Order/Delivery detail modal */}
+      {detailOrder && (
+        <>
+          <div className="fixed inset-0 bg-black/40 z-[70]" onClick={() => setDetailOrder(null)} />
+          <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg bg-white rounded-2xl shadow-2xl z-[71] max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)] shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center">
+                  <Package className="w-4 h-4 text-emerald-600" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-bold text-[var(--text-primary)]">{detailOrder.id}</h2>
+                  <p className="text-xs text-[var(--text-muted)]">{detailOrder.supplier?.name} · {detailOrder.date}</p>
+                </div>
+              </div>
+              <button onClick={() => setDetailOrder(null)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100">
+                <X className="w-4 h-4 text-[var(--text-secondary)]" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+              {/* Items list */}
+              <div>
+                <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-2">
+                  Items ({detailOrder.items?.length || 0})
+                </p>
+                <div className="space-y-1.5">
+                  {(detailOrder.items || []).map((item: any, i: number) => (
+                    <div key={i} className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-lg">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-[var(--text-primary)] truncate">
+                          {item.product?.name || item.productName || `Item ${i + 1}`}
+                        </p>
+                        <p className="text-xs text-[var(--text-muted)]">
+                          {item.quantity} {item.unit || "units"} × {formatCurrency(item.unitPrice || item.costPrice || 0)}
+                        </p>
+                      </div>
+                      <span className="text-sm font-semibold tabular-nums text-[var(--text-primary)] shrink-0 ml-2">
+                        {formatCurrency(item.total || (item.quantity * (item.unitPrice || item.costPrice || 0)))}
+                      </span>
+                    </div>
+                  ))}
+                  {(!detailOrder.items || detailOrder.items.length === 0) && (
+                    <p className="text-xs text-center text-[var(--text-muted)] py-4">No items data available</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Total */}
+              <div className="border-t border-[var(--border)] pt-3">
+                <div className="flex justify-between text-sm font-bold">
+                  <span className="text-[var(--text-primary)]">Total</span>
+                  <span className="text-[var(--text-primary)] tabular-nums">{formatCurrency(detailOrder.total)}</span>
+                </div>
+              </div>
+            </div>
+            <div className="px-5 py-3 border-t border-[var(--border)] shrink-0">
+              <button
+                onClick={() => { handlePrintDelivery(detailOrder); }}
+                className="w-full flex items-center justify-center gap-2 text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 py-2.5 rounded-xl transition-colors"
+              >
+                <Printer className="w-4 h-4" />
+                {t.achats.printDelivery}
+              </button>
+            </div>
+          </div>
+        </>
       )}
     </AppShell>
   );
