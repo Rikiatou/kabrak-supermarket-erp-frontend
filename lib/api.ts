@@ -562,13 +562,14 @@ export const purchaseOrdersApi = {
     return Array.isArray(res) ? res : (res?.data ?? []);
   },
   get: (id: string) => fetchAPI<ApiPurchaseOrder>(`/purchase-orders/${id}`),
-  create: (data: { supplierId: string; expectedDate: string; notes?: string; items: Array<{ productId: string; quantity: number; unitCost: number }> }) =>
+  create: (data: { supplierId: string; expectedDate: string; notes?: string; createdBy?: string; items: Array<{ productId: string; quantity: number; unitCost: number }> }) =>
     fetchAPI<ApiPurchaseOrder>(`/purchase-orders`, { method: "POST", body: JSON.stringify(data) }),
   createDirect: (data: {
     supplierId: string;
     expectedDate: string;
     invoiceNumber?: string;
     notes?: string;
+    createdBy?: string;
     items: Array<{
       productId: string;
       quantity: number;
@@ -858,7 +859,7 @@ export interface ApiRevenue {
 export const accountingApi = {
   expenses: (startDate?: string, endDate?: string, category?: string) =>
     fetchAPI<ApiExpense[]>(`/accounting/expenses?${startDate ? `startDate=${startDate}&` : ""}${endDate ? `endDate=${endDate}&` : ""}${category ? `category=${category}` : ""}`),
-  createExpense: (data: { category: string; description: string; amount: number; paymentMethod?: string; supplier?: string }) =>
+  createExpense: (data: { category: string; description: string; amount: number; paymentMethod?: string; supplier?: string; createdBy?: string }) =>
     fetchAPI<ApiExpense>(`/accounting/expenses`, { method: "POST", body: JSON.stringify(data) }),
   revenues: (startDate?: string, endDate?: string, category?: string) =>
     fetchAPI<ApiRevenue[]>(`/accounting/revenues?${startDate ? `startDate=${startDate}&` : ""}${endDate ? `endDate=${endDate}&` : ""}${category ? `category=${category}` : ""}`),

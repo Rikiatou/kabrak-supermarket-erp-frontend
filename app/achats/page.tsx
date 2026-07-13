@@ -34,6 +34,7 @@ import { useSuppliers, usePurchaseOrders, useCreatePurchaseOrder, useProducts, u
 import { useBarcodeScanner } from "@/lib/hooks/useBarcodeScanner";
 import { suppliersApi, purchaseOrdersApi, productsApi, batchesApi } from "@/lib/api";
 import { formatCurrency, cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth/context";
 import type { Supplier } from "@/lib/types";
 import type { Product } from "@/lib/types";
 
@@ -74,6 +75,7 @@ function StarRating({ rating }: { rating: number }) {
 export default function AchatsPage() {
   const { t } = useI18n();
   const { toast } = useToast();
+  const { user } = useAuth();
   const { suppliers: apiSuppliers, reload: reloadSuppliers } = useSuppliers();
   const { data: apiOrders, reload: reloadOrders } = usePurchaseOrders();
   const { create: createOrder, creating: creatingOrder } = useCreatePurchaseOrder();
@@ -276,6 +278,7 @@ export default function AchatsPage() {
         expectedDate: deliveryDate,
         invoiceNumber: deliveryRef || undefined,
         notes: deliveryRef ? `Bordereau ref: ${deliveryRef}` : undefined,
+        createdBy: user?.id,
         items: validLines.map((l) => {
           // En mode PACK: unitPrice = prix du carton, sellPrice = prix du carton
           // Le backend attend le prix par UNITÉ → diviser par packQuantity
@@ -1025,7 +1028,7 @@ export default function AchatsPage() {
                 <div>
                   <p className="text-[11px] text-[var(--text-muted)]">{t.common.name}</p>
                   <p className="text-sm font-semibold text-[var(--text-primary)]">
-                    {supplier.address.split(",").pop()?.trim()}
+                    {supplier.address?.split(",").pop()?.trim() || "—"}
                   </p>
                 </div>
               </div>
@@ -1117,6 +1120,7 @@ export default function AchatsPage() {
                 supplierId: order.supplier.id,
                 expectedDate: new Date(order.expectedDate).toISOString(),
                 notes: order.notes,
+                createdBy: user?.id,
                 items: order.lines
                   .filter((l) => l.productId && l.quantity > 0)
                   .map((l) => ({
@@ -1149,7 +1153,7 @@ export default function AchatsPage() {
 
               reloadOrders();
             } catch (error) {
-              toast("Erreur: " + (error instanceof Error ? error.message : t.achats.unknownError), "warning");
+              toast((t.common.error || "Error") + ": " + (error instanceof Error ? error.message : t.achats.unknownError), "warning");
             }
           }}
           defaultSupplier={orderSupplier}

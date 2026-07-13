@@ -25,6 +25,7 @@ import { exportToCSV } from "@/lib/export";
 import { useInvoices, useCreateInvoice, useUpdateInvoiceStatus, useAddPayment, useServerProductSearch } from "@/lib/hooks/useApi";
 import type { ApiInvoicePayment } from "@/lib/api";
 import { useLicense } from "@/lib/license/context";
+import { useAuth } from "@/lib/auth/context";
 import jsPDF from "jspdf";
 import QRCode from "qrcode";
 
@@ -130,6 +131,7 @@ const paymentMethodLabels: Record<string, string> = {
 export default function FacturesPage() {
   const { t } = useI18n();
   const { toast } = useToast();
+  const { user } = useAuth();
   const { config: licenseConfig } = useLicense();
   const { data: apiInvoices, reload } = useInvoices();
   const { create: createInvoice, creating: creatingInvoice } = useCreateInvoice();
@@ -430,7 +432,7 @@ export default function FacturesPage() {
     pdf.text(formatCurrency(invoice.subtotal), pageWidth - margin - 5, y, { align: "right" });
     y += 7;
     if (invoice.discount && invoice.discount > 0) {
-      pdf.text(`${t.factures.discount || "Remise"}:`, margin + 95, y);
+      pdf.text(`${t.factures.discount || "Discount"}:`, margin + 95, y);
       pdf.text(`- ${formatCurrency(invoice.discount)}`, pageWidth - margin - 5, y, { align: "right" });
       y += 10;
     } else {
@@ -819,7 +821,7 @@ export default function FacturesPage() {
                 <span className="tabular-nums">{formatCurrency(subtotal)}</span>
               </div>
               <div className="flex items-center justify-between text-[var(--text-muted)]">
-                <span>{t.factures.discount || "Remise"}</span>
+                <span>{t.factures.discount || "Discount"}</span>
                 <input
                   type="number"
                   min="0"

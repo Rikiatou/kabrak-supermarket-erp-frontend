@@ -120,7 +120,7 @@ export default function EmployesPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [search, setSearch] = useState("");
   const [filterRole, setFilterRole] = useState("All");
-  const [filterStatus, setFilterStatus] = useState("Tous");
+  const [filterStatus, setFilterStatus] = useState("all");
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [showNewEmployee, setShowNewEmployee] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
@@ -218,7 +218,7 @@ export default function EmployesPage() {
       reloadEmployees();
       toast(`${data.firstName} ${data.lastName} ${t.common.saved}`, "success");
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Update failed";
+      const msg = e instanceof Error ? e.message : (t.employes.deleteError || "Update failed");
       toast(msg, "warning");
       // Mettre à jour localement quand même
       setEmployees((prev) => prev.map((e) =>
@@ -239,7 +239,7 @@ export default function EmployesPage() {
     const matchSearch = !search || name.includes(search.toLowerCase());
     const matchRole = filterRole === "All" || e.role === filterRole;
     const matchStatus =
-      filterStatus === "Tous" ||
+      filterStatus === "all" ||
       (filterStatus === "active" && e.status === "active") ||
       (filterStatus === "on_leave" && e.status === "on_leave");
     return matchSearch && matchRole && matchStatus;
@@ -300,7 +300,7 @@ export default function EmployesPage() {
 
         <div className="flex items-center gap-1 bg-[var(--background)] border border-[var(--border)] rounded-xl p-1">
           {[
-            { key: "Tous", label: t.common.all },
+            { key: "all", label: t.common.all },
             { key: "active", label: t.employes.status.active },
             { key: "on_leave", label: t.employes.status.leave },
           ].map(({ key, label }) => (
@@ -346,7 +346,7 @@ export default function EmployesPage() {
             <thead>
               <tr>
                 <th className="text-left text-xs font-semibold text-[var(--text-muted)] pb-3 pr-4">
-                  Employee
+                  {t.employes.employeeLabel || "Employee"}
                 </th>
                 {[
                   t.common.monday,

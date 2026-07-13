@@ -122,7 +122,7 @@ export function StockAlertsList() {
   return (
     <div className="divide-y divide-transparent">
       {displayAlerts.length === 0 ? (
-        <p className="text-center text-sm text-[var(--text-muted)] py-6">{t.stockAlerts.noAlerts || "Aucune alerte"}</p>
+        <p className="text-center text-sm text-[var(--text-muted)] py-6">{t.stockAlerts.noAlerts || "No alerts"}</p>
       ) : (
         displayAlerts.map((alert, index) => (
           <AlertRow key={`${alert.id}-${alert.severity}-${index}`} alert={alert} />

@@ -681,7 +681,7 @@ export default function CaissesPage() {
       const report = await shiftsApi.zReport(shiftId);
       setZReport(report);
     } catch {
-      toast("Erreur: impossible de charger le Z-report", "warning");
+      toast(t.caisses.errorZReport || "Error: unable to load Z-report", "warning");
     } finally {
       setReprintLoading(null);
     }
@@ -690,7 +690,7 @@ export default function CaissesPage() {
   // Z-Report journalier par caissier (sans dépendre des shifts)
   const generateDailyZReport = async () => {
     if (!histCashier || !histDate) {
-      toast("Sélectionnez un caissier et une date", "warning");
+      toast(t.caisses.selectCashierAndDate || "Select a cashier and a date", "warning");
       return;
     }
     setDailyReportLoading(true);
@@ -698,7 +698,7 @@ export default function CaissesPage() {
       const report = await shiftsApi.dailyZReport(histCashier, histDate);
       setZReport(report);
     } catch {
-      toast("Erreur: impossible de générer le Z-report journalier", "warning");
+      toast(t.caisses.errorDailyReport || "Error: unable to generate daily Z-report", "warning");
     } finally {
       setDailyReportLoading(false);
     }
@@ -827,7 +827,7 @@ export default function CaissesPage() {
             className="flex items-center gap-2 px-4 py-2.5 bg-[var(--brand-light)] text-[var(--brand)] rounded-xl font-semibold text-sm hover:opacity-80 transition-opacity"
           >
             <Printer className="w-4 h-4" />
-            {showHistory ? "Masquer l'historique" : "Réimprimer un Z-Report"}
+            {showHistory ? (t.caisses.hideHistory || "Hide history") : (t.caisses.reprintZReport || "Reprint Z-Report")}
           </button>
 
           {showHistory && (
@@ -835,13 +835,13 @@ export default function CaissesPage() {
               {/* Filtres: par caissier + par date */}
               <div className="flex flex-wrap items-end gap-3 px-4 py-3 border-b border-[var(--border)] bg-slate-50">
                 <div className="flex flex-col gap-1">
-                  <label className="text-[11px] font-semibold text-[var(--text-muted)] uppercase">Caissier</label>
+                  <label className="text-[11px] font-semibold text-[var(--text-muted)] uppercase">{t.caisses.cashierLabel || "Cashier"}</label>
                   <select
                     value={histCashier}
                     onChange={(e) => setHistCashier(e.target.value)}
                     className="bg-white border border-[var(--border)] rounded-lg px-3 py-1.5 text-sm outline-none focus:border-[var(--brand)]"
                   >
-                    <option value="">Tous les caissiers</option>
+                    <option value="">{t.caisses.allCashiers || "All cashiers"}</option>
                     {cashiers.map((c) => (
                       <option key={c.id} value={c.id}>{c.firstName} {c.lastName}</option>
                     ))}
@@ -861,7 +861,7 @@ export default function CaissesPage() {
                     onClick={() => { setHistCashier(""); setHistDate(""); }}
                     className="px-3 py-1.5 text-sm font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] underline"
                   >
-                    Réinitialiser
+                    {t.common.reset || "Reset"}
                   </button>
                 )}
                 <button
@@ -870,23 +870,23 @@ export default function CaissesPage() {
                   className="px-4 py-1.5 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed"
                   title="Génère un Z-Report pour ce caissier à cette date, indépendamment des shifts"
                 >
-                  {dailyReportLoading ? "..." : "Z-Report journalier"}
+                  {dailyReportLoading ? "..." : (t.caisses.dailyReport || "Daily Z-Report")}
                 </button>
                 <span className="ml-auto text-xs text-[var(--text-muted)] self-center">
                   {filteredPastShifts.length} shift(s)
                 </span>
               </div>
               {filteredPastShifts.length === 0 ? (
-                <p className="px-4 py-6 text-center text-sm text-[var(--text-muted)]">Aucun shift fermé trouvé.</p>
+                <p className="px-4 py-6 text-center text-sm text-[var(--text-muted)]">{t.caisses.noClosedShifts || "No closed shifts found."}</p>
               ) : (
                 <table className="w-full text-sm">
                   <thead className="bg-slate-50 border-b border-[var(--border)]">
                     <tr>
                       <th className="px-4 py-2 text-left font-semibold text-xs text-[var(--text-muted)] uppercase">Caisse</th>
-                      <th className="px-4 py-2 text-left font-semibold text-xs text-[var(--text-muted)] uppercase">Caissier</th>
-                      <th className="px-4 py-2 text-left font-semibold text-xs text-[var(--text-muted)] uppercase">Ouvert</th>
-                      <th className="px-4 py-2 text-left font-semibold text-xs text-[var(--text-muted)] uppercase">Fermé</th>
-                      <th className="px-4 py-2 text-right font-semibold text-xs text-[var(--text-muted)] uppercase">Cash fermeture</th>
+                      <th className="px-4 py-2 text-left font-semibold text-xs text-[var(--text-muted)] uppercase">{t.caisses.cashierLabel || "Cashier"}</th>
+                      <th className="px-4 py-2 text-left font-semibold text-xs text-[var(--text-muted)] uppercase">{t.caisses.opened || "Opened"}</th>
+                      <th className="px-4 py-2 text-left font-semibold text-xs text-[var(--text-muted)] uppercase">{t.caisses.closed || "Closed"}</th>
+                      <th className="px-4 py-2 text-right font-semibold text-xs text-[var(--text-muted)] uppercase">{t.caisses.closingCash || "Closing cash"}</th>
                       <th className="px-4 py-2 text-center font-semibold text-xs text-[var(--text-muted)] uppercase">Action</th>
                     </tr>
                   </thead>

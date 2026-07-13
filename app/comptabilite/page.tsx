@@ -324,7 +324,7 @@ export default function ComptabilitePage() {
 
   const handleCreateExpense = async (data: { category: string; description: string; amount: number; paymentMethod: string; supplier?: string }) => {
     try {
-      await createExpense(data);
+      await createExpense({ ...data, createdBy: user?.id });
       toast(t.comptabilite.expenseSaved, "success");
       setModalOpen(false);
       // Forcer le refetch des données
@@ -512,7 +512,7 @@ export default function ComptabilitePage() {
               {expenses.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-5 py-8 text-center text-[var(--text-muted)]">
-                    No expenses in this period
+                    {t.comptabilite.noExpenses || "No expenses in this period"}
                   </td>
                 </tr>
               )}

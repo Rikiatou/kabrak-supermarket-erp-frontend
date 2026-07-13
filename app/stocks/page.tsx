@@ -228,7 +228,7 @@ export default function StocksPage() {
     if (!restockProduct) return;
     const qty = parseInt(restockQty);
     if (!qty || qty <= 0) {
-      toast(t.stocks.markdownInvalidPrice || "Quantité invalide", "warning");
+      toast(t.stocks.markdownInvalidPrice || "Invalid quantity", "warning");
       return;
     }
     try {
@@ -322,11 +322,11 @@ export default function StocksPage() {
     setDeleting(true);
     try {
       await productsApi.delete(deleteProduct.id);
-      toast(`${deleteProduct.name} supprimé`, "success");
+      toast(`${deleteProduct.name} ${t.stocks.deleted || "deleted"}`, "success");
       reloadProducts();
       setDeleteProduct(null);
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Erreur suppression";
+      const msg = e instanceof Error ? e.message : (t.stocks.deleteError || "Delete error");
       toast(msg, "warning");
     } finally {
       setDeleting(false);
@@ -953,7 +953,7 @@ export default function StocksPage() {
             <div className="flex gap-2">
               <Button variant="secondary" className="flex-1" onClick={closeEditModal}>{t.common.cancel}</Button>
               <Button className="flex-1" onClick={handleEditSave}>
-                {t.common.save || "Enregistrer"}
+                {t.common.save || "Save"}
               </Button>
             </div>
           </div>
@@ -969,17 +969,17 @@ export default function StocksPage() {
                 <Trash2 className="w-5 h-5 text-red-500" />
               </div>
               <div>
-                <h3 className="font-semibold text-[var(--text-primary)]">Supprimer le produit</h3>
-                <p className="text-xs text-[var(--text-muted)]">Cette action est irréversible</p>
+                <h3 className="font-semibold text-[var(--text-primary)]">{t.stocks.deleteProduct || "Delete product"}</h3>
+                <p className="text-xs text-[var(--text-muted)]">{t.stocks.irreversible || "This action is irreversible"}</p>
               </div>
             </div>
             <p className="text-sm text-[var(--text-secondary)] mb-4">
-              Voulez-vous vraiment supprimer <b>{deleteProduct.name}</b> ?
+              {t.stocks.confirmDelete || "Do you really want to delete"} <b>{deleteProduct.name}</b> ?
             </p>
             <div className="flex justify-end gap-2">
-              <Button size="sm" variant="ghost" onClick={() => setDeleteProduct(null)}>Annuler</Button>
+              <Button size="sm" variant="ghost" onClick={() => setDeleteProduct(null)}>{t.common.cancel || "Cancel"}</Button>
               <Button size="sm" variant="danger" onClick={handleDeleteProduct} disabled={deleting}>
-                {deleting ? "Suppression..." : "Supprimer"}
+                {deleting ? (t.common.deleting || "Deleting...") : (t.common.delete || "Delete")}
               </Button>
             </div>
           </div>
@@ -1133,7 +1133,7 @@ function ProductDetailPanel({
             >
               <span className="flex items-center gap-1.5">
                 <Package className="w-3.5 h-3.5" />
-                {t.stocks.batches || "Lots"} ({batches.length})
+                {t.stocks.batches || "Batches"} ({batches.length})
               </span>
               <ChevronDown className={cn("w-4 h-4 transition-transform", showBatches && "rotate-180")} />
             </button>
@@ -1142,7 +1142,7 @@ function ProductDetailPanel({
                 {batchesLoading ? (
                   <p className="text-xs text-[var(--text-muted)] text-center py-4">{t.common.loading}</p>
                 ) : batches.length === 0 ? (
-                  <p className="text-xs text-[var(--text-muted)] text-center py-4">{t.stocks.noBatches || "Aucun lot — stock géré en global"}</p>
+                  <p className="text-xs text-[var(--text-muted)] text-center py-4">{t.stocks.noBatches || "No batches — stock managed globally"}</p>
                 ) : (
                   <div className="space-y-2">
                     {batches.map((batch) => {
@@ -1157,8 +1157,8 @@ function ProductDetailPanel({
                               {batch.batchNumber && <span className="text-[var(--text-muted)] ml-1">— {batch.batchNumber}</span>}
                             </p>
                             <p className="text-[var(--text-muted)]">
-                              {t.stocks.received || "Reçu"}: {formatDate(batch.receivedDate)}
-                              {batch.expiryDate && ` · ${t.stocks.expiration || "Expiration"}: ${formatDate(batch.expiryDate)}`}
+                              {t.stocks.received || "Received"}: {formatDate(batch.receivedDate)}
+                              {batch.expiryDate && ` · ${t.stocks.expiration || "Expiry"}: ${formatDate(batch.expiryDate)}`}
                             </p>
                           </div>
                           <span className={cn(

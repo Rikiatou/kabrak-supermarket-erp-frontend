@@ -189,10 +189,10 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-[var(--text-primary)] text-[12px] font-medium truncate">
-              {user ? `${user.firstName} ${user.lastName}` : "Grace Johnson"}
+              {user ? `${user?.firstName || ""} ${user?.lastName || ""}`.trim() || "User" : "Grace Johnson"}
             </p>
             <p className="text-[var(--text-muted)] text-[11px] truncate capitalize">
-              {user ? user.role : "Boss"}
+              {user ? user?.role || "—" : "Boss"}
             </p>
           </div>
           {user && (

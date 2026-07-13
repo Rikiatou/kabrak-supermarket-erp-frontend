@@ -488,6 +488,7 @@ export const translations = {
       pinResetOk: "PIN réinitialisé pour",
       pinResetFail: "Échec de la réinitialisation du PIN",
       employeeAdded: "{name} ajouté — PIN temporaire: {pin}",
+      deleteError: "Échec de la suppression",
     },
     // Achats
     achats: {
@@ -750,6 +751,11 @@ export const translations = {
       forThePeriod: "pour la période",
       perTransaction: "par transaction",
       grossMargin: "marge brute",
+      totalRevenue: "CA total",
+      cost: "Coût",
+      marginRate: "Taux de marge",
+      exportDone: "Export terminé",
+      noData: "Aucune donnée",
     },
     // IA
     ia: {
@@ -2094,6 +2100,7 @@ export const translations = {
       pinResetOk: "PIN reset for",
       pinResetFail: "Failed to reset PIN",
       employeeAdded: "{name} added — temporary PIN: {pin}",
+      deleteError: "Delete failed",
     },
     achats: {
       title: "Purchases & Suppliers",
@@ -2351,6 +2358,11 @@ export const translations = {
       forThePeriod: "for the period",
       perTransaction: "per transaction",
       grossMargin: "gross margin",
+      totalRevenue: "Total revenue",
+      cost: "Cost",
+      marginRate: "Margin rate",
+      exportDone: "Export done",
+      noData: "No data",
     },
     ia: {
       title: "AI & Forecasts",

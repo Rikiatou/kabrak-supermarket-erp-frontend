@@ -7,7 +7,7 @@ import { useI18n } from "@/lib/i18n/context";
 import { cn } from "@/lib/utils";
 import type { Employee } from "@/lib/types";
 
-const ROLES: Employee["role"][] = ["boss", "manager", "cashier", "stockist", "accountant"];
+const ROLES: Employee["role"][] = ["boss", "manager", "supervisor", "cashier", "stockist", "accountant"];
 
 type FormData = {
   firstName: string;
@@ -55,7 +55,7 @@ export function EditEmployeeModal({ employee, onClose, onSave }: EditEmployeeMod
     if (!form.lastName.trim()) errs.lastName = t.common.required;
     if (!form.role) errs.role = t.common.required;
     if (!form.phone.trim()) errs.phone = t.common.required;
-    if (form.pin.trim() && !/^\d{4,6}$/.test(form.pin.trim())) errs.pin = "4-6 chiffres";
+    if (form.pin.trim() && !/^\d{4,6}$/.test(form.pin.trim())) errs.pin = t.employes.pinError || "4-6 digits";
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -167,7 +167,7 @@ export function EditEmployeeModal({ employee, onClose, onSave }: EditEmployeeMod
                       <input type="email" value={form.email} onChange={set("email")}
                         placeholder="prenom.nom@kabrak.cm" className={inputClass(false)} />
                     </Field>
-                    <Field label="Status" span={2}>
+                    <Field label={t.employes.statusLabel || "Status"} span={2}>
                       <select value={form.status} onChange={set("status")} className={inputClass(false)}>
                         <option value="active">{t.employes.statusActive}</option>
                         <option value="inactive">{t.employes.statusInactive}</option>
@@ -178,14 +178,14 @@ export function EditEmployeeModal({ employee, onClose, onSave }: EditEmployeeMod
 
                 <div>
                   <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-widest mb-3">
-                    Code PIN / Mot de passe
+                    {t.employes.pinPassword || "PIN / Password"}
                   </p>
-                  <Field label="Nouveau PIN (laisser vide pour ne pas changer)" error={errors.pin}>
+                  <Field label={t.employes.newPin || "New PIN (leave empty to keep)"} error={errors.pin}>
                     <input type="text" inputMode="numeric" value={form.pin} onChange={set("pin")}
                       placeholder="Ex: 1234" maxLength={6} className={inputClass(!!errors.pin)} />
                   </Field>
                   <p className="text-[11px] text-[var(--text-muted)] mt-1.5">
-                    Entre un code de 4 à 6 chiffres. Ce PIN servira à l&apos;employé pour se connecter.
+                    {t.employes.pinHelp || "Enter a 4-6 digit code. This PIN will be used by the employee to log in."}
                   </p>
                 </div>
               </div>

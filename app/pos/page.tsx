@@ -1157,7 +1157,19 @@ export default function POSPage() {
 
   // Vérifier si un article du panier a un stock insuffisant
 
-  const stockIssues: { product: Product; quantity: number }[] = [];
+  const stockIssues: { product: Product; quantity: number }[] = cart
+
+    .filter((item) => {
+      const sellMode = (item as any).sellMode || "unit";
+      const product = item.product;
+      if (sellMode === "carton" && product.packQuantity) {
+        const unitsNeeded = item.quantity * product.packQuantity;
+        return unitsNeeded > product.stock;
+      }
+      return item.quantity > product.stock;
+    })
+
+    .map((item) => ({ product: item.product, quantity: item.quantity }));
 
   const hasStockIssues = stockIssues.length > 0;
 
@@ -1597,7 +1609,17 @@ export default function POSPage() {
 
         // Échec réseau  stocker en local pour sync ultérieure
 
-        const pending = JSON.parse(localStorage.getItem("kabrak_pending_tx") || "[]");
+        let pending: any[] = [];
+
+        try {
+
+          pending = JSON.parse(localStorage.getItem("kabrak_pending_tx") || "[]");
+
+        } catch {
+
+          pending = [];
+
+        }
 
         pending.push({ ...txPayload, _createdAt: Date.now() });
 
@@ -1615,7 +1637,17 @@ export default function POSPage() {
 
       // Mode offline  stocker en local
 
-      const pending = JSON.parse(localStorage.getItem("kabrak_pending_tx") || "[]");
+      let pending: any[] = [];
+
+      try {
+
+        pending = JSON.parse(localStorage.getItem("kabrak_pending_tx") || "[]");
+
+      } catch {
+
+        pending = [];
+
+      }
 
       pending.push({ ...txPayload, _createdAt: Date.now() });
 
@@ -3741,7 +3773,7 @@ function CustomerCreateModal({
 
       console.error("Failed to create customer:", err);
 
-      const msg = err instanceof Error ? err.message : t.clients?.createError || "Erreur lors de la création du client";
+      const msg = err instanceof Error ? err.message : t.clients?.createError || "Error creating customer";
 
       setFormError(msg);
 
@@ -3787,7 +3819,7 @@ function CustomerCreateModal({
 
             <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
 
-              {t.clients?.firstName || "Prénom"}
+              {t.clients?.firstName || "First name"}
 
             </label>
 
@@ -3811,7 +3843,7 @@ function CustomerCreateModal({
 
             <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
 
-              {t.clients?.lastName || "Nom"}
+              {t.clients?.lastName || "Last name"}
 
             </label>
 
@@ -3835,7 +3867,7 @@ function CustomerCreateModal({
 
             <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
 
-              {t.clients?.phone || "Téléphone"}
+              {t.clients?.phone || "Phone"}
 
             </label>
 

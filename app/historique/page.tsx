@@ -65,7 +65,7 @@ function StockSparkline({ points }: { points: number[] }) {
     const y = h - pad - ((v - min) / range) * (h - pad * 2);
     return `${x},${y}`;
   });
-  const last = coords[coords.length - 1].split(",");
+  const last = coords[coords.length - 1]?.split(",") || ["0", "0"];
   return (
     <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-12" preserveAspectRatio="none">
       <polyline
@@ -388,7 +388,7 @@ export default function HistoriquePage() {
             activeTab === "sales" ? "bg-[var(--brand)] text-white" : "bg-slate-100 text-[var(--text-secondary)] hover:bg-slate-200"
           )}
         >
-          {t.historique?.mySales || "Mes ventes"}
+          {t.historique?.mySales || "My sales"}
         </button>
       </div>
 
@@ -398,7 +398,7 @@ export default function HistoriquePage() {
           <div className="p-4 border-b border-[var(--border)]">
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div>
-                <h3 className="text-sm font-bold text-[var(--text-primary)]">{t.historique?.mySales || "Mes ventes"}</h3>
+                <h3 className="text-sm font-bold text-[var(--text-primary)]">{t.historique?.mySales || "My sales"}</h3>
                 <p className="text-xs text-[var(--text-muted)] mt-0.5">
                   {mySales.length} {t.historique?.salesCount || "ventes"}
                 </p>

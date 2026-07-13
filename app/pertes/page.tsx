@@ -204,7 +204,7 @@ export default function PertesPage() {
 
     for (const item of lossItems) {
       try {
-        await adjust(item.productId, Math.max(0, item.stock - item.quantity), `${item.type}: ${item.reason}`);
+        await adjust(item.productId, Math.max(0, item.stock - item.quantity), `${item.type}: ${item.reason}`, user?.id);
         savedCount++;
       } catch (e) {
         toast(t.pertes.stockAdjustmentError, "warning");
@@ -212,7 +212,7 @@ export default function PertesPage() {
     }
 
     if (savedCount > 0) {
-      toast(`${savedCount} perte(s) enregistrée(s)`, "success");
+      toast(`${savedCount} ${t.pertes.lossesSaved || "loss(es) recorded"}`, "success");
       reloadProducts();
       reloadLosses();  // Recharger depuis la DB
     }
@@ -258,6 +258,7 @@ export default function PertesPage() {
         reason: returnReason,
         resolution,
         refundMethod,
+        createdBy: user?.id,
         items: selectedItems.map((it) => ({
           productId: it.productId,
           productName: it.productName,
