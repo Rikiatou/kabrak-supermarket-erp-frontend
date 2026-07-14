@@ -517,7 +517,8 @@ export function useCreateTransaction() {
         return tx;
       } catch (e: any) {
         setError(e.message);
-        return null;
+        // Re-throw so the caller (handleConfirmPayment) can store in localStorage
+        throw e;
       } finally {
         setCreating(false);
       }
