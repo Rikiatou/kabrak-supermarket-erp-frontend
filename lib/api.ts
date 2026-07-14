@@ -26,6 +26,14 @@ async function fetchAPI<T>(
     headers["Authorization"] = `Bearer ${token}`;
   }
 
+  // Ajouter le tenantId si disponible (multi-tenant SaaS)
+  if (typeof window !== "undefined") {
+    const tenantId = localStorage.getItem("kabrak_tenant_id");
+    if (tenantId) {
+      headers["X-Tenant-Id"] = tenantId;
+    }
+  }
+
   const res = await fetch(url, {
     ...options,
     headers,
