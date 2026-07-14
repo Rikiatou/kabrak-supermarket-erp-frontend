@@ -13,6 +13,7 @@ import {
   Wallet,
   CheckCircle2,
   Clock,
+  Trash2,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Card } from "@/components/ui/Card";
@@ -24,6 +25,7 @@ import { formatCurrency, cn } from "@/lib/utils";
 import { exportToCSV } from "@/lib/export";
 import { useInvoices, useCreateInvoice, useUpdateInvoiceStatus, useAddPayment, useServerProductSearch } from "@/lib/hooks/useApi";
 import type { ApiInvoicePayment } from "@/lib/api";
+import { invoicesApi } from "@/lib/api";
 import { useLicense } from "@/lib/license/context";
 import { useAuth } from "@/lib/auth/context";
 import jsPDF from "jspdf";
@@ -129,7 +131,7 @@ const paymentMethodLabels: Record<string, string> = {
 };
 
 export default function FacturesPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { toast } = useToast();
   const { user } = useAuth();
   const { config: licenseConfig } = useLicense();
@@ -272,6 +274,17 @@ export default function FacturesPage() {
     setPaymentAmount("");
     setPaymentMethod("cash");
     setPaymentNote("");
+  };
+
+  const handleDeleteInvoice = async (invoice: Invoice) => {
+    if (!confirm(`${locale === "fr" ? "Supprimer la facture" : "Delete invoice"} ${invoice.number}?\n${locale === "fr" ? "Le stock sera restauré et les ventes liées supprimées." : "Stock will be restored and linked sales deleted."}`)) return;
+    try {
+      await invoicesApi.remove(invoice.id);
+      toast(`${locale === "fr" ? "Facture" : "Invoice"} ${invoice.number} ${locale === "fr" ? "supprimée" : "deleted"}`, "success");
+      reload();
+    } catch (e: any) {
+      toast(e?.message || (locale === "fr" ? "Erreur lors de la suppression" : "Error deleting invoice"), "warning");
+    }
   };
 
   const handleAddPayment = async () => {
@@ -689,6 +702,11 @@ export default function FacturesPage() {
                         {invoice.clientEmail && (
                           <button onClick={() => sendEmail(invoice)} title="Email" className="p-1.5 hover:bg-blue-50 rounded-lg transition-colors">
                             <Send className="w-4 h-4 text-blue-500" />
+                          </button>
+                        )}
+                        {user?.role === "boss" && (
+                          <button onClick={() => handleDeleteInvoice(invoice)} title={locale === "fr" ? "Supprimer" : "Delete"} className="p-1.5 hover:bg-red-50 rounded-lg transition-colors">
+                            <Trash2 className="w-4 h-4 text-red-600" />
                           </button>
                         )}
                       </div>

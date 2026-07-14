@@ -1424,12 +1424,52 @@ export default function POSPage() {
     }
     setInvoiceLoading(true);
     try {
-      await invoicesApi.addPayment(selectedInvoice.id, {
+      const result = await invoicesApi.addPayment(selectedInvoice.id, {
         amount,
         method: invoicePaymentMethod,
         note: `POS payment - ${user?.firstName || ""} ${user?.lastName || ""}`,
       });
       toast(`Payment of ${formatCurrency(amount)} recorded for ${selectedInvoice.number}`, "success");
+
+      // Print receipt for the invoice payment
+      const now = new Date();
+      const dateStr = now.toLocaleDateString("en-GB");
+      const timeStr = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+      const methodLabel = invoicePaymentMethod === "cash" ? "Cash" : invoicePaymentMethod === "mobile" ? "MoMo" : invoicePaymentMethod === "orange" ? "Orange Money" : "Card";
+      const newBalance = result.invoice.balance;
+      const newPaid = result.invoice.paidAmount;
+      const html = `<html><head><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:monospace;font-size:12px;width:280px;margin:0 auto;padding:8px}.center{text-align:center}.right{text-align:right}.bold{font-weight:bold}.border-top{border-top:1px dashed #000;margin-top:6px;padding-top:6px}.border-bottom{border-bottom:1px dashed #000;margin-bottom:6px;padding-bottom:6px}.row{display:flex;justify-content:space-between;padding:1px 0}.lg{font-size:16px}</style></head><body>
+<div class="center bold lg">PAYMENT RECEIPT</div>
+<div class="center">${dateStr} ${timeStr}</div>
+<div class="center">Invoice: ${selectedInvoice.number}</div>
+<div class="border-top"></div>
+<div class="row"><span>Client:</span><span>${selectedInvoice.clientName}</span></div>
+<div class="row"><span>Phone:</span><span>${selectedInvoice.clientPhone || ""}</span></div>
+<div class="border-bottom"></div>
+<div class="row bold"><span>Amount Received:</span><span>${formatCurrency(amount)}</span></div>
+<div class="row"><span>Payment Method:</span><span>${methodLabel}</span></div>
+<div class="row"><span>Total Invoice:</span><span>${formatCurrency(selectedInvoice.total)}</span></div>
+<div class="row"><span>Total Paid:</span><span>${formatCurrency(newPaid)}</span></div>
+<div class="row bold"><span>Balance Due:</span><span>${formatCurrency(newBalance)}</span></div>
+<div class="border-top"></div>
+<div class="center">Cashier: ${user?.firstName || ""} ${user?.lastName || ""}</div>
+${newBalance === 0 ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
+<div class="center" style="margin-top:8px">Thank you!</div>
+</body></html>`;
+      const printFrame = document.createElement("iframe");
+      printFrame.style.position = "fixed";
+      printFrame.style.right = "0";
+      printFrame.style.bottom = "0";
+      printFrame.style.width = "0";
+      printFrame.style.height = "0";
+      printFrame.style.border = "0";
+      document.body.appendChild(printFrame);
+      printFrame.contentDocument?.write(html);
+      printFrame.contentDocument?.close();
+      printFrame.contentWindow?.focus();
+      printFrame.contentWindow?.print();
+      setTimeout(() => { if (printFrame.parentNode) document.body.removeChild(printFrame); }, 1000);
+
       // Reset
       setSelectedInvoice(null);
       setInvoicePaymentAmount("");
