@@ -296,6 +296,7 @@ export default function POSPage() {
   const [invoicePaymentMethod, setInvoicePaymentMethod] = useState("cash");
   const [invoiceLoading, setInvoiceLoading] = useState(false);
   const [invoiceSearchPhone, setInvoiceSearchPhone] = useState("");
+  const [invoiceReceipt, setInvoiceReceipt] = useState<any>(null);
 
   const [showMobileCart, setShowMobileCart] = useState(false);
 
@@ -1431,46 +1432,29 @@ export default function POSPage() {
       });
       toast(`Payment of ${formatCurrency(amount)} recorded for ${selectedInvoice.number}`, "success");
 
-      // Print receipt for the invoice payment
+      // Store receipt data for printing
       const now = new Date();
       const dateStr = now.toLocaleDateString("en-GB");
       const timeStr = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
       const methodLabel = invoicePaymentMethod === "cash" ? "Cash" : invoicePaymentMethod === "mobile" ? "MoMo" : invoicePaymentMethod === "orange" ? "Orange Money" : "Card";
       const newBalance = result.invoice.balance;
       const newPaid = result.invoice.paidAmount;
-      const html = `<html><head><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:monospace;font-size:12px;width:280px;margin:0 auto;padding:8px}.center{text-align:center}.right{text-align:right}.bold{font-weight:bold}.border-top{border-top:1px dashed #000;margin-top:6px;padding-top:6px}.border-bottom{border-bottom:1px dashed #000;margin-bottom:6px;padding-bottom:6px}.row{display:flex;justify-content:space-between;padding:1px 0}.lg{font-size:16px}</style></head><body>
-<div class="center bold lg">PAYMENT RECEIPT</div>
-<div class="center">${dateStr} ${timeStr}</div>
-<div class="center">Invoice: ${selectedInvoice.number}</div>
-<div class="border-top"></div>
-<div class="row"><span>Client:</span><span>${selectedInvoice.clientName}</span></div>
-<div class="row"><span>Phone:</span><span>${selectedInvoice.clientPhone || ""}</span></div>
-<div class="border-bottom"></div>
-<div class="row bold"><span>Amount Received:</span><span>${formatCurrency(amount)}</span></div>
-<div class="row"><span>Payment Method:</span><span>${methodLabel}</span></div>
-<div class="row"><span>Total Invoice:</span><span>${formatCurrency(selectedInvoice.total)}</span></div>
-<div class="row"><span>Total Paid:</span><span>${formatCurrency(newPaid)}</span></div>
-<div class="row bold"><span>Balance Due:</span><span>${formatCurrency(newBalance)}</span></div>
-<div class="border-top"></div>
-<div class="center">Cashier: ${user?.firstName || ""} ${user?.lastName || ""}</div>
-${newBalance === 0 ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
-<div class="center" style="margin-top:8px">Thank you!</div>
-</body></html>`;
-      const printFrame = document.createElement("iframe");
-      printFrame.style.position = "fixed";
-      printFrame.style.right = "0";
-      printFrame.style.bottom = "0";
-      printFrame.style.width = "0";
-      printFrame.style.height = "0";
-      printFrame.style.border = "0";
-      document.body.appendChild(printFrame);
-      printFrame.contentDocument?.write(html);
-      printFrame.contentDocument?.close();
-      printFrame.contentWindow?.focus();
-      printFrame.contentWindow?.print();
-      setTimeout(() => { if (printFrame.parentNode) document.body.removeChild(printFrame); }, 1000);
+      setInvoiceReceipt({
+        invoiceNumber: selectedInvoice.number,
+        clientName: selectedInvoice.clientName,
+        clientPhone: selectedInvoice.clientPhone || "",
+        amountReceived: amount,
+        paymentMethod: methodLabel,
+        totalInvoice: selectedInvoice.total,
+        totalPaid: newPaid,
+        balanceDue: newBalance,
+        cashier: `${user?.firstName || ""} ${user?.lastName || ""}`.trim(),
+        dateStr,
+        timeStr,
+        paidInFull: newBalance === 0,
+      });
 
-      // Reset
+      // Reset selection
       setSelectedInvoice(null);
       setInvoicePaymentAmount("");
       setInvoicePaymentMethod("cash");
@@ -1480,6 +1464,42 @@ ${newBalance === 0 ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
       toast(e?.message || "Error paying invoice", "warning");
     }
     setInvoiceLoading(false);
+  };
+
+  const handlePrintInvoiceReceipt = () => {
+    if (!invoiceReceipt) return;
+    const r = invoiceReceipt;
+    const html = `<html><head><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:monospace;font-size:12px;width:280px;margin:0 auto;padding:8px}.center{text-align:center}.right{text-align:right}.bold{font-weight:bold}.border-top{border-top:1px dashed #000;margin-top:6px;padding-top:6px}.border-bottom{border-bottom:1px dashed #000;margin-bottom:6px;padding-bottom:6px}.row{display:flex;justify-content:space-between;padding:1px 0}.lg{font-size:16px}</style></head><body>
+<div class="center bold lg">PAYMENT RECEIPT</div>
+<div class="center">${r.dateStr} ${r.timeStr}</div>
+<div class="center">Invoice: ${r.invoiceNumber}</div>
+<div class="border-top"></div>
+<div class="row"><span>Client:</span><span>${r.clientName}</span></div>
+<div class="row"><span>Phone:</span><span>${r.clientPhone}</span></div>
+<div class="border-bottom"></div>
+<div class="row bold"><span>Amount Received:</span><span>${formatCurrency(r.amountReceived)}</span></div>
+<div class="row"><span>Payment Method:</span><span>${r.paymentMethod}</span></div>
+<div class="row"><span>Total Invoice:</span><span>${formatCurrency(r.totalInvoice)}</span></div>
+<div class="row"><span>Total Paid:</span><span>${formatCurrency(r.totalPaid)}</span></div>
+<div class="row bold"><span>Balance Due:</span><span>${formatCurrency(r.balanceDue)}</span></div>
+<div class="border-top"></div>
+<div class="center">Cashier: ${r.cashier}</div>
+${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
+<div class="center" style="margin-top:8px">Thank you!</div>
+</body></html>`;
+    const printFrame = document.createElement("iframe");
+    printFrame.style.position = "fixed";
+    printFrame.style.right = "0";
+    printFrame.style.bottom = "0";
+    printFrame.style.width = "0";
+    printFrame.style.height = "0";
+    printFrame.style.border = "0";
+    document.body.appendChild(printFrame);
+    printFrame.contentDocument?.write(html);
+    printFrame.contentDocument?.close();
+    printFrame.contentWindow?.focus();
+    printFrame.contentWindow?.print();
+    setTimeout(() => { if (printFrame.parentNode) document.body.removeChild(printFrame); }, 1000);
   };
 
   const handleCreateInvoiceFromCart = async () => {
@@ -3403,6 +3423,70 @@ ${newBalance === 0 ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
                       Enter a phone or name to search unpaid invoices
                     </p>
                   )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Modal: Invoice payment receipt */}
+      {invoiceReceipt && (
+        <>
+          <div className="fixed inset-0 bg-black/40 z-[90]" onClick={() => setInvoiceReceipt(null)} />
+          <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 pointer-events-none">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm pointer-events-auto">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
+                <h2 className="text-sm font-bold text-[var(--text-primary)]">
+                  {locale === "fr" ? "Reçu de paiement" : "Payment Receipt"}
+                </h2>
+                <button onClick={() => setInvoiceReceipt(null)} className="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center">
+                  <X className="w-4 h-4 text-[var(--text-secondary)]" />
+                </button>
+              </div>
+              <div className="p-5 space-y-3">
+                <div className="text-center">
+                  <p className="text-xs text-[var(--text-muted)]">{invoiceReceipt.dateStr} {invoiceReceipt.timeStr}</p>
+                  <p className="text-sm font-semibold mt-1">{invoiceReceipt.invoiceNumber}</p>
+                  <p className="text-xs text-[var(--text-muted)]">{invoiceReceipt.clientName}</p>
+                </div>
+                <div className="border-t border-dashed border-[var(--border)] pt-3 space-y-1.5">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[var(--text-muted)]">{locale === "fr" ? "Montant reçu" : "Amount received"}</span>
+                    <span className="font-bold tabular-nums">{formatCurrency(invoiceReceipt.amountReceived)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[var(--text-muted)]">{locale === "fr" ? "Méthode" : "Method"}</span>
+                    <span>{invoiceReceipt.paymentMethod}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[var(--text-muted)]">{locale === "fr" ? "Total payé" : "Total paid"}</span>
+                    <span className="tabular-nums">{formatCurrency(invoiceReceipt.totalPaid)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[var(--text-muted)]">{locale === "fr" ? "Reste à payer" : "Balance due"}</span>
+                    <span className="font-bold tabular-nums text-red-600">{formatCurrency(invoiceReceipt.balanceDue)}</span>
+                  </div>
+                </div>
+                {invoiceReceipt.paidInFull && (
+                  <div className="text-center py-2 bg-emerald-50 rounded-lg">
+                    <p className="text-sm font-bold text-emerald-700">{locale === "fr" ? "PAYÉ EN ENTIER" : "PAID IN FULL"}</p>
+                  </div>
+                )}
+                <div className="flex gap-2 pt-2">
+                  <button
+                    onClick={() => setInvoiceReceipt(null)}
+                    className="flex-1 px-3 py-2 text-sm font-medium border border-[var(--border)] rounded-lg hover:bg-slate-50"
+                  >
+                    {locale === "fr" ? "Fermer" : "Close"}
+                  </button>
+                  <button
+                    onClick={handlePrintInvoiceReceipt}
+                    className="flex-1 px-3 py-2 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center justify-center gap-1.5"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    {locale === "fr" ? "Imprimer" : "Print"}
+                  </button>
                 </div>
               </div>
             </div>
