@@ -1002,7 +1002,10 @@ export default function POSPage() {
   const connectUsbDisplay = async () => {
 
     // Web Serial nécessite HTTPS ou localhost (contexte sécurisé)
-    if (!window.isSecureContext) {
+    // Sauf dans Electron où le preload polyfille navigator.serial
+    const isElectron = !!(window as any).kabrakElectron?.isElectron;
+
+    if (!window.isSecureContext && !isElectron) {
 
       toast(
         locale === "fr"
