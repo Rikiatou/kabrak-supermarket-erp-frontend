@@ -51,66 +51,6 @@ import {
 } from "@/lib/hooks/useApi";
 import { stockApi, returnsApi } from "@/lib/api";
 
-// ---- Fallback mock data (used when backend returns nothing) ----
-const mockByDay = [
-  { date: "Lun", revenue: 2_840_000, transactions: 240 },
-  { date: "Mar", revenue: 3_120_000, transactions: 268 },
-  { date: "Mer", revenue: 2_950_000, transactions: 251 },
-  { date: "Jeu", revenue: 3_380_000, transactions: 289 },
-  { date: "Ven", revenue: 3_970_000, transactions: 332 },
-  { date: "Sam", revenue: 4_820_000, transactions: 410 },
-  { date: "Dim", revenue: 3_610_000, transactions: 305 },
-];
-
-const mockSalesReport = {
-  totalRevenue: 24_690_000,
-  transactionCount: 2095,
-  avgBasket: 11_780,
-  byDay: mockByDay,
-};
-
-const mockByCategory = [
-  { category: "Boissons", revenue: 6_200_000, quantity: 1820 },
-  { category: "Alimentation", revenue: 8_400_000, quantity: 3120 },
-  { category: "Hygiène", revenue: 3_100_000, quantity: 980 },
-  { category: "Maison", revenue: 2_690_000, quantity: 540 },
-  { category: "Autres", revenue: 4_300_000, quantity: 1240 },
-];
-
-const mockByEmployee = [
-  { cashierId: "1", firstName: "Awa", lastName: "Diallo", revenue: 7_820_000, transactions: 680 },
-  { cashierId: "2", firstName: "Moussa", lastName: "Traoré", revenue: 6_540_000, transactions: 560 },
-  { cashierId: "3", firstName: "Fatou", lastName: "Bambara", revenue: 5_930_000, transactions: 510 },
-  { cashierId: "4", firstName: "Ibrahim", lastName: "Konaté", revenue: 4_400_000, transactions: 345 },
-];
-
-const mockTopProducts = [
-  { productId: "1", name: "Bière 33 Export 65cl", quantity: 248, revenue: 223_200 },
-  { productId: "2", name: "Riz Parfumé 25kg", quantity: 87, revenue: 1_914_000 },
-  { productId: "3", name: "Eau Minérale 1.5L", quantity: 412, revenue: 164_800 },
-  { productId: "4", name: "Huile Végétale 5L", quantity: 63, revenue: 346_500 },
-  { productId: "5", name: "Savon Lux 200g", quantity: 185, revenue: 83_250 },
-  { productId: "6", name: "Sucre 1kg", quantity: 156, revenue: 109_200 },
-  { productId: "7", name: "Lait en poudre 400g", quantity: 98, revenue: 215_600 },
-  { productId: "8", name: "Thé Lipton 100s", quantity: 74, revenue: 148_000 },
-  { productId: "9", name: "Pâtes 500g", quantity: 230, revenue: 92_000 },
-  { productId: "10", name: "Café Malongo 200g", quantity: 61, revenue: 170_800 },
-];
-
-const mockProfit = {
-  totalRevenue: 24_690_000,
-  totalCost: 17_280_000,
-  grossProfit: 7_410_000,
-  marginRate: 30,
-};
-
-const mockInventory = {
-  totalCostValue: 42_500_000,
-  totalSaleValue: 58_900_000,
-  potentialMargin: 16_400_000,
-  productCount: 1248,
-};
-
 const PIE_COLORS = ["#2563eb", "#16a34a", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#ec4899", "#84cc16"];
 
 function toISODate(d: Date): string {
