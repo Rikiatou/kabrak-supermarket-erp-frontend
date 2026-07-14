@@ -209,7 +209,7 @@ export default function POSPage() {
 
   const { data: apiCustomers } = useCustomers();
 
-  const { transactions: recentTransactions, reload: reloadRecentTransactions } = useRecentTransactions(10);
+  const { transactions: recentTransactions, reload: reloadRecentTransactions } = useRecentTransactions(100);
 
   const { create: createTransaction, creating } = useCreateTransaction();
 
