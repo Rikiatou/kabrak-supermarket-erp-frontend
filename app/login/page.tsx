@@ -8,11 +8,13 @@ import { authApi, type ApiCashier } from "@/lib/api";
 import { ROLE_HOME, type Role } from "@/lib/auth/roles";
 import { Button } from "@/components/ui/Button";
 import { useI18n } from "@/lib/i18n/context";
+import { useTenantResolution } from "@/lib/tenant/use-tenant";
 
 export default function LoginPage() {
   const router = useRouter();
   const { login, user, isAuthenticated, loading: authLoading } = useAuth();
   const { t } = useI18n();
+  const { tenant, loading: tenantLoading } = useTenantResolution();
   const [cashiers, setCashiers] = useState<ApiCashier[]>([]);
   const [selectedCashier, setSelectedCashier] = useState<ApiCashier | null>(null);
   const [pin, setPin] = useState("");
@@ -27,10 +29,20 @@ export default function LoginPage() {
     }
   }, [authLoading, isAuthenticated, router, user]);
 
-  // Charger la liste des caissiers
+  // Charger la liste des caissiers (après résolution du tenant)
   useEffect(() => {
-    authApi.listCashiers().then(setCashiers).catch(() => {});
-  }, []);
+    if (tenantLoading) return; // Attendre que le tenant soit résolu
+    authApi.listCashiers().then((list) => {
+      // Dedup par employeeNumber (sécurité)
+      const seen = new Set<string>();
+      const unique = list.filter((c) => {
+        if (seen.has(c.employeeNumber)) return false;
+        seen.add(c.employeeNumber);
+        return true;
+      });
+      setCashiers(unique);
+    }).catch(() => {});
+  }, [tenantLoading, tenant]);
 
   const handleLogin = async () => {
     if (!selectedCashier || !pin) {

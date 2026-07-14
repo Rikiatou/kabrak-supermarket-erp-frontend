@@ -44,6 +44,10 @@ export const ROLE_PERMISSIONS: Record<Role, string[]> = {
     "/comptabilite",
     "/rapports",
     "/ia",
+    "/historique",
+    "/settings",
+    "/cadeaux",
+    "/returns",
   ],
   supervisor: [
     "/dashboard",

@@ -121,7 +121,7 @@ export default function HistoriquePage() {
   });
   const [salesEndDate, setSalesEndDate] = useState(() => new Date().toISOString().slice(0, 10));
 
-  const { transactions: mySales, loading: loadingSales } = useRecentTransactions(200, cashierIdFilter, salesStartDate, salesEndDate);
+  const { transactions: mySales, loading: loadingSales } = useRecentTransactions(100000, cashierIdFilter, salesStartDate, salesEndDate);
 
   // Return modal state
   const [returnTx, setReturnTx] = useState<ApiTransaction | null>(null);
