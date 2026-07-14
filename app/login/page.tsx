@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Lock, User, Loader2, AlertCircle, ShoppingBag } from "lucide-react";
+import { Lock, User, Loader2, AlertCircle, ShoppingBag, Store } from "lucide-react";
 import { useAuth } from "@/lib/auth/context";
 import { authApi, type ApiCashier } from "@/lib/api";
 import { ROLE_HOME, type Role } from "@/lib/auth/roles";
@@ -99,11 +99,21 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-lg mb-3">
-            <ShoppingBag className="w-8 h-8 text-white" />
+          {/* KABRAK Logo */}
+          <div className="inline-flex items-center justify-center mb-3">
+            <img
+              src="/kabrak-logo.jpeg"
+              alt="KABRAK"
+              className="w-20 h-20 object-contain rounded-2xl shadow-lg"
+            />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">{t.login.appName}</h1>
-          <p className="text-sm text-slate-500 mt-1">{t.login.subtitle}</p>
+          {/* EASY SHOP - Welcome message */}
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full shadow-md mb-2">
+            <Store className="w-4 h-4 text-white" />
+            <span className="text-sm font-bold text-white tracking-wide">{t.login.easyShop}</span>
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900">{t.login.welcomeTo}</h1>
+          <p className="text-sm text-slate-500 mt-1">{t.login.poweredBy}</p>
         </div>
 
         {/* Card */}

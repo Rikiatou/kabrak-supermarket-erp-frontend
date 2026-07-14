@@ -757,6 +757,7 @@ export const translations = {
       exportDone: "Export terminé",
       noData: "Aucune donnée",
     },
+  
     // IA
     ia: {
       title: "IA & Prévisions",
@@ -910,6 +911,9 @@ export const translations = {
     login: {
       appName: "KABRAK Retail",
       subtitle: "Connexion",
+      welcomeTo: "Bienvenue dans votre magasin",
+      easyShop: "EASY SHOP",
+      poweredBy: "Propulsé par KABRAK Retail",
       selectProfile: "Sélectionnez votre profil",
       loading: "Chargement...",
       connectionError: "Erreur de connexion au serveur",
@@ -2514,6 +2518,9 @@ export const translations = {
     login: {
       appName: "KABRAK Retail",
       subtitle: "Sign in",
+      welcomeTo: "Welcome to your store",
+      easyShop: "EASY SHOP",
+      poweredBy: "Powered by KABRAK Retail",
       selectProfile: "Select your profile",
       loading: "Loading...",
       connectionError: "Connection error to server",
