@@ -73,7 +73,7 @@ function StarRating({ rating }: { rating: number }) {
 }
 
 export default function AchatsPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { toast } = useToast();
   const { user } = useAuth();
   const { suppliers: apiSuppliers, reload: reloadSuppliers } = useSuppliers();
@@ -1197,18 +1197,28 @@ export default function AchatsPage() {
                 </p>
                 <div className="space-y-1.5">
                   {(detailOrder.items || []).map((item: any, i: number) => (
-                    <div key={i} className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-lg">
-                      <div className="min-w-0 flex-1">
+                    <div key={i} className="py-2.5 px-3 bg-slate-50 rounded-lg">
+                      <div className="flex items-center justify-between mb-1">
                         <p className="text-sm font-medium text-[var(--text-primary)] truncate">
                           {item.product?.name || item.productName || `Item ${i + 1}`}
                         </p>
-                        <p className="text-xs text-[var(--text-muted)]">
-                          {item.quantity} {item.unit || "units"} × {formatCurrency(item.unitPrice || item.costPrice || 0)}
-                        </p>
+                        <span className="text-sm font-semibold tabular-nums text-[var(--text-primary)] shrink-0 ml-2">
+                          {formatCurrency(item.total || (item.quantity * (item.unitCost || 0)))}
+                        </span>
                       </div>
-                      <span className="text-sm font-semibold tabular-nums text-[var(--text-primary)] shrink-0 ml-2">
-                        {formatCurrency(item.total || (item.quantity * (item.unitPrice || item.costPrice || 0)))}
-                      </span>
+                      <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-[var(--text-muted)]">
+                        <span>{item.quantity} {item.unit || item.product?.unit || "units"}</span>
+                        <span>{t.achats.unitPrice}: {formatCurrency(item.unitCost || 0)}</span>
+                        {item.product?.price && (
+                          <span>{locale === "fr" ? "Prix vente" : "Sell price"}: {formatCurrency(item.product.price)}</span>
+                        )}
+                        {item.product?.wholesalePrice && (
+                          <span>{locale === "fr" ? "Prix gros" : "Wholesale"}: {formatCurrency(item.product.wholesalePrice)}</span>
+                        )}
+                        {item.product?.packQuantity && (
+                          <span>{locale === "fr" ? "Pack" : "Pack"}: {item.product.packQuantity}</span>
+                        )}
+                      </div>
                     </div>
                   ))}
                   {(!detailOrder.items || detailOrder.items.length === 0) && (
