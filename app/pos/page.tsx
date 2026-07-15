@@ -82,7 +82,7 @@ import { formatCurrency, cn } from "@/lib/utils";
 
 import { useI18n } from "@/lib/i18n/context";
 
-import { useProducts, useCreateTransaction, useCustomers, useCreateCustomer, useRecentTransactions, useActiveShifts, useServerProductSearch } from "@/lib/hooks/useApi";
+import { useProducts, useCreateTransaction, useCustomers, useCreateCustomer, useRecentTransactions, useActiveShifts, useServerProductSearch, usePaginatedTransactions } from "@/lib/hooks/useApi";
 
 import { useBarcodeScanner } from "@/lib/hooks/useBarcodeScanner";
 
@@ -209,7 +209,14 @@ export default function POSPage() {
 
   const { data: apiCustomers } = useCustomers();
 
-  const { transactions: recentTransactions, reload: reloadRecentTransactions } = useRecentTransactions(100);
+  const { transactions: recentTransactions, reload: reloadRecentTransactions } = useRecentTransactions(20);
+
+  // Paginated transactions for history modal
+  const [historyPage, setHistoryPage] = useState(1);
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const [historyStartDate, setHistoryStartDate] = useState(todayStr);
+  const [historyEndDate, setHistoryEndDate] = useState(todayStr);
+  const { transactions: historyTransactions, total: historyTotal, totalPages: historyTotalPages, loading: historyLoading } = usePaginatedTransactions(historyPage, 20, undefined, historyStartDate, historyEndDate);
 
   const { create: createTransaction, creating } = useCreateTransaction();
 
@@ -3240,7 +3247,7 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
 
         <HistoryModal
 
-          transactions={recentTransactions}
+          transactions={historyTransactions}
 
           onClose={() => setShowHistoryModal(false)}
 
@@ -3251,6 +3258,24 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
             setShowHistoryModal(false);
 
           }}
+
+          page={historyPage}
+
+          totalPages={historyTotalPages}
+
+          total={historyTotal}
+
+          startDate={historyStartDate}
+
+          endDate={historyEndDate}
+
+          onPageChange={setHistoryPage}
+
+          onStartDateChange={(d) => { setHistoryStartDate(d); setHistoryPage(1); }}
+
+          onEndDateChange={(d) => { setHistoryEndDate(d); setHistoryPage(1); }}
+
+          loading={historyLoading}
 
         />
 
@@ -3549,6 +3574,24 @@ function HistoryModal({
 
   onReprint,
 
+  page,
+
+  totalPages,
+
+  total,
+
+  startDate,
+
+  endDate,
+
+  onPageChange,
+
+  onStartDateChange,
+
+  onEndDateChange,
+
+  loading,
+
 }: {
 
   transactions: ApiTransaction[];
@@ -3556,6 +3599,24 @@ function HistoryModal({
   onClose: () => void;
 
   onReprint: (tx: ApiTransaction) => void;
+
+  page: number;
+
+  totalPages: number;
+
+  total: number;
+
+  startDate: string;
+
+  endDate: string;
+
+  onPageChange: (p: number) => void;
+
+  onStartDateChange: (d: string) => void;
+
+  onEndDateChange: (d: string) => void;
+
+  loading: boolean;
 
 }) {
 
@@ -3579,9 +3640,31 @@ function HistoryModal({
 
         </div>
 
+        {/* Date filters */}
+        <div className="flex items-center gap-2 mb-3">
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => onStartDateChange(e.target.value)}
+            className="px-2 py-1.5 border border-[var(--border)] rounded-lg text-xs outline-none focus:border-[var(--brand)]"
+          />
+          <span className="text-xs text-[var(--text-muted)]">→</span>
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => onEndDateChange(e.target.value)}
+            className="px-2 py-1.5 border border-[var(--border)] rounded-lg text-xs outline-none focus:border-[var(--brand)]"
+          />
+          <span className="text-xs text-[var(--text-muted)] ml-auto">{total} ventes</span>
+        </div>
+
         <div className="flex-1 overflow-y-auto -mx-2 px-2">
 
-          {transactions.length === 0 ? (
+          {loading ? (
+
+            <p className="text-sm text-[var(--text-muted)] text-center py-8">...</p>
+
+          ) : transactions.length === 0 ? (
 
             <p className="text-sm text-[var(--text-muted)] text-center py-8">{t.pos.noHistory}</p>
 
@@ -3640,6 +3723,27 @@ function HistoryModal({
           )}
 
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between pt-3 mt-2 border-t border-[var(--border)]">
+            <button
+              onClick={() => onPageChange(Math.max(1, page - 1))}
+              disabled={page <= 1}
+              className="px-3 py-1.5 text-xs font-medium rounded-lg border border-[var(--border)] disabled:opacity-40 hover:bg-slate-50"
+            >
+              ← Précédent
+            </button>
+            <span className="text-xs text-[var(--text-muted)]">{page} / {totalPages}</span>
+            <button
+              onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+              disabled={page >= totalPages}
+              className="px-3 py-1.5 text-xs font-medium rounded-lg border border-[var(--border)] disabled:opacity-40 hover:bg-slate-50"
+            >
+              Suivant →
+            </button>
+          </div>
+        )}
 
         <div className="flex gap-3 pt-4 mt-2 border-t border-[var(--border)]">
 

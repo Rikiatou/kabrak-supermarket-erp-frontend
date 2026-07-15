@@ -22,7 +22,7 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { useI18n } from "@/lib/i18n/context";
 import { useToast } from "@/components/ui/Toast";
-import { useServerProductSearch, useRecentTransactions } from "@/lib/hooks/useApi";
+import { useServerProductSearch, useRecentTransactions, usePaginatedTransactions } from "@/lib/hooks/useApi";
 import { stockApi, returnsApi } from "@/lib/api";
 import type { ApiStockMovement, ApiTransaction, ApiTransactionItem } from "@/lib/api";
 import type { Product } from "@/lib/types";
@@ -113,15 +113,18 @@ export default function HistoriquePage() {
   const isCashier = user?.role === "cashier";
   const cashierIdFilter = isCashier ? (user?.id ?? undefined) : undefined;
 
-  // Filtre par date — par défaut: 30 derniers jours
-  const [salesStartDate, setSalesStartDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 30);
-    return d.toISOString().slice(0, 10);
-  });
+  // Filtre par date — par défaut: aujourd'hui
+  const [salesStartDate, setSalesStartDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [salesEndDate, setSalesEndDate] = useState(() => new Date().toISOString().slice(0, 10));
 
-  const { transactions: mySales, loading: loadingSales } = useRecentTransactions(5000, cashierIdFilter, salesStartDate, salesEndDate);
+  // Pagination
+  const [salesPage, setSalesPage] = useState(1);
+  const SALES_PER_PAGE = 20;
+
+  const { transactions: mySales, total: salesTotal, totalPages: salesTotalPages, loading: loadingSales } = usePaginatedTransactions(salesPage, SALES_PER_PAGE, cashierIdFilter, salesStartDate, salesEndDate);
+
+  // Reset page when filters change
+  useEffect(() => { setSalesPage(1); }, [salesStartDate, salesEndDate, cashierIdFilter]);
 
   // Return modal state
   const [returnTx, setReturnTx] = useState<ApiTransaction | null>(null);
@@ -400,7 +403,7 @@ export default function HistoriquePage() {
               <div>
                 <h3 className="text-sm font-bold text-[var(--text-primary)]">{t.historique?.mySales || "My sales"}</h3>
                 <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                  {mySales.length} {t.historique?.salesCount || "ventes"}
+                  {salesTotal} {t.historique?.salesCount || "ventes"} · {t.historique?.page || "Page"} {salesPage}/{salesTotalPages || 1}
                 </p>
               </div>
               {/* Date range filter */}
@@ -472,6 +475,29 @@ export default function HistoriquePage() {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Pagination */}
+          {salesTotalPages > 1 && (
+            <div className="p-3 border-t border-[var(--border)] flex items-center justify-between">
+              <button
+                onClick={() => setSalesPage((p) => Math.max(1, p - 1))}
+                disabled={salesPage <= 1}
+                className="px-3 py-1.5 text-xs font-medium rounded-lg border border-[var(--border)] disabled:opacity-40 hover:bg-slate-50"
+              >
+                ← {t.historique?.prev || "Précédent"}
+              </button>
+              <span className="text-xs text-[var(--text-muted)]">
+                {salesPage} / {salesTotalPages}
+              </span>
+              <button
+                onClick={() => setSalesPage((p) => Math.min(salesTotalPages, p + 1))}
+                disabled={salesPage >= salesTotalPages}
+                className="px-3 py-1.5 text-xs font-medium rounded-lg border border-[var(--border)] disabled:opacity-40 hover:bg-slate-50"
+              >
+                {t.historique?.next || "Suivant"} →
+              </button>
             </div>
           )}
         </Card>

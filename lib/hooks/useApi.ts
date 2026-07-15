@@ -433,6 +433,35 @@ export function useRecentTransactions(limit: number = 10, cashierId?: string, st
 }
 
 // ========================================
+// HOOK: usePaginatedTransactions
+// Transactions avec pagination + filtres date
+// ========================================
+export function usePaginatedTransactions(page: number = 1, limit: number = 20, cashierId?: string, startDate?: string, endDate?: string) {
+  const [transactions, setTransactions] = useState<ApiTransaction[]>([]);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await transactionsApi.list(page, limit, cashierId, startDate, endDate);
+      setTransactions(response.data);
+      setTotal(response.meta.total);
+      setTotalPages(response.meta.totalPages);
+    } catch (e) {
+      console.warn("Backend indisponible");
+    } finally {
+      setLoading(false);
+    }
+  }, [page, limit, cashierId, startDate, endDate]);
+
+  useEffect(() => { load(); }, [load]);
+
+  return { transactions, total, totalPages, loading, reload: load };
+}
+
+// ========================================
 // HOOK: useReturns
 // Liste des retours produits
 // ========================================
