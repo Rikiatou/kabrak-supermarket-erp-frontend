@@ -140,6 +140,33 @@ export default function AchatsPage() {
       setShowNewProductModal(false);
     };
   }, []);
+
+  // === DRAFT AUTO-SAVE: save delivery lines to localStorage ===
+  useEffect(() => {
+    const hasData = deliveryLines.some(l => l.productId || l.isNewProduct);
+    if (hasData && showDeliveryForm) {
+      localStorage.setItem("kabrak_achats_draft", JSON.stringify({ deliveryLines, deliveryRef, deliverySupplierId, deliverySupplierName, savedAt: Date.now() }));
+    }
+  }, [deliveryLines, deliveryRef, deliverySupplierId, deliverySupplierName, showDeliveryForm]);
+
+  // === DRAFT RESTORE: on mount, restore draft if it exists ===
+  useEffect(() => {
+    try {
+      const draft = JSON.parse(localStorage.getItem("kabrak_achats_draft") || "null");
+      if (draft && draft.deliveryLines) {
+        const hasData = draft.deliveryLines.some((l: any) => l.productId || l.isNewProduct);
+        if (hasData) {
+          setDeliveryLines(draft.deliveryLines);
+          setDeliveryRef(draft.deliveryRef || "");
+          setDeliverySupplierId(draft.deliverySupplierId || "");
+          setDeliverySupplierName(draft.deliverySupplierName || "");
+          setShowDeliveryForm(true);
+          const age = Math.round((Date.now() - draft.savedAt) / 60000);
+          console.log(`📦 Draft restored: ${draft.deliveryLines.length} line(s), ${age} min ago`);
+        }
+      }
+    } catch {}
+  }, []);
   type DeliveryLine = {
     productId: string;
     productLabel: string;    // nom affiché du produit sélectionné (recherche server-side)
@@ -253,6 +280,8 @@ export default function AchatsPage() {
     setDeliveryRef(""); setDeliveryDate(new Date().toISOString().split("T")[0]);
     setDeliverySupplierId(""); setDeliverySupplierName(""); setDeliveryLines([{ productId: "", productLabel: "", qty: 1, unitPrice: 0, sellPrice: 0, expiryDate: "", receiveInPacks: false, packQty: 1, productPackQuantity: null, isNewProduct: false, newProductName: "", newProductBarcode: "", newProductCategory: "Grocery", newProductUnit: "pc" }]);
     setScanInput(""); setScanMode(false);
+    // Clear draft
+    localStorage.removeItem("kabrak_achats_draft");
   };
 
   const handleSaveDelivery = useCallback(async () => {

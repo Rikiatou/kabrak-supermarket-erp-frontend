@@ -398,6 +398,30 @@ export default function POSPage() {
 
 
 
+  // === DRAFT AUTO-SAVE: save cart to localStorage on every change ===
+  useEffect(() => {
+    if (cart.length > 0) {
+      localStorage.setItem("kabrak_pos_draft", JSON.stringify({ cart, savedAt: Date.now() }));
+    } else {
+      localStorage.removeItem("kabrak_pos_draft");
+    }
+  }, [cart]);
+
+  // === DRAFT RESTORE: on mount, restore cart from localStorage if it exists ===
+  useEffect(() => {
+    try {
+      const draft = JSON.parse(localStorage.getItem("kabrak_pos_draft") || "null");
+      if (draft && draft.cart && draft.cart.length > 0) {
+        setCart(draft.cart);
+        const age = Math.round((Date.now() - draft.savedAt) / 60000);
+        setSyncMsg(`🛒 Panier restauré (${draft.cart.length} article(s), il y a ${age} min)`);
+        setTimeout(() => setSyncMsg(null), 6000);
+      }
+    } catch {}
+  }, []);
+
+
+
   // Compter les transactions en attente
 
   const refreshPendingCount = () => {
@@ -426,16 +450,23 @@ export default function POSPage() {
 
       if (pending.length === 0) return;
 
+      console.log(`🔄 Resubmitting ${pending.length} pending transactions...`);
+      setSyncMsg(`🔄 Resoumission de ${pending.length} transaction(s)...`);
+
       const remaining: any[] = [];
 
       for (const tx of pending) {
 
         try {
 
-          await createTransaction(tx);
+          // Remove server-generated fields that might cause conflicts
+          const { id, transactionNumber, _createdAt, syncStatus, syncedAt, ...cleanTx } = tx;
+          await createTransaction(cleanTx);
+          console.log(`✅ Pending tx resubmitted`);
 
-        } catch {
+        } catch (e: any) {
 
+          console.log(`❌ Pending tx failed: ${e.message}`);
           remaining.push(tx);
 
         }
@@ -2250,11 +2281,15 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
 
           {pendingTxCount > 0 && (
 
-            <span className="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 rounded-md px-1.5 py-0.5 font-medium shrink-0">
+            <button
+              onClick={() => syncPendingTransactions()}
+              className="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 rounded-md px-1.5 py-0.5 font-medium shrink-0 hover:bg-amber-100 cursor-pointer"
+              title="Cliquez pour resoumettre"
+            >
 
-              {t.pos.pendingCount.replace("{n}", String(pendingTxCount))}
+              {t.pos.pendingCount.replace("{n}", String(pendingTxCount))} ↻
 
-            </span>
+            </button>
 
           )}
 
