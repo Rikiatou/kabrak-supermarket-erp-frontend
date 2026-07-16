@@ -1897,13 +1897,11 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
         const total = effPrice * item.quantity;
 
         return `<tr>
-          <td colspan="2" style="font-size:14px;padding-top:3px">
-            <div style="font-weight:bold">${barcode} ${name}</div>
-            <div style="display:flex;justify-content:space-between;padding-left:4px">
-              <span>${item.quantity}.00 @ ${effPrice.toLocaleString("fr-CM")}</span>
-              <span style="font-weight:bold">${total.toLocaleString("fr-CM")}</span>
-            </div>
-          </td>
+          <td colspan="2" style="font-size:14px;padding-top:3px;font-weight:bold">${barcode} ${name}</td>
+        </tr>
+        <tr>
+          <td style="font-size:14px;padding-left:4px">${item.quantity}.00 @ ${effPrice.toLocaleString("fr-CM")}</td>
+          <td style="font-size:14px;text-align:right;font-weight:bold">${total.toLocaleString("fr-CM")}</td>
         </tr>`;
 
       })
@@ -1942,31 +1940,31 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
 
           @page { size: 80mm auto; margin: 0; }
 
-          * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          * { -webkit-print-color-adjust: exact; print-color-adjust: exact; box-sizing: border-box; }
 
-          html, body { width: 76mm; max-width: 76mm; min-width: 76mm; margin: 0 auto; padding: 0; overflow: hidden; background: #fff; }
+          html, body { width: 72mm; max-width: 72mm; margin: 0 auto; padding: 0; background: #fff; }
 
-          body { padding: 2mm 2mm 4mm; font-family: 'Courier New', monospace; color: #000; font-size: 16px; line-height: 1.5; font-weight: bold; }
+          body { padding: 2mm 3mm 4mm; font-family: 'Courier New', monospace; color: #000; font-size: 15px; line-height: 1.4; font-weight: bold; }
 
-          h1 { font-size: 18px; text-align: center; margin: 0 0 2px; font-weight: bold; }
+          h1 { font-size: 17px; text-align: center; margin: 0 0 2px; font-weight: bold; }
 
           .center { text-align: center; }
 
           .dashed { border-top: 1px dashed #000; margin: 4px 0; }
 
-          table { width: 100%; border-collapse: collapse; }
+          table { width: 100%; border-collapse: collapse; table-layout: fixed; }
 
-          td { padding: 1px 0; vertical-align: top; font-weight: bold; }
+          td { padding: 1px 0; vertical-align: top; font-weight: bold; word-wrap: break-word; }
 
-          .total { font-size: 18px; font-weight: bold; }
+          .total { font-size: 17px; font-weight: bold; }
 
           .right { text-align: right; }
 
-          .small { font-size: 14px; font-weight: bold; }
+          .small { font-size: 13px; font-weight: bold; }
 
           @media print {
 
-            html, body { width: 76mm; max-width: 76mm; min-width: 76mm; padding: 2mm 2mm 4mm; overflow: hidden; background: #fff; }
+            html, body { width: 72mm; max-width: 72mm; padding: 2mm 3mm 4mm; background: #fff; }
 
             * { page-break-inside: avoid; break-inside: avoid; }
 
