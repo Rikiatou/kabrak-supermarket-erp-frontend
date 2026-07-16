@@ -125,13 +125,12 @@ export function useServerProductSearch() {
   const scanBarcode = useCallback(async (barcode: string): Promise<Product | null> => {
     if (!barcode) return null;
     try {
-      setLoading(true);
+      // Pas de setLoading ici: on ne veut pas re-render toute la page POS
+      // pendant le scan (causes lag sur mini PC avec 1000+ produits en cache)
       const product = await productsApi.findByBarcode(barcode);
       return apiProductToFrontend(product);
     } catch (e) {
       return null;
-    } finally {
-      setLoading(false);
     }
   }, []);
 
@@ -657,6 +656,32 @@ export function useLosses() {
   }, [reload]);
 
   return { losses, loading, reload };
+}
+
+// ========================================
+// HOOK: useGifts (cadeaux depuis stock movements)
+// ========================================
+export function useGifts() {
+  const [gifts, setGifts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const reload = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await stockApi.listGifts(1, 500);
+      setGifts(res.data || []);
+    } catch {
+      setGifts([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    reload();
+  }, [reload]);
+
+  return { gifts, loading, reload };
 }
 
 // ========================================

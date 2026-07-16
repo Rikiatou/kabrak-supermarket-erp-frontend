@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/Badge";
 import { useI18n } from "@/lib/i18n/context";
 import { useToast } from "@/components/ui/Toast";
 import { useAuth } from "@/lib/auth/context";
-import { useServerProductSearch } from "@/lib/hooks/useApi";
+import { useServerProductSearch, useGifts } from "@/lib/hooks/useApi";
 import { stockApi } from "@/lib/api";
 import { formatDate, cn } from "@/lib/utils";
 import type { ApiStockMovement } from "@/lib/api";
@@ -44,30 +44,31 @@ export default function CadeauxPage() {
   // Recherche server-side
   const { results: searchResults, search: serverSearch, bestsellers } = useServerProductSearch();
 
-  // Historique des cadeaux
-  const [giftMovements, setGiftMovements] = useState<ApiStockMovement[]>([]);
-  const [loadingGifts, setLoadingGifts] = useState(false);
-  const [giftsLoaded, setGiftsLoaded] = useState(false);
+  // Historique des cadeaux — utilise le hook useGifts (filtre coté serveur par reason)
+  const { gifts: dbGifts, loading: loadingGifts, reload: reloadGifts } = useGifts();
 
-  const loadGifts = async () => {
-    if (giftsLoaded) return;
-    setLoadingGifts(true);
-    try {
-      const res = await stockApi.listMovements(1, 500);
-      const gifts = res.data.filter(
-        (m) => m.reason === "gift_staff" || m.reason === "gift_other"
-      );
-      const isPrivileged = ["boss", "manager", "accountant", "supervisor"].includes(user?.role ?? "");
-      setGiftMovements(isPrivileged ? gifts : gifts.filter((m) => m.createdBy === user?.id));
-    } catch {
-      toast(t.gifts.loadError, "warning");
-    } finally {
-      setLoadingGifts(false);
-      setGiftsLoaded(true);
+  // Filtres date (comme pertes)
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const [startDate, setStartDate] = useState(todayStr);
+  const [endDate, setEndDate] = useState(todayStr);
+  const [dateFilterActive, setDateFilterActive] = useState(false);
+
+  // Appliquer filtre par date + permission
+  const giftMovements: ApiStockMovement[] = useMemo(() => {
+    const isPrivileged = ["boss", "manager", "accountant", "supervisor"].includes(user?.role ?? "");
+    let filtered = isPrivileged ? dbGifts : dbGifts.filter((m) => m.createdBy === user?.id);
+
+    if (dateFilterActive && startDate && endDate) {
+      const start = new Date(startDate + "T00:00:00");
+      const end = new Date(endDate + "T23:59:59");
+      filtered = filtered.filter((m) => {
+        const d = new Date(m.createdAt);
+        return d >= start && d <= end;
+      });
     }
-  };
 
-  useMemo(() => { loadGifts(); }, []); // eslint-disable-line
+    return filtered;
+  }, [dbGifts, user, dateFilterActive, startDate, endDate]);
 
   // --- Modal state ---
   const [showModal, setShowModal] = useState(false);
@@ -171,13 +172,8 @@ export default function CadeauxPage() {
       setSaved(true);
       toast(t.gifts.savedSuccess, "success");
 
-      // Recharger les cadeaux
-      setGiftsLoaded(false);
-      const res = await stockApi.listMovements(1, 500);
-      const gifts = res.data.filter((m) => m.reason === "gift_staff" || m.reason === "gift_other");
-      const isPrivileged = ["boss", "manager", "accountant", "supervisor"].includes(user?.role ?? "");
-      setGiftMovements(isPrivileged ? gifts : gifts.filter((m) => m.createdBy === user?.id));
-      setGiftsLoaded(true);
+      // Recharger les cadeaux via le hook
+      reloadGifts();
 
       setTimeout(() => {
         setShowModal(false);
@@ -219,18 +215,52 @@ export default function CadeauxPage() {
         ))}
       </div>
 
-      {/* Header + bouton */}
-      <div className="flex items-center justify-between mb-4">
+      {/* Header + bouton + filtres date */}
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-3">
         <p className="text-sm text-[var(--text-muted)]">{t.gifts.listHint}</p>
-        <Button
-          variant="primary"
-          size="md"
-          icon={<Plus className="w-4 h-4" />}
-          onClick={() => { resetModal(); setShowModal(true); }}
-        >
-          {t.gifts.recordGift}
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Filtre date */}
+          <div className="flex items-center gap-1.5 bg-white border border-[var(--border)] rounded-lg px-2 py-1">
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => { setStartDate(e.target.value); setDateFilterActive(true); }}
+              className="text-xs text-[var(--text-secondary)] bg-transparent outline-none"
+            />
+            <span className="text-xs text-[var(--text-muted)]">→</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => { setEndDate(e.target.value); setDateFilterActive(true); }}
+              className="text-xs text-[var(--text-secondary)] bg-transparent outline-none"
+            />
+            {dateFilterActive && (
+              <button
+                onClick={() => setDateFilterActive(false)}
+                className="text-xs text-red-500 hover:text-red-700 ml-1"
+                title="Effacer le filtre"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+          <Button
+            variant="primary"
+            size="md"
+            icon={<Plus className="w-4 h-4" />}
+            onClick={() => { resetModal(); setShowModal(true); }}
+          >
+            {t.gifts.recordGift}
+          </Button>
+        </div>
       </div>
+
+      {/* Compteur de résultats filtrés */}
+      {dateFilterActive && (
+        <p className="text-xs text-[var(--text-muted)] mb-3">
+          {giftMovements.length} cadeau(x) du {formatDate(startDate)} au {formatDate(endDate)}
+        </p>
+      )}
 
       {/* Liste */}
       {loadingGifts ? (

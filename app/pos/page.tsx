@@ -734,23 +734,26 @@ export default function POSPage() {
 
     async (code: string) => {
 
-      // D'abord chercher dans les produits déjà chargés (cache local)
+      // Pour le scan barcode: aller directement au serveur (findUnique indexé = instantané)
+      // Ne pas chercher dans le cache local de 1000 produits (90% de miss avec 10000 produits)
 
-      let found = products.find(
+      let found: Product | undefined;
 
-        (p) => p.barcode === code.trim() || p.sku.toLowerCase() === code.trim().toLowerCase()
-
-      );
-
-
-
-      // Si pas trouvé en local et mode server-side, chercher sur le serveur
-
-      if (!found && useServerSearch) {
+      if (useServerSearch) {
 
         const serverProduct = await scanBarcode(code.trim());
 
         if (serverProduct) found = serverProduct;
+
+      } else {
+
+        // Fallback: chercher en local si pas de serveur
+
+        found = products.find(
+
+          (p) => p.barcode === code.trim() || p.sku.toLowerCase() === code.trim().toLowerCase()
+
+        );
 
       }
 
@@ -2232,13 +2235,18 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
 
     setTimeout(() => {
 
-      printFrame.contentWindow?.print();
+      try {
+        printFrame.contentWindow?.focus();
+        printFrame.contentWindow?.print();
+      } catch (e) {
+        console.error('Reprint error:', e);
+      }
 
       setTimeout(() => {
         if (printFrame.parentNode) document.body.removeChild(printFrame);
-      }, 1000);
+      }, 2000);
 
-    }, 500);
+    }, 800);
 
   }, [t]);
 

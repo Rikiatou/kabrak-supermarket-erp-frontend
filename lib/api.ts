@@ -439,6 +439,15 @@ export const stockApi = {
     return fetchAPI<PaginatedResponse<ApiStockMovement>>(`/stock/movements?${query}`);
   },
 
+  // Cadeaux (stock movements with reason=gift_staff or gift_other)
+  listGifts: (page = 1, limit = 100) => {
+    const query = new URLSearchParams();
+    query.set("page", String(page));
+    query.set("limit", String(limit));
+    query.set("reason", "gift_staff,gift_other");
+    return fetchAPI<PaginatedResponse<ApiStockMovement>>(`/stock/movements?${query}`);
+  },
+
   // Créer mouvement
   createMovement: (data: {
     productId: string;
