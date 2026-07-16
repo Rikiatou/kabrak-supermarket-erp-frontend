@@ -156,20 +156,6 @@ export function ZReportReceipt({
         ${row(z.customerCount, String(report.customerCount))}
       </div>`;
 
-    // Articles vendus (ticket)
-    if (report.soldProducts && report.soldProducts.length > 0) {
-      html += `<div style="border-top:1px dashed #000;margin-top:5px;padding-top:5px">
-        <div style="font-weight:bold;text-transform:uppercase;font-size:13px;margin-bottom:3px">Articles vendus (${report.soldProducts.length})</div>`;
-      for (const p of report.soldProducts) {
-        const name = report.transactions?.flatMap((t) => t.items || []).find((it) => it.productId === p.productId)?.productName || p.productId;
-        html += `<div style="display:flex;justify-content:space-between;font-size:11px;padding:1px 0">
-          <span>${name.substring(0, 28)}</span>
-          <span>x${p.quantity} ${formatCurrency(p.total)}</span>
-        </div>`;
-      }
-      html += `</div>`;
-    }
-
     html += `<div style="text-align:center;margin-top:8px;font-size:10px">*** END ***</div><br/>`;
 
     const printFrame = document.createElement("iframe");
