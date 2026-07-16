@@ -1895,11 +1895,11 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
         const total = effPrice * item.quantity;
 
         return `<tr>
-          <td colspan="2" style="font-size:14px;padding-top:3px;font-weight:bold">${barcode} ${name}</td>
+          <td colspan="2" style="font-size:13px;padding-top:3px;font-weight:bold">${barcode} ${name}</td>
         </tr>
         <tr>
-          <td style="font-size:14px;padding-left:4px">${item.quantity}.00 @ ${effPrice.toLocaleString("fr-CM")}</td>
-          <td style="font-size:14px;text-align:right;font-weight:bold">${total.toLocaleString("fr-CM")}</td>
+          <td style="font-size:13px;padding-left:4px;width:60%">${item.quantity}.00 @ ${effPrice.toLocaleString("fr-CM")}</td>
+          <td style="font-size:13px;text-align:right;font-weight:bold;width:40%;white-space:nowrap">${total.toLocaleString("fr-CM")}</td>
         </tr>`;
 
       })
@@ -1940,33 +1940,31 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
 
           * { -webkit-print-color-adjust: exact; print-color-adjust: exact; box-sizing: border-box; }
 
-          html, body { width: 72mm; max-width: 72mm; margin: 0 auto; padding: 0; background: #fff; }
+          html, body { width: 70mm; max-width: 70mm; margin: 0; padding: 0; background: #fff; }
 
-          body { padding: 2mm 3mm 4mm; font-family: 'Courier New', monospace; color: #000; font-size: 15px; line-height: 1.4; font-weight: bold; }
+          body { padding: 1mm 2mm 3mm; font-family: 'Courier New', monospace; color: #000; font-size: 14px; line-height: 1.3; font-weight: bold; }
 
-          h1 { font-size: 17px; text-align: center; margin: 0 0 2px; font-weight: bold; }
+          h1 { font-size: 16px; text-align: center; margin: 0 0 2px; font-weight: bold; }
 
           .center { text-align: center; }
 
-          .dashed { border-top: 1px dashed #000; margin: 4px 0; }
+          .dashed { border-top: 1px dashed #000; margin: 3px 0; }
 
-          table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+          table { width: 100%; border-collapse: collapse; }
 
-          td { padding: 1px 0; vertical-align: top; font-weight: bold; word-wrap: break-word; }
+          td { padding: 1px 0; vertical-align: top; font-weight: bold; }
 
-          .total { font-size: 17px; font-weight: bold; }
+          .total { font-size: 16px; font-weight: bold; }
 
-          .right { text-align: right; }
+          .right { text-align: right; white-space: nowrap; }
 
-          .small { font-size: 13px; font-weight: bold; }
+          .small { font-size: 12px; font-weight: bold; }
 
           @media print {
 
-            html, body { width: 72mm; max-width: 72mm; padding: 2mm 3mm 4mm; background: #fff; }
+            html, body { width: 70mm; max-width: 70mm; padding: 1mm 2mm 3mm; background: #fff; }
 
             * { page-break-inside: avoid; break-inside: avoid; }
-
-            .no-break { page-break-inside: avoid; break-inside: avoid; }
 
           }
 
@@ -2032,6 +2030,36 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
 
     printDoc.close();
 
+    // Mode Electron: utiliser l'impression silencieuse native (pas de dialogue)
+    const electronPrint = (window as any).kabrakElectron?.print;
+    if (electronPrint) {
+      // Récupérer le HTML complet du ticket
+      const fullHtml = printDoc.documentElement.outerHTML;
+      electronPrint.printHtml(fullHtml).then((result: any) => {
+        if (!result.success) {
+          console.error('[Print] Electron print failed:', result.error);
+          // Fallback: méthode iframe normale
+          printFrame.contentWindow?.focus();
+          setTimeout(() => {
+            printFrame.contentWindow?.print();
+            setTimeout(() => { if (printFrame.parentNode) document.body.removeChild(printFrame); }, 1000);
+          }, 500);
+        } else {
+          // Succès: supprimer l'iframe
+          if (printFrame.parentNode) document.body.removeChild(printFrame);
+        }
+      }).catch(() => {
+        // Fallback
+        printFrame.contentWindow?.focus();
+        setTimeout(() => {
+          printFrame.contentWindow?.print();
+          setTimeout(() => { if (printFrame.parentNode) document.body.removeChild(printFrame); }, 1000);
+        }, 500);
+      });
+      return;
+    }
+
+    // Mode Chrome: impression via iframe
     printFrame.contentWindow?.focus();
 
     setTimeout(() => {
@@ -2227,6 +2255,25 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
 
     printDoc.close();
 
+    // Mode Electron: impression silencieuse
+    const electronPrint = (window as any).kabrakElectron?.print;
+    if (electronPrint) {
+      const fullHtml = printDoc.documentElement.outerHTML;
+      electronPrint.printHtml(fullHtml).then((result: any) => {
+        if (!result.success) {
+          printFrame.contentWindow?.focus();
+          setTimeout(() => { printFrame.contentWindow?.print(); }, 500);
+        } else {
+          if (printFrame.parentNode) document.body.removeChild(printFrame);
+        }
+      }).catch(() => {
+        printFrame.contentWindow?.focus();
+        setTimeout(() => { printFrame.contentWindow?.print(); }, 500);
+      });
+      return;
+    }
+
+    // Mode Chrome
     printFrame.contentWindow?.focus();
 
     setTimeout(() => {
