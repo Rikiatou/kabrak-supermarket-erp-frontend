@@ -281,16 +281,20 @@ export default function AchatsPage() {
         notes: deliveryRef ? `Bordereau ref: ${deliveryRef}` : undefined,
         createdBy: user?.id,
         items: validLines.map((l) => {
-          // En mode PACK: unitPrice = prix du carton, sellPrice = prix du carton
-          // Le backend attend le prix par UNITÉ → diviser par packQuantity
+          // En mode PACK: unitPrice = prix du carton
+          // Le backend attend le prix d'achat par UNITÉ → diviser par packQuantity
+          // MAIS le prix de vente unité ne doit PAS être recalculé depuis le pack
+          // (sinon 3500/12 = 292 écrase le prix unité 300)
           const isPack = l.receiveInPacks && l.productPackQuantity && l.productPackQuantity > 1;
           const unitCost = isPack ? Math.round(l.unitPrice / l.productPackQuantity!) : l.unitPrice;
-          const unitSellPrice = isPack && l.sellPrice > 0 ? Math.round(l.sellPrice / l.productPackQuantity!) : l.sellPrice;
+          // En mode pack: ne pas envoyer sellPrice (garder le prix de vente unité existant)
+          // En mode unité: envoyer sellPrice si fourni
+          const unitSellPrice = isPack ? undefined : (l.sellPrice > 0 ? l.sellPrice : undefined);
           return {
             productId: l.productId,
             quantity: l.qty, // déjà en unités
             unitCost,
-            sellPrice: unitSellPrice > 0 ? unitSellPrice : undefined,
+            sellPrice: unitSellPrice,
             expiryDate: l.expiryDate || undefined,
           };
         }),
