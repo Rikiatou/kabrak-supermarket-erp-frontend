@@ -369,6 +369,23 @@ export default function POSPage() {
 
   const [usbDisplayConnected, setUsbDisplayConnected] = useState(false);
 
+  // Auto-connecter l'afficheur au démarrage en mode Electron
+  useEffect(() => {
+    const ed = (window as any).kabrakElectron?.display;
+    const isElec = !!(window as any).kabrakElectron?.isElectron;
+    if (isElec && ed && !usbDisplayConnected) {
+      ed.connect().then((result: any) => {
+        if (result.success) {
+          setUsbDisplayConnected(true);
+          console.log('[Display] Auto-connecté:', result.port);
+          ed.message("Bienvenue!");
+        } else {
+          console.log('[Display] Auto-connect échoué:', result.message);
+        }
+      }).catch(() => {});
+    }
+  }, []); // eslint-disable-line
+
   const usbPortRef = useRef<SerialPort | null>(null);
 
   const searchRef = useRef<HTMLInputElement>(null);
@@ -1011,175 +1028,137 @@ export default function POSPage() {
 
 
 
-  // ── USB Customer Display (Web Serial API) ───────────────────────
+  // ── USB Customer Display ───────────────────────
+  // Dans Electron: utilise serialport via IPC (détection auto COM, ESC/POS)
+  // Dans Chrome: utilise Web Serial API (HTTPS ou localhost seulement)
+
+  const isElectron = !!(window as any).kabrakElectron?.isElectron;
+  const electronDisplay = (window as any).kabrakElectron?.display;
 
   const writeToUsbDisplay = async (line1: string, line2: string) => {
-
+    // Mode Electron: utiliser IPC (serialport dans le process principal)
+    if (isElectron && electronDisplay) {
+      try {
+        await electronDisplay.write(line1, line2);
+      } catch { /* ignore */ }
+      return;
+    }
+    // Mode Chrome: Web Serial API
     if (!usbPortRef.current) return;
-
     try {
-
       const writer = usbPortRef.current.writable?.getWriter();
-
       if (!writer) return;
-
       const enc = new TextEncoder();
-
       const pad = (s: string, n: number) => s.slice(0, n).padEnd(n);
-
-      // FF = form feed (clear display on most VFD/LCD)
-
       const msg = '\x0C' + pad(line1, 20) + pad(line2, 20);
-
       await writer.write(enc.encode(msg));
-
       writer.releaseLock();
-
     } catch { /* ignore write errors */ }
-
   };
 
-
-
   const connectUsbDisplay = async () => {
+    // Mode Electron: connexion via IPC (serialport)
+    if (isElectron && electronDisplay) {
+      try {
+        const result = await electronDisplay.connect();
+        if (result.success) {
+          setUsbDisplayConnected(true);
+          toast(locale === "fr"
+            ? `Afficheur connecté (${result.port})`
+            : `Display connected (${result.port})`, "success");
+          const storeName = (storeInfo.name || "KABRAK").slice(0, 20);
+          const welcome = locale === "fr" ? "Bienvenue!" : "Welcome!";
+          await electronDisplay.message(welcome);
+        } else {
+          toast(locale === "fr"
+            ? `Afficheur: ${result.message}`
+            : `Display: ${result.message}`, "warning");
+        }
+      } catch (e: any) {
+        toast(`Display error: ${e.message}`, "warning");
+      }
+      return;
+    }
 
-    // Web Serial nécessite HTTPS ou localhost (contexte sécurisé)
-    // Sauf dans Electron où le preload polyfille navigator.serial
-    const isElectron = !!(window as any).kabrakElectron?.isElectron;
-
-    if (!window.isSecureContext && !isElectron) {
-
+    // Mode Chrome: Web Serial API
+    if (!window.isSecureContext) {
       toast(
         locale === "fr"
-          ? "Afficheur USB : utilisez ce PC serveur (localhost:3000), pas via WiFi. L'écran client WiFi (/pos/display) fonctionne partout."
-          : "USB Display: use the server PC (localhost:3000), not via WiFi. The WiFi customer screen (/pos/display) works everywhere.",
+          ? "Afficheur USB : utilisez ce PC serveur (localhost:3000) ou l'app Electron. L'écran client WiFi (/pos/display) fonctionne partout."
+          : "USB Display: use the server PC (localhost:3000) or Electron app. The WiFi customer screen (/pos/display) works everywhere.",
         "warning"
       );
-
       return;
-
     }
 
     if (!('serial' in navigator)) {
-
       toast(
         locale === "fr"
-          ? "Afficheur USB non supporté — utiliser Chrome ou Edge (pas Firefox)"
-          : "USB display not supported — use Chrome or Edge (not Firefox)",
+          ? "Afficheur USB non supporté — utiliser Chrome, Edge ou l'app Electron"
+          : "USB display not supported — use Chrome, Edge or Electron app",
         "warning"
       );
-
       return;
-
     }
 
     try {
-
       const port = await (navigator as any).serial.requestPort();
-
-      // Essayer plusieurs baud rates courants pour afficheurs VFD/LCD client
       const baudRates = [9600, 19200, 38400, 4800];
-
       let opened = false;
-
       for (const baud of baudRates) {
-
         try {
-
           await port.open({ baudRate: baud, dataBits: 8, stopBits: 1, parity: "none" });
-
           opened = true;
-
           console.log(`[USB Display] Connecté à ${baud} baud`);
-
           break;
-
-        } catch {
-
-          // essayer le prochain baud rate
-
-        }
-
+        } catch { /* essayer le prochain baud rate */ }
       }
-
       if (!opened) {
-
         toast(
           locale === "fr"
-            ? "Impossible d'ouvrir le port — vérifier que l'afficheur est branché et non utilisé par un autre logiciel"
-            : "Cannot open port — check display is plugged in and not used by another app",
+            ? "Impossible d'ouvrir le port — vérifier que l'afficheur est branché"
+            : "Cannot open port — check display is plugged in",
           "warning"
         );
-
         return;
-
       }
-
       usbPortRef.current = port;
-
       setUsbDisplayConnected(true);
-
       toast(t.pos.usbDisplayConnected, "success");
-
-      const storeName = (storeInfo.name || "EASY SHOP LIMBE").slice(0, 20).padEnd(20, " ");
-
+      const storeName = (storeInfo.name || "KABRAK").slice(0, 20).padEnd(20, " ");
       const welcome = (locale === "fr" ? "   Bienvenue!   " : "    Welcome!    ").slice(0, 20).padEnd(20, " ");
-
       await writeToUsbDisplay(storeName, welcome);
-
     } catch (e: any) {
-
-      if (e?.name === "NotAllowedError") {
-
-        // Utilisateur a annulé la sélection du port — pas d'erreur à afficher
-
-        return;
-
-      }
-
-      // Port occupé ou autre erreur
+      if (e?.name === "NotAllowedError") return;
       const msg = e?.message || "";
-
       if (msg.includes("already open") || msg.includes("Access denied")) {
-
         toast(
           locale === "fr"
-            ? "Port déjà utilisé — fermer Retail Plus 50 ou tout autre logiciel utilisant ce port"
-            : "Port already in use — close Retail Plus 50 or any other app using this port",
+            ? "Port déjà utilisé — fermer tout autre logiciel utilisant ce port"
+            : "Port already in use — close any other app using this port",
           "warning"
         );
-
       } else {
-
-        toast(
-          locale === "fr"
-            ? `Erreur afficheur USB: ${msg || "connexion échouée"}`
-            : `USB display error: ${msg || "connection failed"}`,
-          "warning"
-        );
-
+        toast(`USB display error: ${msg || "connection failed"}`, "warning");
       }
-
     }
-
   };
 
-
-
   const disconnectUsbDisplay = async () => {
-
-    if (usbPortRef.current) {
-
-      try { await usbPortRef.current.close(); } catch {}
-
-      usbPortRef.current = null;
-
+    // Mode Electron
+    if (isElectron && electronDisplay) {
+      try { await electronDisplay.disconnect(); } catch {}
+      setUsbDisplayConnected(false);
+      toast(t.pos.usbDisplayDisconnected, "success");
+      return;
     }
-
+    // Mode Chrome
+    if (usbPortRef.current) {
+      try { await usbPortRef.current.close(); } catch {}
+      usbPortRef.current = null;
+    }
     setUsbDisplayConnected(false);
-
     toast(t.pos.usbDisplayDisconnected, "success");
-
   };
 
 
@@ -1401,41 +1380,60 @@ export default function POSPage() {
 
     window.dispatchEvent(new StorageEvent("storage", { key: "kabrak_pos_display" }));
 
-    // USB display update
+    // USB/Electron display update
+    const displayConnected = usbDisplayConnected || (isElectron && electronDisplay);
 
-    if (usbPortRef.current) {
+    if (displayConnected) {
 
       const itemCount = cart.reduce((s, i) => s + i.quantity, 0);
 
       if (cart.length === 0) {
 
-        const storeName = (storeInfo.name || "KABRAK").slice(0, 20).padEnd(20, " ");
+        const storeName = (storeInfo.name || "KABRAK").slice(0, 20);
+        const welcome = locale === "fr" ? "Bienvenue!" : "Welcome!";
 
-        const welcome = (locale === "fr" ? "   Bienvenue!   " : "    Welcome!    ").slice(0, 20).padEnd(20, " ");
+        // Electron: utiliser message(), Chrome: writeToUsbDisplay
+        if (isElectron && electronDisplay) {
+          electronDisplay.write(storeName, welcome);
+        } else {
+          writeToUsbDisplay(storeName, welcome);
+        }
 
-        writeToUsbDisplay(storeName, welcome);
+      } else if (checkoutStep === "receipt") {
+
+        // Merci après paiement
+        const thanksMsg = locale === "fr" ? "Merci!" : "Thank you!";
+        if (isElectron && electronDisplay) {
+          electronDisplay.message(thanksMsg);
+        } else {
+          writeToUsbDisplay(thanksMsg, "");
+        }
 
       } else {
 
+        // Afficher le dernier article + total
+        const lastItem = cart[cart.length - 1];
+        const effPrice = (lastItem as any).unitPrice || getEffectivePrice(lastItem.product);
         const totalStr = total.toLocaleString("fr-FR") + " F";
 
-        const payMsg = locale === "fr" ? "  Paiement...   " : "  Payment...    ";
-
-        const thanksMsg = locale === "fr" ? "  Merci!        " : "  Thank you!    ";
-
-        writeToUsbDisplay(
-
-          `${itemCount} art. ${totalStr}`.slice(0, 20),
-
-          checkoutStep === "payment" ? payMsg : thanksMsg
-
-        );
+        if (isElectron && electronDisplay) {
+          // Ligne 1: nom du dernier article, Ligne 2: total
+          const itemName = lastItem.product.name.substring(0, 20);
+          electronDisplay.write(itemName, `TOTAL: ${totalStr}`);
+        } else {
+          const itemCount = cart.reduce((s, i) => s + i.quantity, 0);
+          const payMsg = locale === "fr" ? "Paiement..." : "Payment...";
+          writeToUsbDisplay(
+            `${itemCount} art. ${totalStr}`.slice(0, 20),
+            checkoutStep === "payment" ? payMsg : ""
+          );
+        }
 
       }
 
     }
 
-  }, [cart, checkoutStep, subtotal, discount, total, selectedCustomer, locale, storeInfo.name]);
+  }, [cart, checkoutStep, subtotal, discount, total, selectedCustomer, locale, storeInfo.name, usbDisplayConnected, isElectron, electronDisplay]);
 
   // === Invoice / Customer advance ===
   const handleSearchInvoices = async () => {
