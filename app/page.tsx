@@ -20,9 +20,8 @@ export default function WelcomePage() {
       tag: "Retail management",
       headline: <>Your store.<br />Under control.</>,
       sub: "Sales, inventory, invoicing and reporting — everything your retail team needs, in one place.",
-      activate: "Activate license",
+      requestDemo: "Request demo",
       access: "I have access",
-      signIn: "Sign in",
       features: [
         { title: "Point of Sale", desc: "Scan and checkout in seconds, with or without internet." },
         { title: "Live Inventory", desc: "Stock levels, expiry alerts, and supplier orders in real time." },
@@ -36,9 +35,8 @@ export default function WelcomePage() {
       tag: "Gestion de commerce",
       headline: <>Votre magasin.<br />Sous contrôle.</>,
       sub: "Caisse, stock, facturation et rapports — tout ce dont votre équipe a besoin, en un seul endroit.",
-      activate: "Activer la licence",
+      requestDemo: "Demander une démo",
       access: "J'ai déjà accès",
-      signIn: "Connexion",
       features: [
         { title: "Point de Vente", desc: "Scannez et encaissez en quelques secondes, avec ou sans internet." },
         { title: "Stock en temps réel", desc: "Niveaux de stock, alertes d'expiration et commandes fournisseurs." },
@@ -87,10 +85,10 @@ export default function WelcomePage() {
               ))}
             </div>
             <button
-              onClick={() => router.push("/login")}
+              onClick={() => (window.location.href = "https://demo.kabrak-retail.com")}
               className="text-[13px] text-neutral-500 hover:text-neutral-900 transition-colors"
             >
-              {c.signIn}
+              {c.requestDemo}
             </button>
           </div>
         </div>
@@ -122,10 +120,10 @@ export default function WelcomePage() {
 
         <div className="flex flex-col sm:flex-row items-center gap-3">
           <button
-            onClick={() => router.push("/login")}
+            onClick={() => (window.location.href = "https://demo.kabrak-retail.com")}
             className="flex items-center gap-2 px-5 py-2.5 bg-neutral-900 text-white text-[14px] font-medium rounded-xl hover:bg-neutral-800 active:scale-[0.98] transition-all"
           >
-            {c.signIn}
+            {c.requestDemo}
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
           <button

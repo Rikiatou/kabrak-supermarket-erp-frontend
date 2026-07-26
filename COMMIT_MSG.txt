@@ -1,9 +1,11 @@
-fix: login page tenant isolation + dynamic store name
+fix: sidebar nav lock in modals + remove Sign in from marketing page
 
-- Don't load cashiers if no tenant resolved (marketing site kabrak-retail.com)
-- Show "access your store" message with URL hint instead of mixed accounts
-- Replace hardcoded "Easy Shop" with tenant.supermarketName
-- Prevents demo + EasyShop accounts from being mixed on marketing site
+- Add lg:left-[252px] to modal backdrops that were covering the sidebar
+  (z-index > 40) and blocking navigation in: achats, historique,
+  comptabilite, caisses, reprint, ZReportReceipt
+- Replace "Sign in" on marketing page (kabrak-retail.com) with
+  "Request demo" linking to demo.kabrak-retail.com
+- Keep "I have access" button for existing users
 
 Generated with [Devin](https://devin.ai)
 

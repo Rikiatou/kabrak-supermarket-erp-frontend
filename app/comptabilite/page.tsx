@@ -161,7 +161,7 @@ function AddExpenseModal({ open, onClose, onSubmit, submitting }: AddExpenseModa
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4 lg:left-[252px]" onClick={onClose}>
       <div
         className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6"
         onClick={(e) => e.stopPropagation()}

@@ -353,7 +353,7 @@ export default function ReprintPage() {
       {/* Preview Modal */}
       {previewTx && (
         <div
-          className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm lg:left-[252px]"
           onClick={() => setPreviewTx(null)}
         >
           <div

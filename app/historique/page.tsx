@@ -1047,7 +1047,7 @@ export default function HistoriquePage() {
       {/* Sale detail modal */}
       {detailTx && (
         <>
-          <div className="fixed inset-0 bg-black/40 z-[70]" onClick={() => setDetailTx(null)} />
+          <div className="fixed inset-0 bg-black/40 z-[70] lg:left-[252px]" onClick={() => setDetailTx(null)} />
           <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg bg-white rounded-2xl shadow-2xl z-[71] max-h-[85vh] flex flex-col">
             <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)] shrink-0">
               <div className="flex items-center gap-3">
