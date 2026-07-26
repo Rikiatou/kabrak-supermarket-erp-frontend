@@ -1,27 +1,16 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { ArrowRight } from "lucide-react";
 import { useI18n } from "@/lib/i18n/context";
 import { cn } from "@/lib/utils";
 
 export default function WelcomePage() {
-  const router = useRouter();
   const { locale, setLocale } = useI18n();
-
-  // Mono-magasin: rediriger directement vers /login
-  useEffect(() => {
-    router.replace("/login");
-  }, [router]);
 
   const content = {
     en: {
       tag: "Retail management",
       headline: <>Your store.<br />Under control.</>,
       sub: "Sales, inventory, invoicing and reporting — everything your retail team needs, in one place.",
-      requestDemo: "Request demo",
-      access: "I have access",
       features: [
         { title: "Point of Sale", desc: "Scan and checkout in seconds, with or without internet." },
         { title: "Live Inventory", desc: "Stock levels, expiry alerts, and supplier orders in real time." },
@@ -35,8 +24,6 @@ export default function WelcomePage() {
       tag: "Gestion de commerce",
       headline: <>Votre magasin.<br />Sous contrôle.</>,
       sub: "Caisse, stock, facturation et rapports — tout ce dont votre équipe a besoin, en un seul endroit.",
-      requestDemo: "Demander une démo",
-      access: "J'ai déjà accès",
       features: [
         { title: "Point de Vente", desc: "Scannez et encaissez en quelques secondes, avec ou sans internet." },
         { title: "Stock en temps réel", desc: "Niveaux de stock, alertes d'expiration et commandes fournisseurs." },
@@ -84,12 +71,6 @@ export default function WelcomePage() {
                 </button>
               ))}
             </div>
-            <button
-              onClick={() => (window.location.href = "https://demo.kabrak-retail.com")}
-              className="text-[13px] text-neutral-500 hover:text-neutral-900 transition-colors"
-            >
-              {c.requestDemo}
-            </button>
           </div>
         </div>
       </nav>
@@ -117,22 +98,6 @@ export default function WelcomePage() {
         <p className="text-[16px] text-neutral-500 leading-relaxed max-w-md mb-10">
           {c.sub}
         </p>
-
-        <div className="flex flex-col sm:flex-row items-center gap-3">
-          <button
-            onClick={() => (window.location.href = "https://demo.kabrak-retail.com")}
-            className="flex items-center gap-2 px-5 py-2.5 bg-neutral-900 text-white text-[14px] font-medium rounded-xl hover:bg-neutral-800 active:scale-[0.98] transition-all"
-          >
-            {c.requestDemo}
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={() => router.push("/login")}
-            className="px-5 py-2.5 text-[14px] text-neutral-500 hover:text-neutral-900 transition-colors"
-          >
-            {c.access}
-          </button>
-        </div>
       </section>
 
       {/* Divider */}
