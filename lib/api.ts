@@ -4,9 +4,10 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
 
 // Helper pour les requêtes
+// FIX: Support AbortController pour annuler les requêtes (évite memory leaks)
 async function fetchAPI<T>(
   endpoint: string,
-  options?: RequestInit
+  options?: RequestInit & { signal?: AbortSignal }
 ): Promise<T> {
   const url = `${API_URL}${endpoint}`;
 
@@ -34,17 +35,37 @@ async function fetchAPI<T>(
     }
   }
 
-  const res = await fetch(url, {
-    ...options,
-    headers,
-  });
+  // FIX: Timeout par défaut de 15s pour éviter requêtes qui pendent indéfiniment
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({ message: "Erreur API" }));
-    throw new Error(error.message || `Erreur ${res.status}`);
+  // Si l'appelant fournit déjà un signal, on combine les deux
+  const signal = options?.signal;
+  if (signal) {
+    signal.addEventListener("abort", () => controller.abort());
   }
 
-  return res.json();
+  try {
+    const res = await fetch(url, {
+      ...options,
+      headers,
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ message: "Erreur API" }));
+      throw new Error(error.message || `Erreur ${res.status}`);
+    }
+
+    return res.json();
+  } catch (e: any) {
+    if (e.name === "AbortError") {
+      throw new Error("Requête annulée (timeout ou abort)");
+    }
+    throw e;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 // ========================================

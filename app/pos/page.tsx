@@ -2,7 +2,7 @@
 
 
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 
 import {
 
@@ -202,6 +202,12 @@ export default function POSPage() {
 
   const { products: apiProducts, loading, reload } = useProducts();
 
+  // FIX: Limites pour éviter que localStorage grandisse indéfiniment
+  // Généreuses pour ne jamais perdre de vraies transactions (~1MB max, loin du quota 5MB)
+  const MAX_PENDING_TX = 500;
+  const MAX_PENDING_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 jours
+  const MAX_HELD_CARTS = 50;
+
   // Recherche server-side pour 3000+ produits
 
   const { results: searchResults, loading: searchLoading, search: serverSearch, scanBarcode, bestsellers } = useServerProductSearch();
@@ -357,7 +363,9 @@ export default function POSPage() {
 
       const raw = localStorage.getItem("kabrak_held_carts");
 
-      return raw ? JSON.parse(raw) : [];
+      // FIX: Limiter à 20 paniers suspendus max au chargement
+      const carts = raw ? JSON.parse(raw) : [];
+      return Array.isArray(carts) ? carts.slice(-MAX_HELD_CARTS) : [];
 
     } catch { return []; }
 
@@ -392,6 +400,19 @@ export default function POSPage() {
 
   const beepRef = useRef<HTMLAudioElement>(null);
 
+  // FIX: Tracker les iframes d'impression pour cleanup au démontage
+  const printFramesRef = useRef<Set<HTMLIFrameElement>>(new Set());
+
+  useEffect(() => {
+    return () => {
+      // Cleanup: retirer tous les iframes d'impression encore présents
+      printFramesRef.current.forEach((frame) => {
+        if (frame.parentNode) document.body.removeChild(frame);
+      });
+      printFramesRef.current.clear();
+    };
+  }, []);
+
 
 
   // Détection online/offline
@@ -418,17 +439,21 @@ export default function POSPage() {
 
     };
 
-  }, []);
+  }, [syncPendingTransactions]);
 
 
 
   // === DRAFT AUTO-SAVE: save cart to localStorage on every change ===
+  // FIX: Debounce 1s pour éviter JSON.stringify + localStorage.setItem à chaque scan
   useEffect(() => {
-    if (cart.length > 0) {
-      localStorage.setItem("kabrak_pos_draft", JSON.stringify({ cart, savedAt: Date.now() }));
-    } else {
-      localStorage.removeItem("kabrak_pos_draft");
-    }
+    const timeoutId = setTimeout(() => {
+      if (cart.length > 0) {
+        localStorage.setItem("kabrak_pos_draft", JSON.stringify({ cart, savedAt: Date.now() }));
+      } else {
+        localStorage.removeItem("kabrak_pos_draft");
+      }
+    }, 1000);
+    return () => clearTimeout(timeoutId);
   }, [cart]);
 
   // === DRAFT RESTORE: on mount, restore cart from localStorage if it exists ===
@@ -463,10 +488,17 @@ export default function POSPage() {
 
 
   // Synchroniser les transactions en attente quand online
+  // FIX: useCallback + guard concurrent pour éviter syncs multiples en parallèle
 
-  const syncPendingTransactions = async () => {
+  const isSyncingRef = useRef(false);
+
+  const syncPendingTransactions = useCallback(async () => {
 
     if (typeof navigator !== "undefined" && !navigator.onLine) return;
+
+    // FIX: Empêcher plusieurs syncs en parallèle
+    if (isSyncingRef.current) return;
+    isSyncingRef.current = true;
 
     try {
 
@@ -477,7 +509,7 @@ export default function POSPage() {
       console.log(`🔄 Resubmitting ${pending.length} pending transactions...`);
       setSyncMsg(`🔄 Resoumission de ${pending.length} transaction(s)...`);
 
-      const remaining: any[] = [];
+      let remaining: any[] = [];
 
       for (const tx of pending) {
 
@@ -497,7 +529,11 @@ export default function POSPage() {
 
       }
 
-      localStorage.setItem("kabrak_pending_tx", JSON.stringify(remaining));
+      // FIX: Nettoyer les vieilles transactions échouées + limiter la taille
+      const nowSync = Date.now();
+      remaining = remaining.filter((tx: any) => tx._createdAt && (nowSync - tx._createdAt) < MAX_PENDING_AGE_MS);
+      if (remaining.length > MAX_PENDING_TX) remaining = remaining.slice(-MAX_PENDING_TX);
+      try { localStorage.setItem("kabrak_pending_tx", JSON.stringify(remaining)); } catch { console.warn("localStorage quota exceeded for pending_tx"); }
 
       refreshPendingCount();
 
@@ -515,9 +551,13 @@ export default function POSPage() {
 
       }
 
-    } catch {}
+    } catch {} finally {
 
-  };
+      isSyncingRef.current = false;
+
+    }
+
+  }, [createTransaction, t]);
 
 
 
@@ -548,14 +588,21 @@ export default function POSPage() {
 
 
   // Déclencher la recherche server-side quand search ou catégorie change
+  // FIX: Debounce 300ms pour éviter un appel API par frappe clavier
 
   useEffect(() => {
 
     if (!useServerSearch) return;
 
-    const activeCategory = activeCategoryIdx === 0 ? undefined : CATEGORY_KEYS[activeCategoryIdx];
+    const timeoutId = setTimeout(() => {
 
-    serverSearch(search, activeCategory);
+      const activeCategory = activeCategoryIdx === 0 ? undefined : CATEGORY_KEYS[activeCategoryIdx];
+
+      serverSearch(search, activeCategory);
+
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
 
   }, [search, activeCategoryIdx, useServerSearch, serverSearch]);
 
@@ -625,12 +672,19 @@ export default function POSPage() {
 
 
   // Scan code-barres: quand on tape un code-barres exact + Entrée, ajouter directement
+  // FIX: Guard pour empêcher scans concurrents (rapid fire scanner)
+
+  const isScanningRef = useRef(false);
 
   const handleSearchSubmit = useCallback(
 
     async (e: React.KeyboardEvent) => {
 
       if (e.key !== "Enter" || !search.trim()) return;
+
+      // FIX: Empêcher scans concurrents
+      if (isScanningRef.current) return;
+      isScanningRef.current = true;
 
       const code = search.trim();
 
@@ -736,6 +790,8 @@ export default function POSPage() {
         }
 
       }
+
+      isScanningRef.current = false;
 
     },
 
@@ -980,11 +1036,12 @@ export default function POSPage() {
 
     };
 
-    const updated = [...heldCarts, held];
+    // FIX: Limiter à 20 paniers suspendus max
+    const updated = [...heldCarts, held].slice(-MAX_HELD_CARTS);
 
     setHeldCarts(updated);
 
-    localStorage.setItem("kabrak_held_carts", JSON.stringify(updated));
+    try { localStorage.setItem("kabrak_held_carts", JSON.stringify(updated)); } catch { console.warn("localStorage quota exceeded for held_carts"); }
 
     clearCart();
 
@@ -1018,7 +1075,7 @@ export default function POSPage() {
 
     setHeldCarts(updated);
 
-    localStorage.setItem("kabrak_held_carts", JSON.stringify(updated));
+    try { localStorage.setItem("kabrak_held_carts", JSON.stringify(updated)); } catch { console.warn("localStorage quota exceeded for held_carts"); }
 
     setShowHeldCarts(false);
 
@@ -1324,8 +1381,11 @@ export default function POSPage() {
 
 
   // Mise à jour de l'écran client via localStorage
+  // FIX: Debounce 200ms pour éviter JSON.stringify + localStorage + StorageEvent à chaque scan
 
   useEffect(() => {
+
+    const timeoutId = setTimeout(() => {
 
     const state = {
 
@@ -1433,6 +1493,9 @@ export default function POSPage() {
 
     }
 
+    }, 200);
+    return () => clearTimeout(timeoutId);
+
   }, [cart, checkoutStep, subtotal, discount, total, selectedCustomer, locale, storeInfo.name, usbDisplayConnected, isElectron, electronDisplay]);
 
   // === Invoice / Customer advance ===
@@ -1534,11 +1597,14 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
     printFrame.style.height = "0";
     printFrame.style.border = "0";
     document.body.appendChild(printFrame);
+    // FIX: Tracker l'iframe pour cleanup
+    printFramesRef.current.add(printFrame);
     printFrame.contentDocument?.write(html);
     printFrame.contentDocument?.close();
     printFrame.contentWindow?.focus();
     printFrame.contentWindow?.print();
-    setTimeout(() => { if (printFrame.parentNode) document.body.removeChild(printFrame); }, 1000);
+    // FIX: Force cleanup après 5s + retirer du tracker
+    setTimeout(() => { if (printFrame.parentNode) document.body.removeChild(printFrame); printFramesRef.current.delete(printFrame); printFramesRef.current.delete(printFrame); }, 5000);
   };
 
   const handleCreateInvoiceFromCart = async () => {
@@ -1725,7 +1791,12 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
 
         pending.push({ ...txPayload, _createdAt: Date.now() });
 
-        localStorage.setItem("kabrak_pending_tx", JSON.stringify(pending));
+        // FIX: Limiter à 100 transactions max + nettoyer les vieilles (>7 jours)
+        const now = Date.now();
+        pending = pending.filter((tx: any) => tx._createdAt && (now - tx._createdAt) < MAX_PENDING_AGE_MS);
+        if (pending.length > MAX_PENDING_TX) pending = pending.slice(-MAX_PENDING_TX);
+
+        try { localStorage.setItem("kabrak_pending_tx", JSON.stringify(pending)); } catch { console.warn("localStorage quota exceeded for pending_tx"); }
 
         refreshPendingCount();
 
@@ -1753,7 +1824,12 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
 
       pending.push({ ...txPayload, _createdAt: Date.now() });
 
-      localStorage.setItem("kabrak_pending_tx", JSON.stringify(pending));
+      // FIX: Limiter à 100 transactions max + nettoyer les vieilles (>7 jours)
+      const nowOff = Date.now();
+      pending = pending.filter((tx: any) => tx._createdAt && (nowOff - tx._createdAt) < MAX_PENDING_AGE_MS);
+      if (pending.length > MAX_PENDING_TX) pending = pending.slice(-MAX_PENDING_TX);
+
+      try { localStorage.setItem("kabrak_pending_tx", JSON.stringify(pending)); } catch { console.warn("localStorage quota exceeded for pending_tx"); }
 
       refreshPendingCount();
 
@@ -1917,11 +1993,14 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
     printFrame.style.height = "0";
     printFrame.style.border = "0";
     document.body.appendChild(printFrame);
+    // FIX: Tracker l'iframe pour cleanup
+    printFramesRef.current.add(printFrame);
 
     const printDoc = printFrame.contentWindow?.document || printFrame.contentDocument;
 
     if (!printDoc) {
       document.body.removeChild(printFrame);
+      printFramesRef.current.delete(printFrame);
       toast(locale === "fr" ? "Erreur impression — réessayer" : "Print error — retry", "warning");
       return;
     }
@@ -2042,18 +2121,18 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
           printFrame.contentWindow?.focus();
           setTimeout(() => {
             printFrame.contentWindow?.print();
-            setTimeout(() => { if (printFrame.parentNode) document.body.removeChild(printFrame); }, 1000);
+            setTimeout(() => { if (printFrame.parentNode) document.body.removeChild(printFrame); printFramesRef.current.delete(printFrame); }, 1000);
           }, 500);
         } else {
           // Succès: supprimer l'iframe
-          if (printFrame.parentNode) document.body.removeChild(printFrame);
+          if (printFrame.parentNode) document.body.removeChild(printFrame); printFramesRef.current.delete(printFrame);
         }
       }).catch(() => {
         // Fallback
         printFrame.contentWindow?.focus();
         setTimeout(() => {
           printFrame.contentWindow?.print();
-          setTimeout(() => { if (printFrame.parentNode) document.body.removeChild(printFrame); }, 1000);
+          setTimeout(() => { if (printFrame.parentNode) document.body.removeChild(printFrame); printFramesRef.current.delete(printFrame); }, 1000);
         }, 500);
       });
       return;
@@ -2068,7 +2147,7 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
 
       // Supprimer l'iframe après impression
       setTimeout(() => {
-        if (printFrame.parentNode) document.body.removeChild(printFrame);
+        if (printFrame.parentNode) document.body.removeChild(printFrame); printFramesRef.current.delete(printFrame);
       }, 1000);
 
     }, 500);
@@ -2090,11 +2169,14 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
     printFrame.style.height = "0";
     printFrame.style.border = "0";
     document.body.appendChild(printFrame);
+    // FIX: Tracker l'iframe pour cleanup
+    printFramesRef.current.add(printFrame);
 
     const printDoc = printFrame.contentWindow?.document || printFrame.contentDocument;
 
     if (!printDoc) {
       document.body.removeChild(printFrame);
+      printFramesRef.current.delete(printFrame);
       toast(locale === "fr" ? "Erreur impression — réessayer" : "Print error — retry", "warning");
       return;
     }
@@ -2264,7 +2346,7 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
           printFrame.contentWindow?.focus();
           setTimeout(() => { printFrame.contentWindow?.print(); }, 500);
         } else {
-          if (printFrame.parentNode) document.body.removeChild(printFrame);
+          if (printFrame.parentNode) document.body.removeChild(printFrame); printFramesRef.current.delete(printFrame);
         }
       }).catch(() => {
         printFrame.contentWindow?.focus();
@@ -2286,7 +2368,7 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
       }
 
       setTimeout(() => {
-        if (printFrame.parentNode) document.body.removeChild(printFrame);
+        if (printFrame.parentNode) document.body.removeChild(printFrame); printFramesRef.current.delete(printFrame);
       }, 2000);
 
     }, 800);

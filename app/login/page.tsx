@@ -13,7 +13,7 @@ import { useTenantResolution } from "@/lib/tenant/use-tenant";
 export default function LoginPage() {
   const router = useRouter();
   const { login, user, isAuthenticated, loading: authLoading } = useAuth();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { tenant, loading: tenantLoading } = useTenantResolution();
   const [cashiers, setCashiers] = useState<ApiCashier[]>([]);
   const [selectedCashier, setSelectedCashier] = useState<ApiCashier | null>(null);
@@ -32,6 +32,7 @@ export default function LoginPage() {
   // Charger la liste des caissiers (après résolution du tenant)
   useEffect(() => {
     if (tenantLoading) return; // Attendre que le tenant soit résolu
+    if (!tenant) return; // Pas de tenant résolu (marketing site) — ne pas charger les caissiers
     authApi.listCashiers().then((list) => {
       // Dedup par employeeNumber (sécurité)
       const seen = new Set<string>();
@@ -107,10 +108,12 @@ export default function LoginPage() {
               className="w-20 h-20 object-contain rounded-2xl shadow-lg"
             />
           </div>
-          {/* EASY SHOP - Welcome message */}
+          {/* Tenant name - dynamique selon le sous-domaine */}
           <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full shadow-md mb-2">
             <Store className="w-4 h-4 text-white" />
-            <span className="text-sm font-bold text-white tracking-wide">{t.login.easyShop}</span>
+            <span className="text-sm font-bold text-white tracking-wide">
+              {tenant?.supermarketName || "KABRAK Retail"}
+            </span>
           </div>
           <h1 className="text-2xl font-bold text-slate-900">{t.login.welcomeTo}</h1>
           <p className="text-sm text-slate-500 mt-1">{t.login.poweredBy}</p>
@@ -118,8 +121,31 @@ export default function LoginPage() {
 
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-6">
+          {/* Pas de tenant résolu — message d'orientation */}
+          {!tenantLoading && !tenant && (
+            <div className="text-center py-8">
+              <Store className="w-8 h-8 text-slate-300 mx-auto mb-3" />
+              <p className="text-sm font-medium text-slate-700 mb-2">
+                {locale === "fr" ? "Accédez à votre magasin" : "Access your store"}
+              </p>
+              <p className="text-xs text-slate-500 mb-4">
+                {locale === "fr"
+                  ? "Utilisez l'URL de votre boutique :"
+                  : "Use your store URL:"}
+              </p>
+              <div className="bg-slate-50 rounded-lg p-3 text-xs text-slate-600 font-mono">
+                yourstore.kabrak-retail.com
+              </div>
+              <p className="text-xs text-slate-400 mt-4">
+                {locale === "fr"
+                  ? "Ex : easyshop.kabrak-retail.com, demo.kabrak-retail.com"
+                  : "Ex: easyshop.kabrak-retail.com, demo.kabrak-retail.com"}
+              </p>
+            </div>
+          )}
+
           {/* Étape 1: Sélection employé */}
-          {!selectedCashier && (
+          {!selectedCashier && tenant && (
             <>
               <h2 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
                 <User className="w-4 h-4" /> {t.login.selectProfile}
