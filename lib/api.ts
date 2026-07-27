@@ -223,6 +223,7 @@ export interface ApiAuthUser {
   lastName: string;
   role: string;
   department: string;
+  tenantId?: string | null;
 }
 
 export interface ApiCashier {

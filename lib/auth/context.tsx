@@ -39,6 +39,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(result.user);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(result.user));
       localStorage.setItem(TOKEN_KEY, result.token);
+      // FIX: Set tenantId from the authenticated user's JWT — overrides any stale
+      // localStorage from a previous visit to a different tenant subdomain.
+      if (result.user.tenantId) {
+        localStorage.setItem("kabrak_tenant_id", result.user.tenantId);
+      }
       return true;
     } catch (e) {
       return false;

@@ -150,7 +150,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
                       <li key={href}>
                         <Link
                           href={href}
-                          onClick={onNavigate}
+                          onClick={(e) => { console.log("[SIDEBAR] click", href, "defaultPrevented:", e.defaultPrevented); setTimeout(() => console.log("[SIDEBAR] pathname 100ms:", window.location.pathname), 100); onNavigate?.(); }}
                           className={cn(
                             "group flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150",
                             active
