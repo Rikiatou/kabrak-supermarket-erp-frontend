@@ -1,9 +1,7 @@
-fix: remove Sign in + redirect from marketing page
+fix: remove duplicate closing brackets in caisses/page.tsx
 
-- Remove useEffect redirect to /login (was causing blank/loading page)
-- Remove Sign in and Request demo buttons
-- Marketing page is now purely informational
-- Users access their store via subdomain (easyshop.kabrak-retail.com, etc.)
+Fixes syntax error from replace_all that corrupted the file structure.
+This was causing the TDZ runtime error (Cannot access 't5' before initialization).
 
 Generated with [Devin](https://devin.ai)
 

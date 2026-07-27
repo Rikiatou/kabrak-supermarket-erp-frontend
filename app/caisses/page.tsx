@@ -627,5 +627,3 @@ export default function CaissesPage() {
     </AppShell>
   );
 }
-  );
-}
