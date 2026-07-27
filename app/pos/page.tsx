@@ -415,34 +415,6 @@ export default function POSPage() {
 
 
 
-  // Détection online/offline
-
-  useEffect(() => {
-
-    const goOnline = () => { setIsOnline(true); syncPendingTransactions(); };
-
-    const goOffline = () => setIsOnline(false);
-
-    window.addEventListener("online", goOnline);
-
-    window.addEventListener("offline", goOffline);
-
-    // Au montage, synchroniser les transactions en attente
-
-    syncPendingTransactions();
-
-    return () => {
-
-      window.removeEventListener("online", goOnline);
-
-      window.removeEventListener("offline", goOffline);
-
-    };
-
-  }, [syncPendingTransactions]);
-
-
-
   // === DRAFT AUTO-SAVE: save cart to localStorage on every change ===
   // FIX: Debounce 1s pour éviter JSON.stringify + localStorage.setItem à chaque scan
   useEffect(() => {
@@ -558,6 +530,20 @@ export default function POSPage() {
     }
 
   }, [createTransaction, t]);
+
+  // Détection online/offline (doit être après syncPendingTransactions pour éviter TDZ)
+  useEffect(() => {
+    const goOnline = () => { setIsOnline(true); syncPendingTransactions(); };
+    const goOffline = () => setIsOnline(false);
+    window.addEventListener("online", goOnline);
+    window.addEventListener("offline", goOffline);
+    // Au montage, synchroniser les transactions en attente
+    syncPendingTransactions();
+    return () => {
+      window.removeEventListener("online", goOnline);
+      window.removeEventListener("offline", goOffline);
+    };
+  }, [syncPendingTransactions]);
 
 
 
