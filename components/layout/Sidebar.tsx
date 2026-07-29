@@ -95,7 +95,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       label: "",
       items: [
         { href: "/settings", label: t.nav.settings, icon: Settings, badge: null },
-        { href: "/guide", label: t.nav.guide || "Guide", icon: HelpCircle, badge: null },
+        { href: "/guide", label: t.nav.guide, icon: HelpCircle, badge: null },
       ],
     },
   ];
@@ -206,7 +206,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           )}
         </div>
         <p className="text-[10px] text-[var(--text-muted)] mt-2.5 text-center font-medium tracking-wide">
-          &copy; {new Date().getFullYear()} KABRAK RETAIL — Developed by KABRAK ENG
+          &copy; {new Date().getFullYear()} KABRAK RETAIL — {t.sidebar.developedBy}
         </p>
       </div>
     </aside>

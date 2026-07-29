@@ -29,24 +29,27 @@ export function ZReportReceipt({
   const [showArticlesModal, setShowArticlesModal] = useState(false);
   const z = t.caisses?.zReport || {
     title: "Z-REPORT",
-    closingReport: "RAPPORT DE CLÔTURE",
-    station: "Caisse",
-    operator: "Opérateur",
-    opened: "Ouvert",
-    closed: "Fermé",
-    grossSales: "Ventes brutes",
-    totalDiscount: "Remises",
-    netSales: "Ventes nettes",
-    receiptsByMethod: "Encaissements",
-    cash: "Espèces",
-    card: "Carte",
+    closingReport: "CASH REGISTER CLOSING REPORT",
+    station: "Station",
+    operator: "Operator",
+    opened: "Opened",
+    closed: "Closed",
+    grossSales: "Gross Sales",
+    totalDiscount: "Total Discounts",
+    netSales: "Net Sales",
+    receiptsByMethod: "Receipts By Method Of Payment",
+    cash: "Cash",
+    card: "Card",
     mobile: "Mobile Money",
     orange: "Orange Money",
-    totalReceipts: "Total",
-    openingCash: "Fonds d'ouverture",
-    customerCount: "Clients",
-    print: "Imprimer",
-    close: "Fermer",
+    totalReceipts: "Total Receipts",
+    openingCash: "Opening Cash",
+    customerCount: "Customer Count",
+    print: "Print",
+    close: "Close",
+    articlesSold: "Sold items",
+    endMarker: "*** END ***",
+    articlesCount: "item(s)",
   };
 
   const rbm = report.receiptsByMethod ?? { cash: 0, card: 0, mobile: 0, orange: 0, split: 0 } as any;
@@ -71,7 +74,7 @@ export function ZReportReceipt({
     const html = `
       <div style="text-align:center;margin-bottom:4px">
         <div style="font-size:14px;font-weight:bold">${storeName}</div>
-        <div style="font-size:12px;font-weight:bold">ARTICLES VENDUS</div>
+        <div style="font-size:12px;font-weight:bold">${z.articlesSold?.toUpperCase() || "SOLD ITEMS"}</div>
         <div style="font-size:11px">${report.employeeName}</div>
         <div style="font-size:11px">${report.openedAt ? new Date(report.openedAt).toLocaleDateString("fr-FR") : ""}</div>
       </div>
@@ -80,11 +83,11 @@ export function ZReportReceipt({
       </div>
       <div style="border-top:1px solid #000;margin-top:3px;padding-top:3px">
         <div style="display:flex;justify-content:space-between;font-weight:bold;font-size:12px">
-          <span>TOTAL</span>
+          <span>${t.common.total}</span>
           <span>x${totalQty} ${formatCurrency(totalVal)}</span>
         </div>
       </div>
-      <div style="text-align:center;margin-top:8px;font-size:10px">*** END ***</div>`;
+      <div style="text-align:center;margin-top:8px;font-size:10px">${z.endMarker}</div>`;
 
     const printFrame = document.createElement("iframe");
     printFrame.style.position = "fixed";
@@ -102,7 +105,7 @@ export function ZReportReceipt({
     }
 
     printDoc.write(`
-      <html><head><title>Articles vendus</title>
+      <html><head><title>${z.articlesSold}</title>
       <style>
         @page { size: 80mm auto; margin: 0; }
         * { -webkit-print-color-adjust: exact; print-color-adjust: exact; box-sizing: border-box; }
@@ -156,7 +159,7 @@ export function ZReportReceipt({
         ${row(z.customerCount, String(report.customerCount))}
       </div>`;
 
-    html += `<div style="text-align:center;margin-top:8px;font-size:10px">*** END ***</div><br/>`;
+    html += `<div style="text-align:center;margin-top:8px;font-size:10px">${z.endMarker}</div><br/>`;
 
     const printFrame = document.createElement("iframe");
     printFrame.style.position = "fixed";
@@ -287,6 +290,7 @@ export function ZReportReceipt({
               {(rbm as any).orange > 0 && (
                 <div className="flex justify-between text-sm">
                   <span>{z.orange || "Orange Money"}</span>
+
                   <span className="font-semibold tabular-nums">{formatCurrency((rbm as any).orange)}</span>
                 </div>
               )}
@@ -314,7 +318,7 @@ export function ZReportReceipt({
         <div className="border-t border-[var(--border)] px-5 py-3 flex justify-end gap-2">
           {report.soldProducts && report.soldProducts.length > 0 && (
             <Button size="sm" variant="secondary" icon={<Package className="w-3.5 h-3.5" />} onClick={() => setShowArticlesModal(true)}>
-              Articles vendus ({report.soldProducts.length})
+              {z.articlesSold} ({report.soldProducts.length})
             </Button>
           )}
           <Button size="sm" variant="secondary" icon={<Printer className="w-3.5 h-3.5" />} onClick={handlePrint}>
@@ -332,12 +336,12 @@ export function ZReportReceipt({
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="sticky top-0 bg-white border-b border-[var(--border)] px-5 py-3 flex items-center justify-between z-10">
               <div>
-                <h2 className="text-sm font-bold uppercase tracking-wide">Articles vendus</h2>
-                <p className="text-xs text-[var(--text-muted)]">{report.employeeName} · {report.soldProducts?.length || 0} article(s)</p>
+                <h2 className="text-sm font-bold uppercase tracking-wide">{z.articlesSold}</h2>
+                <p className="text-xs text-[var(--text-muted)]">{report.employeeName} · {report.soldProducts?.length || 0} {z.articlesCount}</p>
               </div>
               <div className="flex items-center gap-2">
                 <Button size="sm" variant="secondary" icon={<Printer className="w-3.5 h-3.5" />} onClick={handlePrintArticles}>
-                  Imprimer
+                  {t.common.print}
                 </Button>
                 <button onClick={() => setShowArticlesModal(false)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100">
                   <X className="w-4 h-4" />
@@ -348,9 +352,9 @@ export function ZReportReceipt({
               <table className="w-full text-xs">
                 <thead className="sticky top-0 bg-white">
                   <tr className="border-b border-[var(--border)]">
-                    <th className="text-left py-2 font-semibold text-[var(--text-muted)] uppercase">Produit</th>
-                    <th className="text-right py-2 font-semibold text-[var(--text-muted)] uppercase">Qté</th>
-                    <th className="text-right py-2 font-semibold text-[var(--text-muted)] uppercase">Total</th>
+                    <th className="text-left py-2 font-semibold text-[var(--text-muted)] uppercase">{t.common.product}</th>
+                    <th className="text-right py-2 font-semibold text-[var(--text-muted)] uppercase">{t.pos.receiptQty}</th>
+                    <th className="text-right py-2 font-semibold text-[var(--text-muted)] uppercase">{t.common.total}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -364,7 +368,7 @@ export function ZReportReceipt({
                 </tbody>
                 <tfoot>
                   <tr className="border-t-2 border-[var(--border)]">
-                    <td className="py-2 font-bold">Total</td>
+                    <td className="py-2 font-bold">{t.common.total}</td>
                     <td className="py-2 text-right tabular-nums font-bold">{report.soldProducts?.reduce((s, p) => s + p.quantity, 0) || 0}</td>
                     <td className="py-2 text-right tabular-nums font-bold">{formatCurrency(report.soldProducts?.reduce((s, p) => s + p.total, 0) || 0)}</td>
                   </tr>

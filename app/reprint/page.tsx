@@ -25,12 +25,12 @@ import { formatCurrency, formatDate, formatTime, cn } from "@/lib/utils";
 import { reprintTicket } from "@/lib/utils/printReceipt";
 
 const QUICK_DATES = [
-  { label: "Aujourd'hui", days: 0 },
-  { label: "Hier", days: 1 },
-  { label: "7 jours", days: 7 },
-  { label: "30 jours", days: 30 },
-  { label: "Cette année", days: 365 },
-];
+  { labelKey: "today", days: 0 },
+  { labelKey: "yesterday", days: 1 },
+  { labelKey: "last7Days", days: 7 },
+  { labelKey: "last30Days", days: 30 },
+  { labelKey: "thisYear", days: 365 },
+] as const;
 
 const PAGE_SIZE = 50;
 

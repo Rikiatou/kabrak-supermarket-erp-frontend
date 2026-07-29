@@ -4,38 +4,16 @@ import { useI18n } from "@/lib/i18n/context";
 import { cn } from "@/lib/utils";
 
 export default function WelcomePage() {
-  const { locale, setLocale } = useI18n();
+  const { t, locale, setLocale } = useI18n();
 
-  const content = {
-    en: {
-      tag: "Retail management",
-      headline: <>Your store.<br />Under control.</>,
-      sub: "Sales, inventory, invoicing and reporting — everything your retail team needs, in one place.",
-      features: [
-        { title: "Point of Sale", desc: "Scan and checkout in seconds, with or without internet." },
-        { title: "Live Inventory", desc: "Stock levels, expiry alerts, and supplier orders in real time." },
-        { title: "Delivery Notes", desc: "Record supplier deliveries and auto-update stock instantly." },
-        { title: "Sales Reports", desc: "Revenue, margins, and trends by day, week, or month." },
-        { title: "Invoicing", desc: "Create invoices, track payments, export to PDF." },
-        { title: "Team access", desc: "Role-based access for cashiers, stockers, and managers." },
-      ],
-    },
-    fr: {
-      tag: "Gestion de commerce",
-      headline: <>Votre magasin.<br />Sous contrôle.</>,
-      sub: "Caisse, stock, facturation et rapports — tout ce dont votre équipe a besoin, en un seul endroit.",
-      features: [
-        { title: "Point de Vente", desc: "Scannez et encaissez en quelques secondes, avec ou sans internet." },
-        { title: "Stock en temps réel", desc: "Niveaux de stock, alertes d'expiration et commandes fournisseurs." },
-        { title: "Bordereaux de livraison", desc: "Enregistrez les livraisons fournisseurs et mettez à jour le stock automatiquement." },
-        { title: "Rapports de ventes", desc: "CA, marges et tendances par jour, semaine ou mois." },
-        { title: "Facturation", desc: "Créez des factures, suivez les paiements, exportez en PDF." },
-        { title: "Accès par rôle", desc: "Permissions distinctes pour caissiers, gestionnaires de stock et managers." },
-      ],
-    },
-  };
-
-  const c = content[locale] ?? content.en;
+  const features = [
+    { title: t.marketing.feature1Title, desc: t.marketing.feature1Desc },
+    { title: t.marketing.feature2Title, desc: t.marketing.feature2Desc },
+    { title: t.marketing.feature3Title, desc: t.marketing.feature3Desc },
+    { title: t.marketing.feature4Title, desc: t.marketing.feature4Desc },
+    { title: t.marketing.feature5Title, desc: t.marketing.feature5Desc },
+    { title: t.marketing.feature6Title, desc: t.marketing.feature6Desc },
+  ];
 
   return (
     <div className="min-h-screen bg-white text-neutral-900 flex flex-col">
@@ -88,15 +66,15 @@ export default function WelcomePage() {
         </div>
 
         <p className="text-[11px] font-medium tracking-widest text-neutral-400 uppercase mb-6 select-none">
-          {c.tag}
+          {t.marketing.tag}
         </p>
 
         <h1 className="text-[48px] sm:text-[62px] font-semibold tracking-[-2px] leading-[1.08] text-neutral-900 mb-6 max-w-2xl">
-          {c.headline}
+          {t.marketing.headlineLine1}<br />{t.marketing.headlineLine2}
         </h1>
 
         <p className="text-[16px] text-neutral-500 leading-relaxed max-w-md mb-10">
-          {c.sub}
+          {t.marketing.sub}
         </p>
       </section>
 
@@ -106,7 +84,7 @@ export default function WelcomePage() {
       {/* Features */}
       <section className="max-w-5xl mx-auto px-6 py-14 w-full">
         <div className="grid grid-cols-2 md:grid-cols-3 gap-x-12 gap-y-8">
-          {c.features.map((f) => (
+          {features.map((f) => (
             <div key={f.title}>
               <p className="text-[14px] font-semibold text-neutral-900 mb-1">{f.title}</p>
               <p className="text-[13px] text-neutral-500 leading-relaxed">{f.desc}</p>
@@ -122,7 +100,7 @@ export default function WelcomePage() {
             &copy; {new Date().getFullYear()} KABRAK Retail
           </span>
           <span className="text-[12px] text-neutral-400">
-            Powered by KABRAK eng
+            {t.marketing.poweredByEng}
           </span>
         </div>
       </footer>

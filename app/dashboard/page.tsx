@@ -9,14 +9,6 @@ import {
   AlertTriangle,
   ArrowRight,
   Calendar,
-  ShoppingCart,
-  Truck,
-  FileText,
-  BarChart3,
-  Cpu,
-  History,
-  PackagePlus,
-  Zap,
 } from "lucide-react";
 import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
@@ -28,7 +20,6 @@ import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { useI18n } from "@/lib/i18n/context";
-import { useAuth } from "@/lib/auth/context";
 import {
   useTodayStats,
   useYesterdayStats,
@@ -41,7 +32,6 @@ import {
   useMonthlyTopProducts,
   useAverageBasket,
   useUnpaidInvoices,
-  useActiveShifts,
 } from "@/lib/hooks/useApi";
 
 export default function DashboardPage() {
@@ -53,50 +43,10 @@ export default function DashboardPage() {
   const { alerts: stockAlertsData } = useStockAlerts();
   const { value: stockValue } = useStockValue();
   const { employees } = useEmployees();
-  const { data: activeShifts } = useActiveShifts();
-  const openCashiersCount = Array.isArray(activeShifts) ? activeShifts.filter((s: { status: string }) => s.status === "open").length : 0;
   const { data: monthlyGoal } = useMonthlyGoal();
   const { data: topProducts } = useMonthlyTopProducts(5);
   const { data: averageBasket } = useAverageBasket();
   const { data: unpaidInvoices } = useUnpaidInvoices();
-  const { user } = useAuth();
-  const dashCashierId = user?.role === "cashier" ? (user?.id ?? undefined) : undefined;
-
-  const roleShortcuts: Record<string, { label: string; href: string; icon: React.ElementType; color: string }[]> = {
-    boss: [
-      { label: t.dashboard.shortcutNewSale, href: "/pos", icon: ShoppingCart, color: "bg-blue-50 text-blue-700 border-blue-100" },
-      { label: t.dashboard.shortcutReceiveDelivery, href: "/achats", icon: Truck, color: "bg-emerald-50 text-emerald-700 border-emerald-100" },
-      { label: t.dashboard.shortcutReports, href: "/rapports", icon: BarChart3, color: "bg-violet-50 text-violet-700 border-violet-100" },
-      { label: t.dashboard.shortcutAiInsights, href: "/ia", icon: Cpu, color: "bg-amber-50 text-amber-700 border-amber-100" },
-      { label: t.dashboard.shortcutProductHistory, href: "/historique", icon: History, color: "bg-slate-50 text-slate-700 border-slate-200" },
-      { label: t.dashboard.shortcutInvoices, href: "/factures", icon: FileText, color: "bg-rose-50 text-rose-700 border-rose-100" },
-    ],
-    manager: [
-      { label: t.dashboard.shortcutNewSale, href: "/pos", icon: ShoppingCart, color: "bg-blue-50 text-blue-700 border-blue-100" },
-      { label: t.dashboard.shortcutReceiveDelivery, href: "/achats", icon: Truck, color: "bg-emerald-50 text-emerald-700 border-emerald-100" },
-      { label: t.dashboard.shortcutReports, href: "/rapports", icon: BarChart3, color: "bg-violet-50 text-violet-700 border-violet-100" },
-      { label: t.dashboard.shortcutAiInsights, href: "/ia", icon: Cpu, color: "bg-amber-50 text-amber-700 border-amber-100" },
-      { label: t.dashboard.shortcutProductHistory, href: "/historique", icon: History, color: "bg-slate-50 text-slate-700 border-slate-200" },
-      { label: t.dashboard.shortcutInvoices, href: "/factures", icon: FileText, color: "bg-rose-50 text-rose-700 border-rose-100" },
-    ],
-    cashier: [
-      { label: t.dashboard.shortcutNewSale, href: "/pos", icon: ShoppingCart, color: "bg-blue-50 text-blue-700 border-blue-100" },
-      { label: t.dashboard.shortcutClients, href: "/clients", icon: Users, color: "bg-emerald-50 text-emerald-700 border-emerald-100" },
-      { label: t.dashboard.shortcutRegister, href: "/caisses", icon: Zap, color: "bg-amber-50 text-amber-700 border-amber-100" },
-    ],
-    accountant: [
-      { label: t.dashboard.shortcutInvoices, href: "/factures", icon: FileText, color: "bg-blue-50 text-blue-700 border-blue-100" },
-      { label: t.dashboard.shortcutAccounting, href: "/comptabilite", icon: BarChart3, color: "bg-violet-50 text-violet-700 border-violet-100" },
-      { label: t.dashboard.shortcutReports, href: "/rapports", icon: BarChart3, color: "bg-emerald-50 text-emerald-700 border-emerald-100" },
-    ],
-    stockist: [
-      { label: t.dashboard.shortcutReceiveDelivery, href: "/achats", icon: Truck, color: "bg-emerald-50 text-emerald-700 border-emerald-100" },
-      { label: t.dashboard.shortcutStocks, href: "/stocks", icon: PackagePlus, color: "bg-blue-50 text-blue-700 border-blue-100" },
-      { label: t.dashboard.shortcutLosses, href: "/pertes", icon: AlertTriangle, color: "bg-red-50 text-red-700 border-red-100" },
-      { label: t.dashboard.shortcutScanner, href: "/scanner", icon: Package, color: "bg-amber-50 text-amber-700 border-amber-100" },
-    ],
-  };
-  const shortcuts = roleShortcuts[user?.role ?? ""] ?? [];
 
   // Données réelles du backend (fallback sur mock si indisponible)
   const revenue = todayStats?.revenue ?? 0;
@@ -134,60 +84,34 @@ export default function DashboardPage() {
       title={t.dashboard.title}
       subtitle={t.dashboard.subtitle}
     >
-      {/* Hero greeting */}
-      <div className="mb-6">
-        <h2 className="text-[22px] font-bold text-[var(--text-primary)] tracking-tight">
-          {t.dashboard.greeting}, {user?.firstName || t.dashboard.defaultName}
-        </h2>
-        <p className="text-[13px] text-[var(--text-muted)] mt-0.5">
-          {t.dashboard.subtitle}
-        </p>
-      </div>
-
       {/* Status bar */}
-      <div className="flex items-center gap-2 mb-5 flex-wrap">
-        <div className="flex items-center gap-2 bg-[var(--success-light)] text-[var(--success)] text-[11px] font-semibold px-3 py-1.5 rounded-md">
-          <span className="w-1.5 h-1.5 bg-[var(--success)] rounded-full animate-pulse" />
-          {t.dashboard.cashierOpen} — {openCashiersCount} {t.dashboard.activeCashiers}
+      <div className="flex items-center gap-3 mb-6 flex-wrap">
+        <div className="flex items-center gap-2 bg-[var(--success-light)] text-emerald-700 text-xs font-medium px-3 py-1.5 rounded-full">
+          <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+          {t.dashboard.cashierOpen} — 3 {t.dashboard.activeCashiers}
         </div>
         {criticalAlerts > 0 && (
-          <div className="flex items-center gap-2 bg-[var(--danger-light)] text-[var(--danger)] text-[11px] font-semibold px-3 py-1.5 rounded-md">
+          <div className="flex items-center gap-2 bg-[var(--danger-light)] text-red-700 text-xs font-medium px-3 py-1.5 rounded-full">
             <AlertTriangle className="w-3.5 h-3.5" />
             {criticalAlerts} {t.dashboard.criticalOutOfStock}
           </div>
         )}
         {expiringAlerts > 0 && (
-          <div className="flex items-center gap-2 bg-[var(--warning-light)] text-[var(--warning)] text-[11px] font-semibold px-3 py-1.5 rounded-md">
+          <div className="flex items-center gap-2 bg-[var(--warning-light)] text-amber-700 text-xs font-medium px-3 py-1.5 rounded-full">
             <AlertTriangle className="w-3.5 h-3.5" />
             {expiringAlerts} {t.dashboard.expiringSoon}
           </div>
         )}
       </div>
 
-      {/* Role-based quick shortcuts */}
-      {shortcuts.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-5">
-          {shortcuts.map((s) => (
-            <Link
-              key={s.href + s.label}
-              href={s.href}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-[12px] font-semibold transition-all hover:opacity-80 active:scale-95 ${s.color}`}
-            >
-              <s.icon className="w-3.5 h-3.5" />
-              {s.label}
-            </Link>
-          ))}
-        </div>
-      )}
-
       {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <KpiCard
           label={t.dashboard.caRevenue}
           value={revenue}
           previous={yesterdayRevenue}
           format="currency"
-          icon={revenueChange >= 0 ? <TrendingUp className="w-5 h-5 text-[var(--brand)]" /> : <TrendingDown className="w-5 h-5 text-[var(--danger)]" />}
+          icon={revenueChange >= 0 ? <TrendingUp className="w-5 h-5 text-[var(--brand)]" /> : <TrendingDown className="w-5 h-5 text-red-500" />}
           iconBg="bg-[var(--brand-light)]"
         />
         <KpiCard
@@ -195,7 +119,7 @@ export default function DashboardPage() {
           value={averageBasket?.average ?? 0}
           previous={0}
           format="currency"
-          icon={<ShoppingBag className="w-5 h-5 text-[var(--success)]" />}
+          icon={<ShoppingBag className="w-5 h-5 text-emerald-600" />}
           iconBg="bg-[var(--success-light)]"
         />
         <KpiCard
@@ -203,7 +127,7 @@ export default function DashboardPage() {
           value={transactionsCount}
           previous={yesterdayTransactions}
           format="number"
-          icon={<ShoppingBag className="w-5 h-5 text-[var(--info)]" />}
+          icon={<ShoppingBag className="w-5 h-5 text-indigo-600" />}
           iconBg="bg-[var(--info-light)]"
         />
         <KpiCard
@@ -211,7 +135,7 @@ export default function DashboardPage() {
           value={unpaidInvoices?.totalUnpaid ?? 0}
           previous={0}
           format="currency"
-          icon={<AlertTriangle className="w-5 h-5 text-[var(--danger)]" />}
+          icon={<AlertTriangle className="w-5 h-5 text-red-600" />}
           iconBg="bg-[var(--danger-light)]"
         />
       </div>
@@ -255,19 +179,19 @@ export default function DashboardPage() {
               return (
                 <div key={day.date} className="flex-1 flex flex-col items-center gap-1.5">
                   <span className="text-[10px] font-medium text-[var(--text-muted)] tabular-nums">
-                    {(day.revenue ?? 0) > 0 ? `${((day.revenue ?? 0) / 1000).toFixed(0)}k` : ""}
+                    {day.revenue > 0 ? `${(day.revenue / 1000).toFixed(0)}k` : ""}
                   </span>
                   <div className="w-full flex items-end justify-center h-24">
                     <div
-                      className={`w-full max-w-[40px] rounded-t-md transition-all hover:opacity-80 ${
+                      className={`w-full max-w-[40px] rounded-t-lg transition-all hover:opacity-80 ${
                         isToday
-                          ? "bg-gradient-to-t from-[var(--brand)] to-[var(--brand-mid)]"
+                          ? "bg-gradient-to-t from-[var(--brand)] to-blue-400"
                           : day.revenue > 0
-                            ? "bg-gradient-to-t from-[var(--brand-mid)] to-[var(--brand-light)]"
+                            ? "bg-gradient-to-t from-blue-300 to-blue-200"
                             : "bg-slate-100"
                       }`}
                       style={{ height: `${Math.max(heightPct, 2)}%` }}
-                      title={`${day.label}: ${(day.revenue ?? 0).toLocaleString()} ${t.common.currency} (${day.transactions ?? 0} ${t.common.txnsAbbr})`}
+                      title={`${day.label}: ${day.revenue.toLocaleString("fr-FR")} ${t.common.currency} (${day.transactions} ${t.common.txnsAbbr})`}
                     />
                   </div>
                   <span className={`text-[10px] ${isToday ? "font-bold text-[var(--brand)]" : "text-[var(--text-muted)]"}`}>
@@ -292,10 +216,10 @@ export default function DashboardPage() {
             <div className="mt-4">
               <div className="flex items-end justify-between mb-2">
                 <span className="text-2xl font-bold text-[var(--brand)]">
-                  {((monthlyGoal.current ?? 0) / 1000).toFixed(0)}k FCFA
+                  {(monthlyGoal.current / 1000).toFixed(0)}k FCFA
                 </span>
                 <span className="text-sm text-[var(--text-muted)]">
-                  / {((monthlyGoal.goal ?? 0) / 1000).toFixed(0)}k
+                  / {(monthlyGoal.goal / 1000).toFixed(0)}k
                 </span>
               </div>
               <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
@@ -309,7 +233,7 @@ export default function DashboardPage() {
                   {monthlyGoal.progress}% {t.dashboard.monthlyGoalProgress}
                 </span>
                 <span className="text-[var(--text-muted)]">
-                  {t.dashboard.monthlyGoalRemaining} {((monthlyGoal.remaining ?? 0) / 1000).toFixed(0)}k FCFA
+                  {t.dashboard.monthlyGoalRemaining} {(monthlyGoal.remaining / 1000).toFixed(0)}k FCFA
                 </span>
               </div>
             </div>
@@ -335,7 +259,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-semibold text-[var(--brand)]">
-                      {((product.revenue ?? 0) / 1000).toFixed(1)}k
+                      {(product.revenue / 1000).toFixed(1)}k
                     </p>
                   </div>
                 </div>
@@ -400,7 +324,7 @@ export default function DashboardPage() {
               </Link>
             }
           />
-          <RecentTransactions cashierId={dashCashierId} />
+          <RecentTransactions />
         </Card>
       </div>
 
@@ -433,23 +357,21 @@ export default function DashboardPage() {
                   stockist: "from-amber-400 to-orange-600",
                 };
                 const roleLabels: Record<string, string> = {
-                  boss: t.dashboard.roleBoss,
                   manager: t.dashboard.roleManager,
                   supervisor: t.dashboard.roleSupervisor,
                   cashier: t.dashboard.roleCashier,
                   stockist: t.dashboard.roleStockist,
-                  accountant: t.dashboard.roleAccountant,
                 };
                 return (
                   <div key={emp.id} className="flex items-center gap-2">
                     <div
                       className={`w-8 h-8 rounded-full bg-gradient-to-br ${colors[emp.role] || "from-slate-400 to-slate-600"} flex items-center justify-center text-white text-xs font-bold`}
                     >
-                      {emp.firstName?.charAt(0) || "?"}{emp.lastName?.charAt(0) || ""}
+                      {emp.firstName.charAt(0)}{emp.lastName.charAt(0)}
                     </div>
                     <div>
                       <p className="text-xs font-medium text-[var(--text-primary)] leading-none">
-                        {emp.firstName} {emp.lastName?.charAt(0) || ""}.
+                        {emp.firstName} {emp.lastName.charAt(0)}.
                       </p>
                       <p className="text-[11px] text-[var(--text-muted)]">{roleLabels[emp.role] || emp.role}</p>
                     </div>

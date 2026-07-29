@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     template: "%s — KABRAK RETAIL",
     default: "KABRAK RETAIL",
   },
-  description: "KABRAK RETAIL - Gestion complète caisse, stock, ventes",
+  description: "KABRAK RETAIL - Complete management: checkout, inventory, sales",
   applicationName: "KABRAK RETAIL",
   manifest: "/manifest.json",
   appleWebApp: {
@@ -35,10 +35,15 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="fr"
+      lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full`}
     >
       <body className="h-full bg-[var(--background)]">
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `(function(){try{var l=localStorage.getItem('kabrak-locale');if(l&&(l==='fr'||l==='en')){document.documentElement.lang=l;}}catch(e){}})();`,
+            }}
+          />
           <I18nProvider><ToastProvider><AuthProvider><LicenseProvider><RoleGuard>{children}</RoleGuard></LicenseProvider></AuthProvider></ToastProvider></I18nProvider>
           <script
             dangerouslySetInnerHTML={{

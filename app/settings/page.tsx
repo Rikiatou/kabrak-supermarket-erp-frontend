@@ -95,7 +95,7 @@ export default function SettingsPage() {
         }
       );
 
-      if (!res.ok) throw new Error(t.settings.alertUploadError || "Upload failed");
+      if (!res.ok) throw new Error(t.settings.alertUploadError);
 
       const data = await res.json();
       handleChange("logoUrl", data.logoUrl);
@@ -122,7 +122,7 @@ export default function SettingsPage() {
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } else {
-      alert(t.settings.saveError || "Save error. Check your connection.");
+      alert(t.settings.saveError);
     }
     setSaving(false);
   };
@@ -645,12 +645,12 @@ function SyncStatusSection() {
           </div>
           <div>
             <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-              {t.settings.syncTitle || "Synchronisation Cloud"}
+              {t.settings.syncTitle}
             </h3>
             <p className="text-xs text-[var(--text-muted)]">
               {isOnline
-                ? (t.settings.syncOnline || "En ligne")
-                : (t.settings.syncOffline || "Hors ligne")}
+                ? t.settings.syncOnline
+                : t.settings.syncOffline}
             </p>
           </div>
         </div>
@@ -661,14 +661,14 @@ function SyncStatusSection() {
           onClick={handleForce}
           disabled={forcing || !isOnline}
         >
-          {t.settings.syncForce || "Forcer sync"}
+          {t.settings.syncForce}
         </Button>
       </div>
 
       <div className="grid grid-cols-3 gap-3">
         <div className="text-center p-3 bg-slate-50 rounded-xl">
           <p className="text-xs text-[var(--text-muted)] mb-1">
-            {t.settings.syncPending || "En attente"}
+            {t.settings.syncPending}
           </p>
           <p className={`text-lg font-bold ${pending > 0 ? "text-amber-600" : "text-emerald-600"}`}>
             {pending}
@@ -676,7 +676,7 @@ function SyncStatusSection() {
         </div>
         <div className="text-center p-3 bg-slate-50 rounded-xl">
           <p className="text-xs text-[var(--text-muted)] mb-1">
-            {t.settings.syncFailed || "Échecs"}
+            {t.settings.syncFailed}
           </p>
           <p className={`text-lg font-bold ${failed > 0 ? "text-red-600" : "text-emerald-600"}`}>
             {failed}
@@ -684,7 +684,7 @@ function SyncStatusSection() {
         </div>
         <div className="text-center p-3 bg-slate-50 rounded-xl">
           <p className="text-xs text-[var(--text-muted)] mb-1">
-            {t.settings.syncLast || "Dernière sync"}
+            {t.settings.syncLast}
           </p>
           <p className="text-sm font-semibold text-[var(--text-primary)]">
             {sync?.lastSync
@@ -697,13 +697,13 @@ function SyncStatusSection() {
       {failed > 0 && (
         <div className="mt-3 flex items-center gap-2 text-xs text-amber-600 bg-amber-50 p-2 rounded-lg">
           <AlertCircle className="w-4 h-4 shrink-0" />
-          {t.settings.syncFailedWarn || "Des éléments n'ont pas pu être synchronisés. Cliquez sur 'Forcer sync' pour réessayer."}
+          {t.settings.syncFailedWarn}
         </div>
       )}
       {pending === 0 && failed === 0 && isOnline && (
         <div className="mt-3 flex items-center gap-2 text-xs text-emerald-600 bg-emerald-50 p-2 rounded-lg">
           <CheckCircle className="w-4 h-4 shrink-0" />
-          {t.settings.syncAllGood || "Tout est synchronisé."}
+          {t.settings.syncAllGood}
         </div>
       )}
     </div>
