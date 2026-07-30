@@ -696,22 +696,20 @@ export default function POSPage() {
 
 
 
-      // 3. Si toujours pas trouvé, prendre le 1er résultat de la recherche par nom
-
-      if (!found && useServerSearch && searchResults.length > 0) {
-
-        found = searchResults[0];
-
-      } else if (!found && !useServerSearch) {
-
-        // Mode local: chercher par nom dans les produits chargés
-
-        found = products.find(
-
-          (p) => p.name.toLowerCase().includes(code.toLowerCase())
-
-        );
-
+      // 3. Fallback par nom — UNIQUEMENT si le code tapé ressemble à du texte
+      // (pas un barcode). Un barcode scanné est numérique (8-13 chiffres).
+      // Si on fallback sur searchResults pour un barcode, on risque d'ajouter
+      // un produit qui n'a rien à voir (résultat d'une recherche précédente).
+      const looksLikeBarcode = /^\d{6,}$/.test(code);
+      if (!found && !looksLikeBarcode) {
+        if (useServerSearch && searchResults.length > 0) {
+          found = searchResults[0];
+        } else if (!useServerSearch) {
+          // Mode local: chercher par nom dans les produits chargés
+          found = products.find(
+            (p) => p.name.toLowerCase().includes(code.toLowerCase())
+          );
+        }
       }
 
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Wallet,
   TrendingUp,
@@ -26,7 +26,8 @@ import {
   useCloseShift,
   useEmployees,
 } from "@/lib/hooks/useApi";
-import type { ApiShift, ApiEmployee } from "@/lib/api";
+import { shiftsApi, type ApiShift, type ApiEmployee, type ApiZReport } from "@/lib/api";
+import { ZReportReceipt } from "@/components/ZReportReceipt";
 
 // ========================================
 // MOCK DATA
@@ -241,7 +242,7 @@ function CloseShiftModal({
 
           <div>
             <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">
-              Caisse attendue
+              {t.caisses.expectedCash}
             </label>
             <div className="relative">
               <Calculator className="w-4 h-4 text-[var(--text-muted)] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -257,7 +258,7 @@ function CloseShiftModal({
 
           <div>
             <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">
-              Caisse réelle comptée
+              {t.caisses.countedCash}
             </label>
             <div className="relative">
               <Wallet className="w-4 h-4 text-[var(--text-muted)] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -282,7 +283,7 @@ function CloseShiftModal({
             )}
           >
             <span className="text-xs font-medium text-[var(--text-secondary)]">
-              Écart
+              {t.caisses.difference}
             </span>
             <span
               className={cn(
@@ -301,13 +302,13 @@ function CloseShiftModal({
 
           <div>
             <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">
-              Notes (optionnel)
+              {t.caisses.notes}
             </label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={2}
-              placeholder="Anomalies, explications…"
+              placeholder={t.caisses.notesPh}
               className="w-full bg-white border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--brand)] transition-colors resize-none"
             />
           </div>
@@ -315,7 +316,7 @@ function CloseShiftModal({
 
         <div className="flex items-center gap-3 mt-6">
           <Button variant="secondary" className="flex-1" onClick={onCancel}>
-            Annuler
+            {t.common.cancel}
           </Button>
           <Button
             variant="danger"
@@ -324,7 +325,7 @@ function CloseShiftModal({
             disabled={closingNum <= 0 || expectedNum <= 0}
             onClick={() => onConfirm(closingNum, expectedNum, notes)}
           >
-            Fermer la caisse
+            {t.caisses.close || "Close register"}
           </Button>
         </div>
       </Card>
@@ -453,7 +454,7 @@ export default function CaissesPage() {
   const { close, closing } = useCloseShift();
   const { employees } = useEmployees();
 
-  // Build REGISTERS with translated names
+  // Build REGISTERS with translated names (fallback to mock)
   const REGISTERS = REGISTER_KEYS.map(rk => ({ id: rk.id, name: t.common[rk.nameKey] }));
 
   // Filtrer les employés qui peuvent ouvrir une caisse
@@ -463,6 +464,8 @@ export default function CaissesPage() {
 
   const [openRegister, setOpenRegister] = useState<string | null>(null);
   const [closeShift, setCloseShift] = useState<ApiShift | null>(null);
+  const [zReport, setZReport] = useState<ApiZReport | null>(null);
+  const [zReportLoading, setZReportLoading] = useState(false);
 
   // Map registerId -> active shift
   const shiftByRegister = useMemo(() => {
@@ -494,11 +497,11 @@ export default function CaissesPage() {
     if (!openRegister) return;
     try {
       await open({ registerId: openRegister, employeeId, openingCash });
-      toast("Caisse ouverte avec succès", "success");
+      toast(t.caisses.successOpen, "success");
       setOpenRegister(null);
       reload();
     } catch (e) {
-      toast("Erreur lors de l'ouverture de la caisse", "warning");
+      toast(t.caisses.errorOpen, "warning");
     }
   };
 
@@ -508,31 +511,62 @@ export default function CaissesPage() {
     notes: string,
   ) => {
     if (!closeShift) return;
+    const shiftId = closeShift.id;
     try {
-      await close(closeShift.id, { closingCash, expectedCash, notes });
-      toast("Caisse fermée avec succès", "success");
+      await close(shiftId, { closingCash, expectedCash, notes });
+      toast(t.caisses.successClose, "success");
       setCloseShift(null);
-      reload();
+      // Fetch Z report BEFORE reload() to avoid re-render interfering with the fetch.
+      // Retry once on failure — mini-PC network can be flaky.
+      setZReportLoading(true);
+      try {
+        let report = await shiftsApi.zReport(shiftId);
+        if (!report) {
+          await new Promise((r) => setTimeout(r, 500));
+          report = await shiftsApi.zReport(shiftId);
+        }
+        if (report) {
+          setZReport(report);
+        } else {
+          toast(t.caisses.errorClose, "warning");
+        }
+      } catch (e) {
+        // Retry once after a short delay (network blip on mini-PC)
+        try {
+          await new Promise((r) => setTimeout(r, 600));
+          const report = await shiftsApi.zReport(shiftId);
+          if (report) {
+            setZReport(report);
+          } else {
+            toast(t.caisses.errorClose, "warning");
+          }
+        } catch (e2) {
+          toast(t.caisses.errorClose, "warning");
+        }
+      } finally {
+        setZReportLoading(false);
+        reload();
+      }
     } catch (e) {
-      toast("Erreur lors de la fermeture de la caisse", "warning");
+      toast(t.caisses.errorClose, "warning");
     }
   };
 
   const kpis = [
     {
-      label: "Caisses ouvertes",
+      label: t.caisses.openRegisters,
       value: `${openCount} / ${REGISTERS.length}`,
       icon: <Wallet className="w-5 h-5" />,
       tone: "text-emerald-600 bg-emerald-100",
     },
     {
-      label: "CA total caisses",
+      label: t.caisses.totalRegisterRevenue,
       value: formatCurrency(totalRevenue),
       icon: <TrendingUp className="w-5 h-5" />,
       tone: "text-blue-600 bg-blue-100",
     },
     {
-      label: "Écarts total",
+      label: t.caisses.totalDifferences,
       value: formatCurrency(totalDifference),
       icon: <AlertTriangle className="w-5 h-5" />,
       tone:
@@ -546,8 +580,8 @@ export default function CaissesPage() {
 
   return (
     <AppShell
-      title={t.pos.title}
-      subtitle="Gestion multi-caisses — ouvertures et fermetures de shifts"
+      title={t.caisses.title}
+      subtitle={t.caisses.subtitle}
     >
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
@@ -622,6 +656,14 @@ export default function CaissesPage() {
           closing={closing}
           onConfirm={handleClose}
           onCancel={() => setCloseShift(null)}
+        />
+      )}
+
+      {/* Z Report Modal (shown after closing a shift) */}
+      {zReport && (
+        <ZReportReceipt
+          report={zReport}
+          onClose={() => setZReport(null)}
         />
       )}
     </AppShell>
