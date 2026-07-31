@@ -729,11 +729,13 @@ export default function POSPage() {
           if (found.stock < found.packQuantity!) {
             toast(`${found.name} — Insufficient stock for pack`, "warning");
             setSearch("");
+            isScanningRef.current = false;
             return;
           }
         } else if (found.stock <= 0) {
           toast(`${found.name} — Out of stock`, "warning");
           setSearch("");
+          isScanningRef.current = false;
           return;
         }
 
