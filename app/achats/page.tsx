@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   Search,
   Plus,
@@ -367,7 +367,7 @@ export default function AchatsPage() {
   };
 
   // Convertir les suppliers API au format frontend
-  const suppliers: Supplier[] = (apiSuppliers ?? []).map((s) => ({
+  const suppliers: Supplier[] = useMemo(() => (apiSuppliers ?? []).map((s) => ({
     id: s.id,
     name: s.name,
     contact: s.contact,
@@ -378,7 +378,7 @@ export default function AchatsPage() {
     rating: s.rating,
     totalOrders: s._count?.purchaseOrders || 0,
     pendingOrders: 0,
-  }));
+  })), [apiSuppliers]);
 
   const openNewOrder = (supplier?: Supplier) => {
     setOrderSupplier(supplier);
@@ -391,7 +391,7 @@ export default function AchatsPage() {
     if (suppliers.length > 0) {
       setSupplierList(suppliers);
     }
-  }, [suppliers]);
+  }, [suppliers]); // suppliers is now memoized — only changes when apiSuppliers changes
 
   const handleNewSupplier = async (data: Omit<Supplier, "id" | "rating" | "totalOrders" | "pendingOrders">) => {
     try {
@@ -428,7 +428,7 @@ export default function AchatsPage() {
   };
 
   // Convertir les orders API au format frontend
-  const orders = (apiOrders ?? []).map((o) => {
+  const orders = useMemo(() => (apiOrders ?? []).map((o) => {
     const supplier = suppliers.find((s) => s.id === o.supplierId)
       || (o.supplier ? { id: o.supplier.id, name: o.supplier.name, contact: o.supplier.contact || "", phone: o.supplier.phone || "", email: o.supplier.email || "", address: o.supplier.address || "", paymentTerms: "", rating: 0, totalOrders: 0, pendingOrders: 0 } : null)
       || { id: o.supplierId, name: "—", contact: "", phone: "", email: "", address: "", paymentTerms: "", rating: 0, totalOrders: 0, pendingOrders: 0 };
@@ -442,7 +442,7 @@ export default function AchatsPage() {
       itemCount: o.items?.length || 0,
       items: o.items || [],
     };
-  });
+  }), [apiOrders, suppliers]);
 
   const totalSpend = orders
     .filter((o) => o.status === "received")

@@ -191,7 +191,7 @@ export default function IaPage() {
           </div>
           <div className="space-y-2">
             {recommendations.map((rec, idx) => {
-              const priority = priorityConfig[rec.priority];
+              const priority = priorityConfig[rec.priority] || priorityConfig.medium;
               const typeCfg = typeConfig[rec.type] || typeConfig.stockout;
               const Icon = priority.icon;
               return (

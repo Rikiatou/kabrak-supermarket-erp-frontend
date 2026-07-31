@@ -672,8 +672,8 @@ export default function FacturesPage() {
                       <span className={invoice.balance > 0 ? "text-red-600" : "text-emerald-600"}>{formatCurrency(invoice.balance)}</span>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <span className={cn("inline-flex px-2 py-0.5 rounded-md text-xs font-medium", statusConfig[invoice.status].color)}>
-                        {(t.factures.status as any)[invoice.status] || statusConfig[invoice.status].label}
+                      <span className={cn("inline-flex px-2 py-0.5 rounded-md text-xs font-medium", (statusConfig[invoice.status] || statusConfig.draft).color)}>
+                        {(t.factures.status as any)[invoice.status] || (statusConfig[invoice.status] || statusConfig.draft).label}
                       </span>
                     </td>
                     <td className="px-4 py-3">
