@@ -1,9 +1,9 @@
-// KABRAK Service Worker — v8 (network-first for JS/CSS to avoid stale chunk errors)
+// KABRAK Service Worker — v9 (network-first for JS/CSS to avoid stale chunk errors)
 // Strategy: network-first for JS/CSS (always fresh, prevents ChunkLoadError after deploy),
 //           cache-first for fonts/images (stable assets).
 // NEVER intercept: API calls, Next.js RSC payloads, page navigation, cross-origin requests.
 
-const CACHE_NAME = "kabrak-v8";
+const CACHE_NAME = "kabrak-v9";
 
 // Assets that change on every deploy — always fetch fresh, cache as offline fallback
 const NETWORK_FIRST_EXT = [".js", ".css"];
