@@ -26,7 +26,7 @@ import { useServerProductSearch, useRecentTransactions, usePaginatedTransactions
 import { stockApi, returnsApi } from "@/lib/api";
 import type { ApiStockMovement, ApiTransaction, ApiTransactionItem } from "@/lib/api";
 import type { Product } from "@/lib/types";
-import { formatCurrency, formatDate, formatTime, cn } from "@/lib/utils";
+import { formatCurrency, formatDate, formatTime, cn, localDateStr } from "@/lib/utils";
 import { useAuth } from "@/lib/auth/context";
 import { ShoppingCart, Wallet, Clock, User } from "lucide-react";
 
@@ -114,8 +114,8 @@ export default function HistoriquePage() {
   const cashierIdFilter = isCashier ? (user?.id ?? undefined) : undefined;
 
   // Filtre par date — par défaut: aujourd'hui
-  const [salesStartDate, setSalesStartDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [salesEndDate, setSalesEndDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [salesStartDate, setSalesStartDate] = useState(() => localDateStr());
+  const [salesEndDate, setSalesEndDate] = useState(() => localDateStr());
 
   // Pagination
   const [salesPage, setSalesPage] = useState(1);
@@ -366,7 +366,7 @@ export default function HistoriquePage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `stock-history-${selectedProduct.sku}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `stock-history-${selectedProduct.sku}-${localDateStr()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };

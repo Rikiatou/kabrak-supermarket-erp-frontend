@@ -78,7 +78,7 @@ import { useToast } from "@/components/ui/Toast";
 
 import { useRouter } from "next/navigation";
 
-import { formatCurrency, cn } from "@/lib/utils";
+import { formatCurrency, cn, localDateStr } from "@/lib/utils";
 
 import { useI18n } from "@/lib/i18n/context";
 
@@ -219,7 +219,7 @@ export default function POSPage() {
 
   // Paginated transactions for history modal
   const [historyPage, setHistoryPage] = useState(1);
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = localDateStr();
   const [historyStartDate, setHistoryStartDate] = useState(todayStr);
   const [historyEndDate, setHistoryEndDate] = useState(todayStr);
   const { transactions: historyTransactions, total: historyTotal, totalPages: historyTotalPages, loading: historyLoading } = usePaginatedTransactions(historyPage, 20, undefined, historyStartDate, historyEndDate);

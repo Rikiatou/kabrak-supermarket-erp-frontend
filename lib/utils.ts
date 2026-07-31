@@ -13,6 +13,24 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/**
+ * Returns today's date as YYYY-MM-DD in the user's LOCAL timezone.
+ *
+ * IMPORTANT: Do NOT use `new Date().toISOString().slice(0,10)` for "today" —
+ * that returns UTC, which is 1 hour behind local time (Cameroun UTC+1).
+ * After midnight local (00:00–00:59), toISOString() still returns YESTERDAY,
+ * causing date filters to miss sales made just after midnight.
+ *
+ * This function uses local date components (getFullYear/getMonth/getDate)
+ * so "today" is correct regardless of timezone offset.
+ */
+export function localDateStr(date: Date = new Date()): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 export function formatCurrency(amount: number | null | undefined, currency = "XAF"): string {
   if (amount == null || isNaN(amount as number)) return "—";
   const locale = getCurrentLocale();

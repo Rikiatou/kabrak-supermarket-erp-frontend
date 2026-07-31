@@ -33,7 +33,7 @@ import { Button } from "@/components/ui/Button";
 import { useSuppliers, usePurchaseOrders, useCreatePurchaseOrder, useProducts, useServerProductSearch } from "@/lib/hooks/useApi";
 import { useBarcodeScanner } from "@/lib/hooks/useBarcodeScanner";
 import { suppliersApi, purchaseOrdersApi, productsApi, batchesApi } from "@/lib/api";
-import { formatCurrency, cn } from "@/lib/utils";
+import { formatCurrency, cn, localDateStr } from "@/lib/utils";
 import { useAuth } from "@/lib/auth/context";
 import type { Supplier } from "@/lib/types";
 import type { Product } from "@/lib/types";
@@ -96,7 +96,7 @@ export default function AchatsPage() {
   const [showDeliveryForm, setShowDeliveryForm] = useState(false);
   const [savingDelivery, setSavingDelivery] = useState(false);
   const [deliveryRef, setDeliveryRef] = useState("");
-  const [deliveryDate, setDeliveryDate] = useState(new Date().toISOString().split("T")[0]);
+  const [deliveryDate, setDeliveryDate] = useState(localDateStr());
   const [deliverySupplierId, setDeliverySupplierId] = useState("");
   const [deliverySupplierName, setDeliverySupplierName] = useState("");
   const [supplierSuggestions, setSupplierSuggestions] = useState<Supplier[]>([]);
@@ -251,7 +251,7 @@ export default function AchatsPage() {
   }, 0);
 
   const resetDeliveryForm = () => {
-    setDeliveryRef(""); setDeliveryDate(new Date().toISOString().split("T")[0]);
+    setDeliveryRef(""); setDeliveryDate(localDateStr());
     setDeliverySupplierId(""); setDeliverySupplierName(""); setDeliveryLines([{ productId: "", productLabel: "", qty: 1, unitPrice: 0, sellPrice: 0, expiryDate: "", receiveInPacks: false, packQty: 1, productPackQuantity: null, isNewProduct: false, newProductName: "", newProductBarcode: "", newProductCategory: "Grocery", newProductUnit: "pc" }]);
     setScanInput(""); setScanMode(false);
   };
@@ -435,8 +435,8 @@ export default function AchatsPage() {
     return {
       id: o.orderNumber,
       supplier,
-      date: new Date(o.date).toISOString().split("T")[0],
-      expectedDate: new Date(o.expectedDate).toISOString().split("T")[0],
+      date: localDateStr(new Date(o.date)),
+      expectedDate: localDateStr(new Date(o.expectedDate)),
       total: o.total,
       status: o.status as OrderStatus,
       itemCount: o.items?.length || 0,

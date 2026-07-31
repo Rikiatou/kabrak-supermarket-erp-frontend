@@ -27,7 +27,7 @@ import { EditEmployeeModal } from "@/components/forms/EditEmployeeModal";
 import { useEmployees } from "@/lib/hooks/useApi";
 import { employeesApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth/context";
-import { formatDate, cn } from "@/lib/utils";
+import { formatDate, cn, localDateStr } from "@/lib/utils";
 import type { Employee } from "@/lib/types";
 
 const roleColors: Record<Employee["role"], string> = {
@@ -170,7 +170,7 @@ export default function EmployesPage() {
         department: created.department,
         phone: created.phone || "",
         email: created.email || "",
-        hireDate: created.hireDate ? new Date(created.hireDate).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
+        hireDate: created.hireDate ? localDateStr(new Date(created.hireDate)) : localDateStr(),
         status: "active" as const,
         hoursThisWeek: 0,
       };

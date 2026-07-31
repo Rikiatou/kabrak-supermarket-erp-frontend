@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { useI18n } from "@/lib/i18n/context";
 import { useToast } from "@/components/ui/Toast";
-import { formatCurrency, cn } from "@/lib/utils";
+import { formatCurrency, cn, localDateStr } from "@/lib/utils";
 import { exportToCSV } from "@/lib/export";
 import { useInvoices, useCreateInvoice, useUpdateInvoiceStatus, useAddPayment, useServerProductSearch } from "@/lib/hooks/useApi";
 import type { ApiInvoicePayment } from "@/lib/api";
@@ -155,8 +155,8 @@ export default function FacturesPage() {
     ? apiInvoices.invoices.map((inv) => ({
         id: inv.id,
         number: inv.number,
-        date: new Date(inv.date).toISOString().split("T")[0],
-        dueDate: inv.dueDate ? new Date(inv.dueDate).toISOString().split("T")[0] : undefined,
+        date: localDateStr(new Date(inv.date)),
+        dueDate: inv.dueDate ? localDateStr(new Date(inv.dueDate)) : undefined,
         clientName: inv.clientName,
         clientPhone: inv.clientPhone,
         clientEmail: inv.clientEmail || "",
@@ -177,7 +177,7 @@ export default function FacturesPage() {
           id: p.id,
           amount: p.amount,
           method: p.method,
-          date: new Date(p.date).toISOString().split("T")[0],
+          date: localDateStr(new Date(p.date)),
           note: p.note,
         })),
       }))
@@ -318,7 +318,7 @@ export default function FacturesPage() {
             id: result.payment.id,
             amount: result.payment.amount,
             method: result.payment.method,
-            date: new Date(result.payment.date).toISOString().split("T")[0],
+            date: localDateStr(new Date(result.payment.date)),
             note: result.payment.note,
           },
         ],
@@ -331,7 +331,7 @@ export default function FacturesPage() {
         id: `local-${Date.now()}`,
         amount,
         method: paymentMethod,
-        date: new Date().toISOString().split("T")[0],
+        date: localDateStr(),
         note: paymentNote || undefined,
       };
       const newPaid = paymentInvoice.paidAmount + amount;
@@ -625,7 +625,7 @@ export default function FacturesPage() {
                   Solde: inv.total - inv.paidAmount,
                   Statut: inv.status,
                 })),
-                `factures_${new Date().toISOString().slice(0, 10)}`,
+                `factures_${localDateStr()}`,
                 [
                   { key: "Numero", label: t.factures.invoiceNumber },
                   { key: "Client", label: t.factures.client },

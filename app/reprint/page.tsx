@@ -21,7 +21,7 @@ import { useToast } from "@/components/ui/Toast";
 import { useAuth } from "@/lib/auth/context";
 import { useLicense } from "@/lib/license/context";
 import { transactionsApi, employeesApi, type ApiTransaction, type ApiEmployee } from "@/lib/api";
-import { formatCurrency, formatDate, formatTime, cn } from "@/lib/utils";
+import { formatCurrency, formatDate, formatTime, cn, localDateStr } from "@/lib/utils";
 import { reprintTicket } from "@/lib/utils/printReceipt";
 
 const QUICK_DATES = [
@@ -52,9 +52,9 @@ export default function ReprintPage() {
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() - 7);
-    return d.toISOString().slice(0, 10);
+    return localDateStr(d);
   });
-  const [endDate, setEndDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [endDate, setEndDate] = useState(() => localDateStr());
 
   // Employees (for cashier filter)
   const [employees, setEmployees] = useState<ApiEmployee[]>([]);
@@ -115,8 +115,8 @@ export default function ReprintPage() {
     } else {
       start.setDate(start.getDate() - days);
     }
-    setStartDate(start.toISOString().slice(0, 10));
-    setEndDate(end.toISOString().slice(0, 10));
+    setStartDate(localDateStr(start));
+    setEndDate(localDateStr(end));
     setPage(1);
   };
 

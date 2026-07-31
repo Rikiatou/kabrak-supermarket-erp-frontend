@@ -21,7 +21,7 @@ import { useToast } from "@/components/ui/Toast";
 import { useAuth } from "@/lib/auth/context";
 import { useServerProductSearch, useGifts } from "@/lib/hooks/useApi";
 import { stockApi } from "@/lib/api";
-import { formatDate, cn } from "@/lib/utils";
+import { formatDate, cn, localDateStr } from "@/lib/utils";
 import type { ApiStockMovement } from "@/lib/api";
 
 type RecipientType = "staff" | "other";
@@ -48,7 +48,7 @@ export default function CadeauxPage() {
   const { gifts: dbGifts, loading: loadingGifts, reload: reloadGifts } = useGifts();
 
   // Filtres date (comme pertes)
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = localDateStr();
   const [startDate, setStartDate] = useState(todayStr);
   const [endDate, setEndDate] = useState(todayStr);
   const [dateFilterActive, setDateFilterActive] = useState(false);

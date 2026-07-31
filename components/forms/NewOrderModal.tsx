@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { X, ShoppingCart, CheckCircle2, Plus, Trash2, ChevronDown, Search, ScanLine, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useI18n } from "@/lib/i18n/context";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn, formatCurrency, localDateStr } from "@/lib/utils";
 import { useSuppliers, useProducts } from "@/lib/hooks/useApi";
 import { suppliersApi } from "@/lib/api";
 import type { Supplier, Product } from "@/lib/types";
@@ -477,7 +477,7 @@ export function NewOrderModal({ onClose, onSave, defaultSupplier, allowDirectRec
                       type="date"
                       value={form.expectedDate}
                       onChange={set("expectedDate")}
-                      min={new Date().toISOString().split("T")[0]}
+                      min={localDateStr()}
                       className={inputClass(!!errors.expectedDate)}
                     />
                   </Field>
