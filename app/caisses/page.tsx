@@ -202,13 +202,13 @@ function CloseShiftModal({
   const [notes, setNotes] = useState("");
   const { t } = useI18n();
 
-  // expectedCash vient directement du parent (calcul+¬ par le Z-report)
-  // Pas de useState GÇö on utilise la prop directement
+  // expectedCash vient directement du parent (calculÃ© par le Z-report)
+  // Pas de useState â€” on utilise la prop directement
   const expectedNum = initialExpected;
   const closingNum = Number(closingCash) || 0;
   const difference = closingNum - expectedNum;
 
-  // Mettre +á jour closingCash quand le Z-report arrive
+  // Mettre Ã  jour closingCash quand le Z-report arrive
   useEffect(() => {
     setClosingCash(String(initialExpected));
   }, [initialExpected]);
@@ -478,7 +478,7 @@ export default function CaissesPage() {
   // Roles qui voient TOUT (boss, manager, supervisor, accountant)
   const isManager = ["boss", "manager", "supervisor", "accountant"].includes(user?.role ?? "");
 
-  // Filtrer les employ+¬s qui peuvent ouvrir une caisse
+  // Filtrer les employÃ©s qui peuvent ouvrir une caisse
   const cashiers = employees.filter((e) =>
     ["cashier", "supervisor", "manager"].includes(e.role) && e.status === "active"
   );
@@ -508,19 +508,19 @@ export default function CaissesPage() {
     return map;
   }, [shifts]);
 
-  // Shift propre au caissier connect+¬ (si role cashier)
+  // Shift propre au caissier connectÃ© (si role cashier)
   const myShift = useMemo(() =>
     shifts?.find((s) => s.employeeId === user?.id && s.status === "open") ?? null,
   [shifts, user]);
 
-  // Registres visibles selon le r+¦le:
-  // GÇö manager/boss/accountant: tous les registres
-  // GÇö cashier avec shift ouvert: seulement son registre
-  // GÇö cashier sans shift: aucun register affich+¬ (UI d+¬di+¬e +á la place)
+  // Registres visibles selon le rÃ´le:
+  // â€” manager/boss/accountant: tous les registres
+  // â€” cashier avec shift ouvert: seulement son registre
+  // â€” cashier sans shift: aucun register affichÃ© (UI dÃ©diÃ©e Ã  la place)
   const visibleRegisters = useMemo(() => {
     if (isManager) return REGISTERS;
     if (myShift) return REGISTERS.filter((r) => r.id === myShift.registerId);
-    return []; // cashier sans shift: UI d+¬di+¬e (pas de grille de 4 cartes)
+    return []; // cashier sans shift: UI dÃ©diÃ©e (pas de grille de 4 cartes)
   }, [isManager, myShift, REGISTERS]);
 
   // Registres disponibles (libres) pour le cashier qui ouvre son shift
@@ -549,12 +549,12 @@ export default function CaissesPage() {
     setLoadingCloseSummary(true);
     setCloseExpectedCash(shift.openingCash); // fallback initial
     try {
-      // R+¬cup+¬rer les transactions de cet employ+¬
+      // RÃ©cupÃ©rer les transactions de cet employÃ©
       const response = await transactionsApi.list(1, 200, shift.employeeId);
       const shiftStart = new Date(shift.openedAt).getTime();
       const now = Date.now();
 
-      // Filtrer les transactions dans la p+¬riode du shift
+      // Filtrer les transactions dans la pÃ©riode du shift
       const shiftTx = response.data.filter((tx) => {
         const txTime = new Date(tx.date).getTime();
         return txTime >= shiftStart && txTime <= now && tx.status === "completed";
@@ -645,7 +645,7 @@ export default function CaissesPage() {
     }
   };
 
-  // Charger les shifts pass+¬s (ferm+¬s) GÇö tri+¬s du plus r+¬cent au plus ancien
+  // Charger les shifts passÃ©s (fermÃ©s) â€” triÃ©s du plus rÃ©cent au plus ancien
   const loadPastShifts = async () => {
     try {
       const all = await shiftsApi.list();
@@ -658,7 +658,7 @@ export default function CaissesPage() {
     }
   };
 
-  // Historique filtr+¬ par caissier et/ou par date
+  // Historique filtrÃ© par caissier et/ou par date
   const filteredPastShifts = useMemo(() => {
     return pastShifts.filter((s) => {
       if (histCashier && s.employeeId !== histCashier) return false;
@@ -674,7 +674,7 @@ export default function CaissesPage() {
     });
   }, [pastShifts, histCashier, histDate]);
 
-  // R+¬imprimer un Z-report
+  // RÃ©imprimer un Z-report
   const reprintZReport = async (shiftId: string) => {
     setReprintLoading(shiftId);
     try {
@@ -687,7 +687,7 @@ export default function CaissesPage() {
     }
   };
 
-  // Z-Report journalier par caissier (sans d+¬pendre des shifts)
+  // Z-Report journalier par caissier (sans dÃ©pendre des shifts)
   const generateDailyZReport = async () => {
     if (!histCashier || !histDate) {
       toast(t.caisses.selectCashierAndDate || "Select a cashier and a date", "warning");
@@ -735,7 +735,7 @@ export default function CaissesPage() {
       title={t.caisses.title}
       subtitle={t.caisses.subtitle}
     >
-      {/* KPI Cards GÇö managers/boss seulement */}
+      {/* KPI Cards â€” managers/boss seulement */}
       {isManager && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
           {kpis.map((kpi) => (
@@ -754,7 +754,7 @@ export default function CaissesPage() {
         </div>
       )}
 
-      {/* GöÇGöÇ Cashier: pas de shift ouvert GåÆ UI d+¬di+¬e d'ouverture GöÇGöÇ */}
+      {/* â”€â”€ Cashier: pas de shift ouvert â†’ UI dÃ©diÃ©e d'ouverture â”€â”€ */}
       {!isManager && !myShift && (
         <div className="flex flex-col items-center justify-center py-16 gap-6">
           <div className="w-20 h-20 rounded-2xl bg-amber-100 flex items-center justify-center">
@@ -773,7 +773,7 @@ export default function CaissesPage() {
                   className="w-full h-14 bg-[#16a34a] hover:bg-[#15803d] text-white text-[15px] font-bold rounded-xl transition-all shadow-[0_4px_14px_rgba(22,163,74,.3)] flex items-center justify-center gap-2 active:scale-[0.99]"
                 >
                   <Unlock className="w-5 h-5" />
-                  {t.caisses.open} GÇö {reg.name}
+                  {t.caisses.open} â€” {reg.name}
                 </button>
               ))}
             </div>
@@ -785,8 +785,8 @@ export default function CaissesPage() {
         </div>
       )}
 
-      {/* GöÇGöÇ Cashier: shift ouvert GåÆ sa seule caisse GöÇGöÇ */}
-      {/* GöÇGöÇ Manager: grille de toutes les caisses GöÇGöÇ */}
+      {/* â”€â”€ Cashier: shift ouvert â†’ sa seule caisse â”€â”€ */}
+      {/* â”€â”€ Manager: grille de toutes les caisses â”€â”€ */}
       {(isManager || myShift) && (
         <div className={cn(
           "grid gap-4",
@@ -816,7 +816,7 @@ export default function CaissesPage() {
         </p>
       )}
 
-      {/* Z-Report History GÇö Reprint past Z-reports (accessible +á tous: manager ET caissiers) */}
+      {/* Z-Report History â€” Reprint past Z-reports (accessible Ã  tous: manager ET caissiers) */}
       {(
         <div className="mt-6">
           <button
@@ -868,7 +868,7 @@ export default function CaissesPage() {
                   onClick={generateDailyZReport}
                   disabled={!histCashier || !histDate || dailyReportLoading}
                   className="px-4 py-1.5 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed"
-                  title="G+¬n+¿re un Z-Report pour ce caissier +á cette date, ind+¬pendamment des shifts"
+                  title="GÃ©nÃ¨re un Z-Report pour ce caissier Ã  cette date, indÃ©pendamment des shifts"
                 >
                   {dailyReportLoading ? "..." : (t.caisses.dailyReport || "Daily Z-Report")}
                 </button>
@@ -898,8 +898,8 @@ export default function CaissesPage() {
                         <tr key={s.id} className="border-b border-[var(--border)] last:border-0 hover:bg-slate-50">
                           <td className="px-4 py-2.5">{reg?.name ?? s.registerId}</td>
                           <td className="px-4 py-2.5">{emp ? `${emp.firstName} ${emp.lastName}` : s.employeeId}</td>
-                          <td className="px-4 py-2.5 text-xs text-[var(--text-muted)]">{s.openedAt ? new Date(s.openedAt).toLocaleString("fr-FR") : "GÇö"}</td>
-                          <td className="px-4 py-2.5 text-xs text-[var(--text-muted)]">{s.closedAt ? new Date(s.closedAt).toLocaleString("fr-FR") : "GÇö"}</td>
+                          <td className="px-4 py-2.5 text-xs text-[var(--text-muted)]">{s.openedAt ? new Date(s.openedAt).toLocaleString("fr-FR") : "â€”"}</td>
+                          <td className="px-4 py-2.5 text-xs text-[var(--text-muted)]">{s.closedAt ? new Date(s.closedAt).toLocaleString("fr-FR") : "â€”"}</td>
                           <td className="px-4 py-2.5 text-right font-semibold tabular-nums">{formatCurrency(s.closingCash ?? 0)}</td>
                           <td className="px-4 py-2.5 text-center">
                             <button
