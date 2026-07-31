@@ -41,19 +41,29 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
 
     // Re-valider avec le serveur en arrière-plan (si licence présente)
     if (lic) {
-      LicenseValidator.revalidate()
-        .then(() => {
-          // Mettre à jour les states si revalidation OK
-          const updatedLic = LicenseValidator.getLicense();
-          const updatedCfg = LicenseValidator.getConfig();
-          const updatedStr = LicenseValidator.getStores();
-          if (updatedLic) setLicense(updatedLic);
-          if (updatedCfg) setConfig(updatedCfg);
-          if (updatedStr) setStores(updatedStr);
-        })
-        .catch(() => {
-          // Erreur réseau — on garde les données locales (offline)
-        });
+      // Si la config est manquante en localStorage, la fetch immédiatement
+      // (arrive après un clear cache ou sur un nouveau navigateur)
+      if (!cfg) {
+        LicenseValidator.fetchConfig(lic.licenseKey)
+          .then((fetchedCfg) => {
+            if (fetchedCfg) setConfig(fetchedCfg);
+          })
+          .catch(() => {});
+      } else {
+        // Config présente — revalider normalement (1x/24h)
+        LicenseValidator.revalidate()
+          .then(() => {
+            const updatedLic = LicenseValidator.getLicense();
+            const updatedCfg = LicenseValidator.getConfig();
+            const updatedStr = LicenseValidator.getStores();
+            if (updatedLic) setLicense(updatedLic);
+            if (updatedCfg) setConfig(updatedCfg);
+            if (updatedStr) setStores(updatedStr);
+          })
+          .catch(() => {
+            // Erreur réseau — on garde les données locales (offline)
+          });
+      }
     }
   }, []);
 
