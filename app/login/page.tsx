@@ -21,6 +21,12 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Local dev (IP/localhost): no subdomain, but still show login form.
+  // Cloud SaaS: tenant must be resolved via subdomain.
+  const isLocalDev = typeof window !== "undefined" &&
+    !window.location.hostname.includes("kabrak-retail.com");
+  const showLogin = tenant || isLocalDev;
+
   // Rediriger si déjà connecté
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
@@ -29,10 +35,10 @@ export default function LoginPage() {
     }
   }, [authLoading, isAuthenticated, router, user]);
 
-  // Charger la liste des caissiers (après résolution du tenant)
+  // Charger la liste des caissiers (après résolution du tenant OU en local dev)
   useEffect(() => {
     if (tenantLoading) return; // Attendre que le tenant soit résolu
-    if (!tenant) return; // Pas de tenant résolu (marketing site) — ne pas charger les caissiers
+    if (!showLogin) return; // Pas de tenant résolu (marketing site) — ne pas charger les caissiers
     authApi.listCashiers().then((list) => {
       // Dedup par employeeNumber (sécurité)
       const seen = new Set<string>();
@@ -43,7 +49,7 @@ export default function LoginPage() {
       });
       setCashiers(unique);
     }).catch(() => {});
-  }, [tenantLoading, tenant]);
+  }, [tenantLoading, showLogin]);
 
   const handleLogin = async () => {
     if (!selectedCashier || !pin) {
@@ -121,8 +127,8 @@ export default function LoginPage() {
 
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-6">
-          {/* Pas de tenant résolu — message d'orientation */}
-          {!tenantLoading && !tenant && (
+          {/* Pas de tenant résolu — message d'orientation (cloud SaaS only) */}
+          {!tenantLoading && !showLogin && (
             <div className="text-center py-8">
               <Store className="w-8 h-8 text-slate-300 mx-auto mb-3" />
               <p className="text-sm font-medium text-slate-700 mb-2">
@@ -141,7 +147,7 @@ export default function LoginPage() {
           )}
 
           {/* Étape 1: Sélection employé */}
-          {!selectedCashier && tenant && (
+          {!selectedCashier && showLogin && (
             <>
               <h2 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
                 <User className="w-4 h-4" /> {t.login.selectProfile}
