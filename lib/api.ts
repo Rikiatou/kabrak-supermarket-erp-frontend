@@ -618,6 +618,20 @@ export const purchaseOrdersApi = {
     }>;
   }) =>
     fetchAPI<ApiPurchaseOrder>(`/purchase-orders/direct`, { method: "POST", body: JSON.stringify(data) }),
+  // Ajouter des articles à un bordereau existant (reçoit uniquement les nouveaux items)
+  addItems: (id: string, items: Array<{
+    productId: string;
+    quantity: number;
+    unitCost: number;
+    sellPrice?: number;
+    expiryDate?: string;
+    isNewProduct?: boolean;
+    newProductName?: string;
+    newProductBarcode?: string;
+    newProductCategory?: string;
+    newProductUnit?: string;
+  }>) =>
+    fetchAPI<ApiPurchaseOrder>(`/purchase-orders/${id}/items`, { method: "POST", body: JSON.stringify({ items }) }),
   updateStatus: (id: string, status: string) =>
     fetchAPI<ApiPurchaseOrder>(`/purchase-orders/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
 };

@@ -110,6 +110,11 @@ export default function AchatsPage() {
   const scanInputRef = useRef<HTMLInputElement>(null);
   const [showNewProductModal, setShowNewProductModal] = useState(false);
   const [pendingBarcode, setPendingBarcode] = useState("");
+  // Mode "ajout à un bordereau existant": si non-null, on complète ce bordereau
+  // (les articles déjà reçus ne sont PAS re-réceptionnés).
+  const [appendToOrderId, setAppendToOrderId] = useState<string | null>(null);
+  const [appendOrderNumber, setAppendOrderNumber] = useState("");
+  const [appendExistingItems, setAppendExistingItems] = useState<Array<{ name: string; quantity: number }>>([]);
 
   // Auto-focus le champ scan quand le formulaire de livraison s'ouvre
   useEffect(() => {
@@ -257,7 +262,57 @@ export default function AchatsPage() {
     setDeliveryRef(""); setDeliveryDate(localDateStr());
     setDeliverySupplierId(""); setDeliverySupplierName(""); setDeliveryLines([{ productId: "", productLabel: "", qty: 1, unitPrice: 0, sellPrice: 0, expiryDate: "", receiveInPacks: false, packQty: 1, productPackQuantity: null, isNewProduct: false, newProductName: "", newProductBarcode: "", newProductCategory: "Grocery", newProductUnit: "pc" }]);
     setScanInput(""); setScanMode(false);
+    setAppendToOrderId(null); setAppendOrderNumber(""); setAppendExistingItems([]);
     try { localStorage.removeItem(DELIVERY_DRAFT_KEY); } catch {}
+  };
+
+  // Construit une DeliveryLine à partir d'un item de bordereau existant.
+  const orderItemToLine = (item: any): DeliveryLine => ({
+    productId: item.productId || item.product?.id || "",
+    productLabel: item.product?.name
+      ? `${item.product.name}${item.product.sku ? ` (${item.product.sku})` : ""}`
+      : (item.productName || ""),
+    qty: item.quantity || 1,
+    unitPrice: item.unitCost || 0,
+    sellPrice: item.product?.price || 0,
+    expiryDate: "",
+    receiveInPacks: false,
+    packQty: 1,
+    productPackQuantity: item.product?.packQuantity || null,
+    isNewProduct: false,
+    newProductName: "", newProductBarcode: "", newProductCategory: "Grocery", newProductUnit: "pc",
+  });
+
+  // RÉUTILISER: copie la liste d'un ancien bordereau dans un NOUVEAU bordereau
+  // (livraison récurrente). Le stock s'incrémentera normalement à l'enregistrement.
+  const reuseDelivery = (order: typeof orders[0]) => {
+    setDetailOrder(null);
+    setAppendToOrderId(null); setAppendOrderNumber(""); setAppendExistingItems([]);
+    setDeliveryRef("");
+    setDeliveryDate(localDateStr());
+    setDeliverySupplierId(order.supplier?.id || "");
+    setDeliverySupplierName(order.supplier?.name || "");
+    const lines = (order.items || []).map(orderItemToLine).filter((l) => l.productId);
+    setDeliveryLines(lines.length ? lines : [{ productId: "", productLabel: "", qty: 1, unitPrice: 0, sellPrice: 0, expiryDate: "", receiveInPacks: false, packQty: 1, productPackQuantity: null, isNewProduct: false, newProductName: "", newProductBarcode: "", newProductCategory: "Grocery", newProductUnit: "pc" }]);
+    setShowDeliveryForm(true);
+  };
+
+  // AJOUTER: complète un bordereau existant. Les articles déjà reçus sont affichés
+  // en lecture seule; on ne scanne QUE les nouveaux (stock += nouveaux uniquement).
+  const appendToDelivery = (order: typeof orders[0]) => {
+    setDetailOrder(null);
+    setDeliveryRef("");
+    setDeliveryDate(localDateStr());
+    setDeliverySupplierId(order.supplier?.id || "");
+    setDeliverySupplierName(order.supplier?.name || "");
+    setAppendToOrderId(order.dbId);
+    setAppendOrderNumber(order.id);
+    setAppendExistingItems((order.items || []).map((it: any) => ({
+      name: it.product?.name || it.productName || "—",
+      quantity: it.quantity || 0,
+    })));
+    setDeliveryLines([{ productId: "", productLabel: "", qty: 1, unitPrice: 0, sellPrice: 0, expiryDate: "", receiveInPacks: false, packQty: 1, productPackQuantity: null, isNewProduct: false, newProductName: "", newProductBarcode: "", newProductCategory: "Grocery", newProductUnit: "pc" }]);
+    setShowDeliveryForm(true);
   };
 
   // === DRAFT AUTO-SAVE (delivery/bordereau) ===
@@ -270,6 +325,7 @@ export default function AchatsPage() {
 
   useEffect(() => {
     if (!showDeliveryForm) return;
+    if (appendToOrderId) return; // pas d'autosave en mode "ajout à un bordereau existant"
     const timeoutId = setTimeout(() => {
       if (hasDeliveryContent) {
         try {
@@ -281,7 +337,7 @@ export default function AchatsPage() {
       }
     }, 1000);
     return () => clearTimeout(timeoutId);
-  }, [showDeliveryForm, hasDeliveryContent, deliveryRef, deliveryDate, deliverySupplierId, deliverySupplierName, deliveryLines]);
+  }, [showDeliveryForm, appendToOrderId, hasDeliveryContent, deliveryRef, deliveryDate, deliverySupplierId, deliverySupplierName, deliveryLines]);
 
   // === DRAFT RESTORE (delivery): au mount, restaure le bordereau en cours ===
   useEffect(() => {
@@ -319,33 +375,40 @@ export default function AchatsPage() {
     // Valider les lignes: produit existant avec qty et prix d'achat
     const validLines = deliveryLines.filter((l) => l.productId && l.qty > 0 && l.unitPrice > 0);
     if (validLines.length === 0) { toast(t.achats.deliveryNeedQty, "warning"); return; }
+    // Construire les items (partagé entre création directe et ajout à un bordereau)
+    const items = validLines.map((l) => {
+      // En mode PACK: unitPrice = prix du carton
+      // Le backend attend le prix d'achat par UNITÉ → diviser par packQuantity
+      // MAIS le prix de vente unité ne doit PAS être recalculé depuis le pack
+      // (sinon 3500/12 = 292 écrase le prix unité 300)
+      const isPack = l.receiveInPacks && l.productPackQuantity && l.productPackQuantity > 1;
+      const unitCost = isPack ? Math.round(l.unitPrice / l.productPackQuantity!) : l.unitPrice;
+      // En mode pack: ne pas envoyer sellPrice (garder le prix de vente unité existant)
+      // En mode unité: envoyer sellPrice si fourni
+      const unitSellPrice = isPack ? undefined : (l.sellPrice > 0 ? l.sellPrice : undefined);
+      return {
+        productId: l.productId,
+        quantity: l.qty, // déjà en unités
+        unitCost,
+        sellPrice: unitSellPrice,
+        expiryDate: l.expiryDate || undefined,
+      };
+    });
     setSavingDelivery(true);
     try {
-      await purchaseOrdersApi.createDirect({
-        supplierId,
-        expectedDate: deliveryDate,
-        invoiceNumber: deliveryRef || undefined,
-        notes: deliveryRef ? `Bordereau ref: ${deliveryRef}` : undefined,
-        createdBy: user?.id,
-        items: validLines.map((l) => {
-          // En mode PACK: unitPrice = prix du carton
-          // Le backend attend le prix d'achat par UNITÉ → diviser par packQuantity
-          // MAIS le prix de vente unité ne doit PAS être recalculé depuis le pack
-          // (sinon 3500/12 = 292 écrase le prix unité 300)
-          const isPack = l.receiveInPacks && l.productPackQuantity && l.productPackQuantity > 1;
-          const unitCost = isPack ? Math.round(l.unitPrice / l.productPackQuantity!) : l.unitPrice;
-          // En mode pack: ne pas envoyer sellPrice (garder le prix de vente unité existant)
-          // En mode unité: envoyer sellPrice si fourni
-          const unitSellPrice = isPack ? undefined : (l.sellPrice > 0 ? l.sellPrice : undefined);
-          return {
-            productId: l.productId,
-            quantity: l.qty, // déjà en unités
-            unitCost,
-            sellPrice: unitSellPrice,
-            expiryDate: l.expiryDate || undefined,
-          };
-        }),
-      });
+      if (appendToOrderId) {
+        // Mode AJOUT: on ne réceptionne QUE les nouveaux articles
+        await purchaseOrdersApi.addItems(appendToOrderId, items);
+      } else {
+        await purchaseOrdersApi.createDirect({
+          supplierId,
+          expectedDate: deliveryDate,
+          invoiceNumber: deliveryRef || undefined,
+          notes: deliveryRef ? `Bordereau ref: ${deliveryRef}` : undefined,
+          createdBy: user?.id,
+          items,
+        });
+      }
       // Créer un lot (batch) pour chaque ligne avec date d'expiration
       for (const l of validLines) {
         await batchesApi.create({
@@ -354,7 +417,10 @@ export default function AchatsPage() {
           expiryDate: l.expiryDate || undefined,
         }).catch(() => {}); // non-bloquant
       }
-      toast(`${t.achats.deliverySaved} ${validLines.length} ${t.achats.deliverySavedProducts}`, "success");
+      const savedMsg = appendToOrderId
+        ? `${t.achats.deliveryItemsAdded || "Articles ajoutés"}: ${validLines.length}`
+        : `${t.achats.deliverySaved} ${validLines.length} ${t.achats.deliverySavedProducts}`;
+      toast(savedMsg, "success");
       reloadOrders();
       reloadSuppliers();
       setShowDeliveryForm(false);
@@ -364,7 +430,7 @@ export default function AchatsPage() {
     } finally {
       setSavingDelivery(false);
     }
-  }, [deliverySupplierId, deliveryDate, deliveryRef, deliveryLines, reloadOrders, toast]);
+  }, [deliverySupplierId, deliverySupplierName, deliveryDate, deliveryRef, deliveryLines, appendToOrderId, user, reloadOrders, reloadSuppliers, toast, t]);
 
   const handlePrintDelivery = (order: typeof orders[0]) => {
     const sup = order.supplier ? (suppliers.find((s) => s.id === order.supplier.id) || order.supplier) : null;
@@ -481,6 +547,7 @@ export default function AchatsPage() {
       || { id: o.supplierId, name: "—", contact: "", phone: "", email: "", address: "", paymentTerms: "", rating: 0, totalOrders: 0, pendingOrders: 0 };
     return {
       id: o.orderNumber,
+      dbId: o.id,
       supplier,
       date: localDateStr(new Date(o.date)),
       expectedDate: localDateStr(new Date(o.expectedDate)),
@@ -757,8 +824,14 @@ export default function AchatsPage() {
                   <Truck className="w-4 h-4 text-emerald-600" />
                 </div>
                 <div>
-                  <h2 className="font-semibold text-[var(--text-primary)] text-sm">{t.achats.newDelivery}</h2>
-                  <p className="text-xs text-[var(--text-muted)]">{t.achats.deliverySubtitle}</p>
+                  <h2 className="font-semibold text-[var(--text-primary)] text-sm">
+                    {appendToOrderId ? (t.achats.addItemsToDelivery || "Ajouter des articles") : t.achats.newDelivery}
+                  </h2>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    {appendToOrderId
+                      ? `${t.achats.deliverySubtitle} · #${appendOrderNumber}`
+                      : t.achats.deliverySubtitle}
+                  </p>
                 </div>
               </div>
               <button onClick={() => setShowDeliveryForm(false)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors">
@@ -768,6 +841,25 @@ export default function AchatsPage() {
 
             {/* Body */}
             <div className="flex-1 overflow-y-auto p-5 space-y-4">
+              {/* Append mode: existing items already received (read-only) */}
+              {appendToOrderId && appendExistingItems.length > 0 && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle2 className="w-4 h-4 text-amber-600" />
+                    <p className="text-xs font-semibold text-amber-800 uppercase tracking-wide">
+                      {t.achats.alreadyReceived || "Articles déjà reçus"}
+                    </p>
+                  </div>
+                  <ul className="space-y-1">
+                    {appendExistingItems.map((it, i) => (
+                      <li key={i} className="flex items-center justify-between text-xs text-amber-900">
+                        <span className="truncate">{it.name}</span>
+                        <span className="font-medium tabular-nums">×{it.quantity}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               {/* Row 1: Supplier + Date */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="relative">
@@ -1035,7 +1127,9 @@ export default function AchatsPage() {
                 {t.common.cancel}
               </Button>
               <Button className="flex-1" onClick={handleSaveDelivery} disabled={savingDelivery}>
-                {savingDelivery ? (t.common.loading || "...") : t.achats.saveDelivery}
+                {savingDelivery
+                  ? (t.common.loading || "...")
+                  : (appendToOrderId ? (t.achats.addItems || "Ajouter") : t.achats.saveDelivery)}
               </Button>
             </div>
           </div>
@@ -1287,7 +1381,23 @@ export default function AchatsPage() {
                 </div>
               </div>
             </div>
-            <div className="px-5 py-3 border-t border-[var(--border)] shrink-0">
+            <div className="px-5 py-3 border-t border-[var(--border)] shrink-0 space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => appendToDelivery(detailOrder)}
+                  className="flex items-center justify-center gap-2 text-sm font-medium text-[var(--brand)] bg-[var(--brand-light)] hover:opacity-90 py-2.5 rounded-xl transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  {t.achats.addItemsToDelivery || "Ajouter des articles"}
+                </button>
+                <button
+                  onClick={() => reuseDelivery(detailOrder)}
+                  className="flex items-center justify-center gap-2 text-sm font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 py-2.5 rounded-xl transition-colors"
+                >
+                  <Truck className="w-4 h-4" />
+                  {t.achats.reuseDelivery || "Réutiliser"}
+                </button>
+              </div>
               <button
                 onClick={() => { handlePrintDelivery(detailOrder); }}
                 className="w-full flex items-center justify-center gap-2 text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 py-2.5 rounded-xl transition-colors"
