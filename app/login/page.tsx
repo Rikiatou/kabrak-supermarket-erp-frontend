@@ -23,8 +23,11 @@ export default function LoginPage() {
 
   // Local dev (IP/localhost): no subdomain, but still show login form.
   // Cloud SaaS: tenant must be resolved via subdomain.
-  const isLocalDev = typeof window !== "undefined" &&
-    !window.location.hostname.includes("kabrak-retail.com");
+  // FIX: Use state + useEffect to avoid SSR hydration mismatch (window is undefined on server).
+  const [isLocalDev, setIsLocalDev] = useState(false);
+  useEffect(() => {
+    setIsLocalDev(!window.location.hostname.includes("kabrak-retail.com"));
+  }, []);
   const showLogin = tenant || isLocalDev;
 
   // Rediriger si déjà connecté

@@ -40,6 +40,9 @@ import type { Product } from "@/lib/types";
 
 type OrderStatus = "draft" | "sent" | "received" | "cancelled";
 
+// Clé localStorage pour l'auto-sauvegarde du bordereau de livraison en cours.
+const DELIVERY_DRAFT_KEY = "kabrak_delivery_draft";
+
 function useOrderStatusConfig(t: ReturnType<typeof useI18n>["t"]) {
   return {
     draft: { label: t.achats.status.draft, badge: "neutral" as const, icon: FileText },
@@ -254,7 +257,51 @@ export default function AchatsPage() {
     setDeliveryRef(""); setDeliveryDate(localDateStr());
     setDeliverySupplierId(""); setDeliverySupplierName(""); setDeliveryLines([{ productId: "", productLabel: "", qty: 1, unitPrice: 0, sellPrice: 0, expiryDate: "", receiveInPacks: false, packQty: 1, productPackQuantity: null, isNewProduct: false, newProductName: "", newProductBarcode: "", newProductCategory: "Grocery", newProductUnit: "pc" }]);
     setScanInput(""); setScanMode(false);
+    try { localStorage.removeItem(DELIVERY_DRAFT_KEY); } catch {}
   };
+
+  // === DRAFT AUTO-SAVE (delivery/bordereau) ===
+  // Protège contre la perte de données si le PC se met en veille / se recharge
+  // pendant la saisie d'un bordereau (articles scannés non encore enregistrés).
+  // Même pattern que le POS: debounce 1s + restore au mount.
+  const hasDeliveryContent =
+    deliveryLines.some((l) => l.productId || l.isNewProduct || l.newProductName.trim()) ||
+    !!deliverySupplierName.trim() || !!deliverySupplierId || !!deliveryRef.trim();
+
+  useEffect(() => {
+    if (!showDeliveryForm) return;
+    const timeoutId = setTimeout(() => {
+      if (hasDeliveryContent) {
+        try {
+          localStorage.setItem(DELIVERY_DRAFT_KEY, JSON.stringify({
+            deliveryRef, deliveryDate, deliverySupplierId, deliverySupplierName,
+            deliveryLines, savedAt: Date.now(),
+          }));
+        } catch { console.warn("localStorage quota exceeded for delivery draft"); }
+      }
+    }, 1000);
+    return () => clearTimeout(timeoutId);
+  }, [showDeliveryForm, hasDeliveryContent, deliveryRef, deliveryDate, deliverySupplierId, deliverySupplierName, deliveryLines]);
+
+  // === DRAFT RESTORE (delivery): au mount, restaure le bordereau en cours ===
+  useEffect(() => {
+    try {
+      const draft = JSON.parse(localStorage.getItem(DELIVERY_DRAFT_KEY) || "null");
+      const lines = draft?.deliveryLines;
+      const hasContent = Array.isArray(lines) && lines.some((l: DeliveryLine) => l.productId || l.isNewProduct || (l.newProductName || "").trim());
+      if (hasContent) {
+        setDeliveryRef(draft.deliveryRef || "");
+        setDeliveryDate(draft.deliveryDate || localDateStr());
+        setDeliverySupplierId(draft.deliverySupplierId || "");
+        setDeliverySupplierName(draft.deliverySupplierName || "");
+        setDeliveryLines(lines);
+        setShowDeliveryForm(true);
+        const age = Math.round((Date.now() - (draft.savedAt || Date.now())) / 60000);
+        toast(`${t.achats.deliveryDraftRestored || "Bordereau restauré"} (${lines.length} ligne(s), ${age} min)`, "success");
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSaveDelivery = useCallback(async () => {
     let supplierId = deliverySupplierId;

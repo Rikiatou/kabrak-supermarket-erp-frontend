@@ -38,32 +38,6 @@ import {
 } from "@/lib/hooks/useApi";
 import type { ApiExpense } from "@/lib/api";
 
-// ---- Fallback mock data ----
-const mockMonthlyData = [
-  { month: "Nov", revenue: 28_400_000, expenses: 19_800_000, profit: 8_600_000 },
-  { month: "Dec", revenue: 35_200_000, expenses: 23_100_000, profit: 12_100_000 },
-  { month: "Jan", revenue: 29_100_000, expenses: 20_500_000, profit: 8_600_000 },
-  { month: "Feb", revenue: 27_800_000, expenses: 19_200_000, profit: 8_600_000 },
-  { month: "Mar", revenue: 31_500_000, expenses: 21_800_000, profit: 9_700_000 },
-  { month: "Apr", revenue: 34_100_000, expenses: 22_900_000, profit: 11_200_000 },
-];
-
-const mockExpenseBreakdown = [
-  { category: "supplies", amount: 14_200_000, percentage: 62 },
-  { category: "salaries", amount: 4_800_000, percentage: 21 },
-  { category: "rent", amount: 1_900_000, percentage: 8 },
-  { category: "utilities", amount: 850_000, percentage: 4 },
-  { category: "other", amount: 1_150_000, percentage: 5 },
-];
-
-const mockExpenses: ApiExpense[] = [
-  { id: "EXP-001", date: "2026-04-28", category: "supplies", description: "SABC invoice — beer delivery", amount: 340_000, paymentMethod: "transfer", supplier: "SABC", status: "paid" },
-  { id: "EXP-002", date: "2026-04-27", category: "salaries", description: "Salaries — bi-weekly", amount: 2_400_000, paymentMethod: "transfer", status: "paid" },
-  { id: "EXP-003", date: "2026-04-26", category: "supplies", description: "Unilever CMR invoice", amount: 185_000, paymentMethod: "cash", supplier: "Unilever", status: "paid" },
-  { id: "EXP-004", date: "2026-04-25", category: "rent", description: "Monthly rent", amount: 950_000, paymentMethod: "transfer", supplier: "Landlord", status: "paid" },
-  { id: "EXP-005", date: "2026-04-20", category: "utilities", description: "ENEO invoice — electricity", amount: 320_000, paymentMethod: "transfer", supplier: "ENEO", status: "paid" },
-];
-
 const PIE_COLORS = ["#1a56db", "#6366f1", "#10b981", "#f59e0b", "#ef4444", "#94a3b8"];
 
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
