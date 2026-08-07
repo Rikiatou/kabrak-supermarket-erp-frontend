@@ -20,6 +20,7 @@ import {
   Printer,
   Trash2,
   ScanLine,
+  Copy,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { useI18n } from "@/lib/i18n/context";
@@ -115,6 +116,7 @@ export default function AchatsPage() {
   const [appendToOrderId, setAppendToOrderId] = useState<string | null>(null);
   const [appendOrderNumber, setAppendOrderNumber] = useState("");
   const [appendExistingItems, setAppendExistingItems] = useState<Array<{ name: string; quantity: number }>>([]);
+  const [confirmReuseOrder, setConfirmReuseOrder] = useState<typeof orders[0] | null>(null);
 
   // Auto-focus le champ scan quand le formulaire de livraison s'ouvre
   useEffect(() => {
@@ -283,10 +285,18 @@ export default function AchatsPage() {
     newProductName: "", newProductBarcode: "", newProductCategory: "Grocery", newProductUnit: "pc",
   });
 
-  // RÉUTILISER: copie la liste d'un ancien bordereau dans un NOUVEAU bordereau
-  // (livraison récurrente). Le stock s'incrémentera normalement à l'enregistrement.
+  // CRÉER UN NOUVEL ACHAT BASÉ SUR CELUI-CI: copie la liste d'un ancien bordereau
+  // dans un NOUVEAU bordereau. Le stock s'incrémentera pour TOUS les articles à la sauvegarde.
+  // Une confirmation est demandée pour éviter le double-comptage accidentel.
   const reuseDelivery = (order: typeof orders[0]) => {
     setDetailOrder(null);
+    setConfirmReuseOrder(order);
+  };
+
+  const confirmReuseDelivery = () => {
+    const order = confirmReuseOrder;
+    if (!order) return;
+    setConfirmReuseOrder(null);
     setAppendToOrderId(null); setAppendOrderNumber(""); setAppendExistingItems([]);
     setDeliveryRef("");
     setDeliveryDate(localDateStr());
@@ -825,7 +835,7 @@ export default function AchatsPage() {
                 </div>
                 <div>
                   <h2 className="font-semibold text-[var(--text-primary)] text-sm">
-                    {appendToOrderId ? (t.achats.addItemsToDelivery || "Ajouter des articles") : t.achats.newDelivery}
+                    {appendToOrderId ? (t.achats.completeDelivery || "Compléter la livraison") : t.achats.newDelivery}
                   </h2>
                   <p className="text-xs text-[var(--text-muted)]">
                     {appendToOrderId
@@ -1129,7 +1139,7 @@ export default function AchatsPage() {
               <Button className="flex-1" onClick={handleSaveDelivery} disabled={savingDelivery}>
                 {savingDelivery
                   ? (t.common.loading || "...")
-                  : (appendToOrderId ? (t.achats.addItems || "Ajouter") : t.achats.saveDelivery)}
+                  : (appendToOrderId ? (t.achats.completeDelivery || "Compléter") : t.achats.saveDelivery)}
               </Button>
             </div>
           </div>
@@ -1382,32 +1392,70 @@ export default function AchatsPage() {
               </div>
             </div>
             <div className="px-5 py-3 border-t border-[var(--border)] shrink-0 space-y-2">
+              {/* Primary action: Complete delivery (append new items to existing PO) */}
+              <button
+                onClick={() => appendToDelivery(detailOrder)}
+                className="w-full flex items-center justify-center gap-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 py-2.5 rounded-xl transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                {t.achats.completeDelivery || "Compléter la livraison"}
+              </button>
+              {/* Secondary actions */}
               <div className="grid grid-cols-2 gap-2">
                 <button
-                  onClick={() => appendToDelivery(detailOrder)}
-                  className="flex items-center justify-center gap-2 text-sm font-medium text-[var(--brand)] bg-[var(--brand-light)] hover:opacity-90 py-2.5 rounded-xl transition-colors"
+                  onClick={() => reuseDelivery(detailOrder)}
+                  className="flex items-center justify-center gap-2 text-xs font-medium text-[var(--text-secondary)] bg-slate-50 hover:bg-slate-100 py-2.5 rounded-xl transition-colors"
                 >
-                  <Plus className="w-4 h-4" />
-                  {t.achats.addItemsToDelivery || "Ajouter des articles"}
+                  <Copy className="w-3.5 h-3.5" />
+                  {t.achats.createNewFromThis || "Nouvel achat"}
                 </button>
                 <button
-                  onClick={() => reuseDelivery(detailOrder)}
-                  className="flex items-center justify-center gap-2 text-sm font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 py-2.5 rounded-xl transition-colors"
+                  onClick={() => { handlePrintDelivery(detailOrder); }}
+                  className="flex items-center justify-center gap-2 text-xs font-medium text-[var(--text-secondary)] bg-slate-50 hover:bg-slate-100 py-2.5 rounded-xl transition-colors"
                 >
-                  <Truck className="w-4 h-4" />
-                  {t.achats.reuseDelivery || "Réutiliser"}
+                  <Printer className="w-3.5 h-3.5" />
+                  {t.achats.printDelivery}
                 </button>
               </div>
-              <button
-                onClick={() => { handlePrintDelivery(detailOrder); }}
-                className="w-full flex items-center justify-center gap-2 text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 py-2.5 rounded-xl transition-colors"
-              >
-                <Printer className="w-4 h-4" />
-                {t.achats.printDelivery}
-              </button>
             </div>
           </div>
         </>
+      )}
+
+      {/* Confirmation dialog: Create new purchase from existing */}
+      {confirmReuseOrder && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setConfirmReuseOrder(null)}>
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-5" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
+                <Copy className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-sm text-[var(--text-primary)]">
+                  {t.achats.createNewFromThis || "Nouvel achat basé sur celui-ci"}
+                </h3>
+                <p className="text-xs text-[var(--text-muted)]">#{confirmReuseOrder.id}</p>
+              </div>
+            </div>
+            <p className="text-xs text-[var(--text-secondary)] mb-4 leading-relaxed">
+              {t.achats.reuseWarning || "Un NOUVEAU bordereau sera créé avec les mêmes articles. Le stock sera incrémenté une nouvelle fois pour chaque article. Utilisez plutôt \"Compléter la livraison\" si vous voulez seulement ajouter des articles à ce bordereau."}
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setConfirmReuseOrder(null)}
+                className="flex-1 text-sm font-medium text-[var(--text-secondary)] bg-slate-50 hover:bg-slate-100 py-2.5 rounded-xl transition-colors"
+              >
+                {t.common.cancel}
+              </button>
+              <button
+                onClick={confirmReuseDelivery}
+                className="flex-1 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 py-2.5 rounded-xl transition-colors"
+              >
+                {t.achats.confirmCreateNew || "Créer le nouveau"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </AppShell>
   );
