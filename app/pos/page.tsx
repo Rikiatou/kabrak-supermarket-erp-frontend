@@ -2589,7 +2589,7 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
 
                 </div>
 
-                <div className="flex items-center gap-1 lg:gap-1.5 overflow-x-auto no-scrollbar">
+                <div className="flex items-center gap-1 lg:gap-1.5 flex-wrap justify-end">
 
                   <button
 
