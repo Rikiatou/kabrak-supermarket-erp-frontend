@@ -652,6 +652,8 @@ export default function POSPage() {
       }
       return [...prev, { product, quantity: 1, discount: 0, sellMode: mode, unitPrice: effectiveUnitPrice } as any];
     });
+    // Auto-switch to cart view on mobile when item added
+    setShowMobileCart(true);
 
   }, [toast, sellMode]);
 
@@ -1894,6 +1896,7 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
     setReceipt(null);
 
     setCheckoutStep("cart");
+    setShowMobileCart(false);
 
     setCashGiven("");
 
@@ -2481,13 +2484,16 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
 
       {/* Main POS  plein ecran */}
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
 
 
 
-        {/* LEFT  Panier (55%) */}
+        {/* LEFT  Panier (55% desktop, full width mobile when visible) */}
 
-        <div className="w-[55%] flex flex-col bg-white border-r border-[#e5e7eb] shrink-0">
+        <div className={cn(
+          "w-full lg:w-[55%] flex flex-col bg-white border-r border-[#e5e7eb] shrink-0",
+          !showMobileCart && checkoutStep === "cart" && "hidden lg:flex"
+        )}>
 
 
 
@@ -2541,7 +2547,7 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
 
               setSplitPayment={setSplitPayment}
 
-              onBack={() => setCheckoutStep("cart")}
+              onBack={() => { setCheckoutStep("cart"); setShowMobileCart(true); }}
 
               onConfirm={handleConfirmPayment}
 
@@ -2569,7 +2575,7 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
 
               {/* Cart header */}
 
-              <div className="px-4 py-2.5 border-b border-[#f3f4f6] flex items-center justify-between shrink-0">
+              <div className="px-3 lg:px-4 py-2.5 border-b border-[#f3f4f6] flex items-center justify-between shrink-0 gap-2">
 
                 <div>
 
@@ -2583,7 +2589,7 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
 
                 </div>
 
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1 lg:gap-1.5 overflow-x-auto no-scrollbar">
 
                   <button
 
@@ -2967,13 +2973,13 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
 
                 )}
 
-                <div className="px-4 pb-3">
+                <div className="px-4 pb-20 lg:pb-3">
 
                   <button
 
                     disabled={cart.length === 0 || hasStockIssues}
 
-                    onClick={() => setCheckoutStep("payment")}
+                    onClick={() => { setCheckoutStep("payment"); setShowMobileCart(true); }}
 
                     className="w-full h-12 bg-[#16a34a] hover:bg-[#15803d] active:scale-[0.99] text-white text-[15px] font-bold rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_4px_14px_rgba(22,163,74,.3)] flex items-center justify-center gap-2"
 
@@ -2999,7 +3005,10 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
 
         {/* RIGHT  Recherche & Scan (Retail Mode) */}
 
-        <div className="flex-1 flex flex-col bg-[#f7f8fa]">
+        <div className={cn(
+          "w-full lg:flex-1 flex flex-col bg-[#f7f8fa]",
+          showMobileCart && checkoutStep === "cart" && "hidden lg:flex"
+        )}>
 
 
 
@@ -3265,6 +3274,31 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
         </div>
 
       </div>
+
+      {/* Mobile toggle button - switch between cart and products */}
+      {checkoutStep === "cart" && (
+        <button
+          onClick={() => setShowMobileCart(!showMobileCart)}
+          className="lg:hidden fixed bottom-4 right-4 z-[60] h-14 px-5 bg-[#16a34a] text-white rounded-full shadow-lg flex items-center gap-2 font-bold text-sm active:scale-95 transition-transform"
+        >
+          {showMobileCart ? (
+            <>
+              <Search className="w-5 h-5" />
+              <span>Produits</span>
+            </>
+          ) : (
+            <>
+              <ShoppingCart className="w-5 h-5" />
+              <span>Panier</span>
+              {cart.length > 0 && (
+                <span className="bg-white text-[#16a34a] w-6 h-6 rounded-full flex items-center justify-center text-xs font-black">
+                  {cart.reduce((s, i) => s + i.quantity, 0)}
+                </span>
+              )}
+            </>
+          )}
+        </button>
+      )}
 
 
 
