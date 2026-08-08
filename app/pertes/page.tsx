@@ -39,6 +39,7 @@ interface LossEntry {
   reason: string;
   value: number;
   date: string;
+  employeeName?: string;
 }
 
 export default function PertesPage() {
@@ -137,6 +138,9 @@ export default function PertesPage() {
         reason,
         value: qty * costPrice,
         date: m.createdAt || new Date().toISOString(),
+        employeeName: m.employee
+          ? `${m.employee.firstName} ${m.employee.lastName}`.trim()
+          : (m.createdBy === user?.id ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : (m.createdBy ?? "—")),
       };
     });
   }, [dbLosses]);
@@ -389,7 +393,7 @@ export default function PertesPage() {
               {lossesLoading ? (
                 <div className="flex flex-col items-center justify-center py-16 text-[var(--text-muted)]">
                   <div className="w-8 h-8 border-2 border-[var(--border)] border-t-[var(--brand)] rounded-full animate-spin mb-3" />
-                  <p className="text-sm">Chargement des pertes...</p>
+                  <p className="text-sm">Loading losses...</p>
                 </div>
               ) : losses.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-[var(--text-muted)]">
@@ -408,7 +412,8 @@ export default function PertesPage() {
                         <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">{t.pertes.reason}</th>
                         <th className="text-right text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">{t.pertes.value}</th>
                         <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">{t.pertes.date}</th>
-                        <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Heure</th>
+                        <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Time</th>
+                        <th className="text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-4 py-3">Employee</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -427,7 +432,10 @@ export default function PertesPage() {
                             {new Date(loss.date).toLocaleDateString("en-GB")}
                           </td>
                           <td className="px-4 py-3 text-xs text-[var(--text-muted)]">
-                            {new Date(loss.date).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                            {new Date(loss.date).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+                          </td>
+                          <td className="px-4 py-3 text-xs text-[var(--text-secondary)] font-medium">
+                            {loss.employeeName || "—"}
                           </td>
                         </tr>
                       ))}
@@ -436,7 +444,7 @@ export default function PertesPage() {
                       <tr className="bg-[var(--background)] border-t border-[var(--border)]">
                         <td colSpan={4} className="px-4 py-3 text-xs font-semibold text-[var(--text-muted)] uppercase">{t.pertes.total}</td>
                         <td className="px-4 py-3 text-sm font-bold text-red-600 tabular-nums text-right">{formatCurrency(totalLossValue)}</td>
-                        <td colSpan={2}></td>
+                        <td colSpan={3}></td>
                       </tr>
                     </tfoot>
                   </table>
@@ -538,6 +546,7 @@ export default function PertesPage() {
                         <div className="flex gap-3">
                           <span className="text-[var(--text-muted)]">{t.pertes.returnReason}: <span className="text-[var(--text-secondary)] font-medium">{ret.reason}</span></span>
                           <span className="text-[var(--text-muted)]">{t.pertes.resolution}: <span className="text-[var(--text-secondary)] font-medium">{ret.resolution}</span></span>
+                          <span className="text-[var(--text-muted)]">Employee: <span className="text-[var(--text-secondary)] font-medium">{ret.createdBy === user?.id ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : (ret.createdBy ?? "—")}</span></span>
                         </div>
                         <span className="font-bold text-red-600 tabular-nums">{formatCurrency(ret.totalRefunded)}</span>
                       </div>
