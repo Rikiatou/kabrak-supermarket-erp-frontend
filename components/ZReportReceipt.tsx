@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Printer, X, Package } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useI18n } from "@/lib/i18n/context";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, cn } from "@/lib/utils";
 import type { ApiZReport } from "@/lib/api";
 
 function formatDateTime(date: string | null): string {
@@ -54,6 +54,9 @@ export function ZReportReceipt({
 
   const rbm = report.receiptsByMethod ?? { cash: 0, card: 0, mobile: 0, orange: 0, split: 0 } as any;
   const totalDiscount = report.totalDiscount ?? 0;
+  const returnsAndCredits = report.returnsAndCredits ?? 0;
+  const creditInvoices = report.creditInvoices ?? [];
+  const creditTotal = creditInvoices.reduce((s, c) => s + c.balance, 0);
 
   const handlePrintArticles = () => {
     if (!report.soldProducts || report.soldProducts.length === 0) return;
@@ -140,6 +143,7 @@ export function ZReportReceipt({
       <div style="border-top:1px dashed #000;margin-top:5px;padding-top:5px">
         ${row(z.grossSales, formatCurrency(report.grossSales))}
         ${totalDiscount > 0 ? row("- " + z.totalDiscount, formatCurrency(totalDiscount)) : ""}
+        ${returnsAndCredits > 0 ? row("- " + (z.returns || "Returns"), formatCurrency(returnsAndCredits)) : ""}
         <div style="border-top:1px solid #000;margin-top:3px;padding-top:3px">
           ${row(z.netSales, formatCurrency(report.netSales), true)}
         </div>
@@ -158,6 +162,23 @@ export function ZReportReceipt({
         ${row(z.openingCash, formatCurrency(report.openingCash))}
         ${row(z.customerCount, String(report.customerCount))}
       </div>`;
+
+    if (creditInvoices.length > 0) {
+      let creditRows = "";
+      for (const c of creditInvoices) {
+        const label = c.status === "partial" ? (z.partialPayment || "PARTIAL PAYMENT") : (z.notPaid || "NOT PAID");
+        creditRows += `<div style="border-bottom:1px dashed #000;padding:2px 0">
+          <div style="display:flex;justify-content:space-between;font-weight:bold"><span>${c.clientName} (${c.number})</span><span>${label}</span></div>
+          <div style="font-size:11px">${c.items}</div>
+          <div style="display:flex;justify-content:space-between;font-size:11px"><span>${z.total || "Total"}: ${formatCurrency(c.total)}</span>${c.status === "partial" ? `<span>${z.paid || "Paid"}: ${formatCurrency(c.paidAmount)}</span>` : ""}<span>${z.balance || "Balance"}: ${formatCurrency(c.balance)}</span></div>
+        </div>`;
+      }
+      html += `<div style="border-top:1px dashed #000;margin-top:5px;padding-top:5px">
+        <div style="font-weight:bold;text-transform:uppercase;font-size:13px;margin-bottom:3px">${z.creditsTitle || "CREDITS (NOT IN CASH TOTAL)"}</div>
+        ${creditRows}
+        ${row(z.totalCredit || "Total Credit (unpaid)", formatCurrency(creditTotal), true)}
+      </div>`;
+    }
 
     html += `<div style="text-align:center;margin-top:8px;font-size:10px">${z.endMarker}</div><br/>`;
 
@@ -259,6 +280,12 @@ export function ZReportReceipt({
                 <span className="font-semibold tabular-nums">{formatCurrency(totalDiscount)}</span>
               </div>
             )}
+            {returnsAndCredits > 0 && (
+              <div className="flex justify-between text-sm text-red-600">
+                <span>- {z.returns || "Returns"}</span>
+                <span className="font-semibold tabular-nums">{formatCurrency(returnsAndCredits)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-sm font-bold border-t border-[var(--border-subtle)] pt-1.5">
               <span>{z.netSales}</span>
               <span className="tabular-nums">{formatCurrency(report.netSales)}</span>
@@ -312,6 +339,37 @@ export function ZReportReceipt({
               <span className="font-semibold tabular-nums">{report.customerCount}</span>
             </div>
           </div>
+
+          {/* Credit invoices (informational — not part of cash total) */}
+          {creditInvoices.length > 0 && (
+            <div className="border-t border-dashed border-[var(--border)] pt-3">
+              <p className="text-xs font-bold uppercase tracking-wide text-amber-600 mb-2">
+                {z.creditsTitle || "CREDITS (NOT IN CASH TOTAL)"}
+              </p>
+              <div className="space-y-2">
+                {creditInvoices.map((c) => (
+                  <div key={c.number} className="text-xs border-b border-dashed border-[var(--border-subtle)] pb-1.5 last:border-0">
+                    <div className="flex justify-between font-medium">
+                      <span className="truncate mr-2">{c.clientName} <span className="text-[var(--text-muted)]">({c.number})</span></span>
+                      <span className={cn("shrink-0 font-bold", c.status === "partial" ? "text-blue-600" : "text-red-600")}>
+                        {c.status === "partial" ? (z.partialPayment || "PARTIAL PAYMENT") : (z.notPaid || "NOT PAID")}
+                      </span>
+                    </div>
+                    <div className="text-[var(--text-muted)] truncate">{c.items}</div>
+                    <div className="flex justify-between tabular-nums">
+                      <span>{z.total || "Total"}: {formatCurrency(c.total)}</span>
+                      {c.status === "partial" && <span className="text-blue-600">{z.paid || "Paid"}: {formatCurrency(c.paidAmount)}</span>}
+                      <span className="text-red-600">{z.balance || "Balance"}: {formatCurrency(c.balance)}</span>
+                    </div>
+                  </div>
+                ))}
+                <div className="flex justify-between text-sm font-bold border-t border-[var(--border-subtle)] pt-1.5 text-amber-600">
+                  <span>{z.totalCredit || "Total Credit (unpaid)"}</span>
+                  <span className="tabular-nums">{formatCurrency(creditTotal)}</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}

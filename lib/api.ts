@@ -674,6 +674,7 @@ export interface ApiZReport {
   netSales: number;
   nonTaxableSales: number;
   invoicePayments?: { cash: number; card: number; mobile: number; total: number };
+  creditInvoices?: Array<{ number: string; clientName: string; total: number; paidAmount: number; balance: number; status: string; items: string }>;
   receiptsByMethod: { cash: number; card: number; mobile: number; orange: number; split: number; invoice?: number };
   totalReceipts: number;
   changeGiven: number;
