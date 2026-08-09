@@ -287,12 +287,6 @@ export function ZReportReceipt({
                 <span className="font-semibold tabular-nums">{formatCurrency(returnsAndCredits)}</span>
               </div>
             )}
-            {cashReturns > 0 && (
-              <div className="flex justify-between text-sm text-red-600">
-                <span>- {z.cashReturns || "Cash Refunds"}</span>
-                <span className="font-semibold tabular-nums">{formatCurrency(cashReturns)}</span>
-              </div>
-            )}
             <div className="flex justify-between text-sm font-bold border-t border-[var(--border-subtle)] pt-1.5">
               <span>{z.netSales}</span>
               <span className="tabular-nums">{formatCurrency(report.netSales)}</span>
