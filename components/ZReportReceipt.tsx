@@ -55,6 +55,7 @@ export function ZReportReceipt({
   const rbm = report.receiptsByMethod ?? { cash: 0, card: 0, mobile: 0, orange: 0, split: 0 } as any;
   const totalDiscount = report.totalDiscount ?? 0;
   const returnsAndCredits = report.returnsAndCredits ?? 0;
+  const cashReturns = (report as any).cashReturns ?? 0;
   const creditInvoices = report.creditInvoices ?? [];
   const creditTotal = creditInvoices.reduce((s, c) => s + c.balance, 0);
 
@@ -144,6 +145,7 @@ export function ZReportReceipt({
         ${row(z.grossSales, formatCurrency(report.grossSales))}
         ${totalDiscount > 0 ? row("- " + z.totalDiscount, formatCurrency(totalDiscount)) : ""}
         ${returnsAndCredits > 0 ? row("- " + (z.returns || "Returns"), formatCurrency(returnsAndCredits)) : ""}
+        ${cashReturns > 0 ? row("- " + (z.cashReturns || "Cash Refunds"), formatCurrency(cashReturns)) : ""}
         <div style="border-top:1px solid #000;margin-top:3px;padding-top:3px">
           ${row(z.netSales, formatCurrency(report.netSales), true)}
         </div>
@@ -284,6 +286,12 @@ export function ZReportReceipt({
               <div className="flex justify-between text-sm text-red-600">
                 <span>- {z.returns || "Returns"}</span>
                 <span className="font-semibold tabular-nums">{formatCurrency(returnsAndCredits)}</span>
+              </div>
+            )}
+            {cashReturns > 0 && (
+              <div className="flex justify-between text-sm text-red-600">
+                <span>- {z.cashReturns || "Cash Refunds"}</span>
+                <span className="font-semibold tabular-nums">{formatCurrency(cashReturns)}</span>
               </div>
             )}
             <div className="flex justify-between text-sm font-bold border-t border-[var(--border-subtle)] pt-1.5">
