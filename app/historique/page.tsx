@@ -167,6 +167,7 @@ export default function HistoriquePage() {
         resolution: returnResolution,
         refundMethod: returnResolution === "refund" ? returnRefundMethod : undefined,
         note: returnNote || undefined,
+        createdBy: user?.id,
         items: itemsToReturn.map((it) => {
           const qty = returnQtys[it.productId];
           const exchId = returnExchangeIds[it.productId];

@@ -632,6 +632,9 @@ export const purchaseOrdersApi = {
     newProductUnit?: string;
   }>) =>
     fetchAPI<ApiPurchaseOrder>(`/purchase-orders/${id}/items`, { method: "POST", body: JSON.stringify({ items }) }),
+  // Modifier un article existant (correction quantité/coût) — garde la date originale du bordereau
+  updateItem: (id: string, itemId: string, data: { quantity?: number; unitCost?: number }) =>
+    fetchAPI<ApiPurchaseOrder>(`/purchase-orders/${id}/items/${itemId}`, { method: "PATCH", body: JSON.stringify(data) }),
   updateStatus: (id: string, status: string) =>
     fetchAPI<ApiPurchaseOrder>(`/purchase-orders/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
 };
@@ -861,6 +864,7 @@ export const returnsApi = {
     resolution: string;
     note?: string;
     refundMethod?: string;
+    createdBy?: string;
     items: Array<{
       productId?: string;
       productName: string;

@@ -91,6 +91,10 @@ export default function AchatsPage() {
   const [showNewOrder, setShowNewOrder] = useState(false);
   const [orderSupplier, setOrderSupplier] = useState<Supplier | undefined>(undefined);
   const [detailOrder, setDetailOrder] = useState<typeof orders[0] | null>(null);
+  // Édition inline de la quantité d'un article (correction de bordereau, garde la date originale)
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editQty, setEditQty] = useState<number>(0);
+  const [savingItemEdit, setSavingItemEdit] = useState(false);
 
   // Delivery note state
   const { products: allProducts } = useProducts();
@@ -291,6 +295,28 @@ export default function AchatsPage() {
   const reuseDelivery = (order: typeof orders[0]) => {
     setDetailOrder(null);
     setConfirmReuseOrder(order);
+  };
+
+  // Corriger la quantité d'un article existant (garde la date originale du bordereau)
+  const handleSaveItemEdit = async (itemId: string) => {
+    if (!detailOrder) return;
+    setSavingItemEdit(true);
+    try {
+      const updated = await purchaseOrdersApi.updateItem(detailOrder.dbId, itemId, { quantity: editQty });
+      toast(locale === "fr" ? "Article corrigé" : "Item updated", "success");
+      reloadOrders();
+      setDetailOrder((prev) => prev ? {
+        ...prev,
+        total: updated.total,
+        items: (updated.items || []) as any,
+        itemCount: updated.items?.length || 0,
+      } : prev);
+      setEditingItemId(null);
+    } catch (e: any) {
+      toast(e?.message || (locale === "fr" ? "Erreur correction article" : "Error updating item"), "warning");
+    } finally {
+      setSavingItemEdit(false);
+    }
   };
 
   const confirmReuseDelivery = () => {
@@ -1353,7 +1379,7 @@ export default function AchatsPage() {
                 </p>
                 <div className="space-y-1.5">
                   {(detailOrder.items || []).map((item: any, i: number) => (
-                    <div key={i} className="py-2.5 px-3 bg-slate-50 rounded-lg">
+                    <div key={item.id || i} className="py-2.5 px-3 bg-slate-50 rounded-lg">
                       <div className="flex items-center justify-between mb-1">
                         <p className="text-sm font-medium text-[var(--text-primary)] truncate">
                           {item.product?.name || item.productName || `Item ${i + 1}`}
@@ -1362,19 +1388,56 @@ export default function AchatsPage() {
                           {formatCurrency(item.total || (item.quantity * (item.unitCost || 0)))}
                         </span>
                       </div>
-                      <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-[var(--text-muted)]">
-                        <span>{item.quantity} {item.unit || item.product?.unit || "units"}</span>
-                        <span>{t.achats.unitPrice}: {formatCurrency(item.unitCost || 0)}</span>
-                        {item.product?.price && (
-                          <span>{locale === "fr" ? "Prix vente" : "Sell price"}: {formatCurrency(item.product.price)}</span>
-                        )}
-                        {item.product?.wholesalePrice && (
-                          <span>{locale === "fr" ? "Prix gros" : "Wholesale"}: {formatCurrency(item.product.wholesalePrice)}</span>
-                        )}
-                        {item.product?.packQuantity && (
-                          <span>{locale === "fr" ? "Pack" : "Pack"}: {item.product.packQuantity}</span>
-                        )}
-                      </div>
+                      {editingItemId === item.id ? (
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className="text-xs text-[var(--text-muted)]">{locale === "fr" ? "Nouvelle qté:" : "New qty:"}</span>
+                          <input
+                            type="number"
+                            min={0}
+                            value={editQty}
+                            onChange={(e) => setEditQty(Number(e.target.value))}
+                            className="w-20 px-2 py-1 border border-[var(--border)] rounded-lg text-sm outline-none focus:border-emerald-500"
+                            autoFocus
+                          />
+                          <button
+                            onClick={() => handleSaveItemEdit(item.id)}
+                            disabled={savingItemEdit}
+                            className="px-3 py-1 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg disabled:opacity-50"
+                          >
+                            {savingItemEdit ? "..." : (locale === "fr" ? "Enregistrer" : "Save")}
+                          </button>
+                          <button
+                            onClick={() => setEditingItemId(null)}
+                            className="px-2 py-1 text-xs text-[var(--text-secondary)] hover:bg-slate-100 rounded-lg"
+                          >
+                            {locale === "fr" ? "Annuler" : "Cancel"}
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between">
+                          <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-[var(--text-muted)]">
+                            <span>{item.quantity} {item.unit || item.product?.unit || "units"}</span>
+                            <span>{t.achats.unitPrice}: {formatCurrency(item.unitCost || 0)}</span>
+                            {item.product?.price && (
+                              <span>{locale === "fr" ? "Prix vente" : "Sell price"}: {formatCurrency(item.product.price)}</span>
+                            )}
+                            {item.product?.wholesalePrice && (
+                              <span>{locale === "fr" ? "Prix gros" : "Wholesale"}: {formatCurrency(item.product.wholesalePrice)}</span>
+                            )}
+                            {item.product?.packQuantity && (
+                              <span>{locale === "fr" ? "Pack" : "Pack"}: {item.product.packQuantity}</span>
+                            )}
+                          </div>
+                          {item.id && (
+                            <button
+                              onClick={() => { setEditingItemId(item.id); setEditQty(item.quantity); }}
+                              className="shrink-0 ml-2 text-xs font-medium text-emerald-600 hover:underline"
+                            >
+                              {locale === "fr" ? "Corriger" : "Edit"}
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                   {(!detailOrder.items || detailOrder.items.length === 0) && (

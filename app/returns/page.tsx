@@ -121,6 +121,7 @@ export default function ReturnsPage() {
         reason,
         resolution,
         note,
+        createdBy: user?.id,
         refundMethod: resolution === "refund" ? refundMethod : undefined,
         items: returnItems.filter((i) => i.quantity > 0).map((i) => ({
           productId: i.productId || undefined,
