@@ -145,7 +145,6 @@ export function ZReportReceipt({
         ${row(z.grossSales, formatCurrency(report.grossSales))}
         ${totalDiscount > 0 ? row("- " + z.totalDiscount, formatCurrency(totalDiscount)) : ""}
         ${returnsAndCredits > 0 ? row("- " + (z.returns || "Returns"), formatCurrency(returnsAndCredits)) : ""}
-        ${cashReturns > 0 ? row("- " + (z.cashReturns || "Cash Refunds"), formatCurrency(cashReturns)) : ""}
         <div style="border-top:1px solid #000;margin-top:3px;padding-top:3px">
           ${row(z.netSales, formatCurrency(report.netSales), true)}
         </div>
