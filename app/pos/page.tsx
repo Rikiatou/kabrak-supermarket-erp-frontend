@@ -120,27 +120,6 @@ declare global {
 
 const TAX_RATE = 0;
 
-// FIX: Forcer l'impression d'un ticket sur UNE seule page continue (pas de coupure
-// quand le ticket est long). On mesure la hauteur réelle du contenu et on injecte une
-// règle @page avec cette hauteur exacte, ce qui remplace le "@page size: 80mm auto"
-// du ticket et empêche Chrome de paginer / l'imprimante de couper.
-function forceContinuousPage(printDoc: Document | null | undefined) {
-  if (!printDoc) return;
-  try {
-    const px = Math.max(
-      printDoc.body?.scrollHeight || 0,
-      printDoc.documentElement?.scrollHeight || 0,
-      printDoc.body?.offsetHeight || 0,
-    );
-    if (!px) return;
-    const heightMm = Math.ceil((px / 96) * 25.4) + 6; // px @96dpi -> mm + petite marge
-    const style = printDoc.createElement("style");
-    style.setAttribute("data-continuous", "1");
-    style.textContent = `@page { size: 80mm ${heightMm}mm; margin: 0; }`;
-    (printDoc.head || printDoc.body).appendChild(style);
-  } catch { /* ignore */ }
-}
-
 // Stable backend category keys (match DB seed data) - order matches CATEGORIES labels
 
 const CATEGORY_KEYS = ["Tous", "Grocery", "Beverages", "Dairy", "Hygiene", "Butchery", "Bakery", "Frozen"];
@@ -1611,7 +1590,6 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
     printFrame.contentDocument?.write(html);
     printFrame.contentDocument?.close();
     printFrame.contentWindow?.focus();
-    forceContinuousPage(printFrame.contentDocument);
     printFrame.contentWindow?.print();
     // FIX: Force cleanup après 5s + retirer du tracker
     setTimeout(() => { if (printFrame.parentNode) document.body.removeChild(printFrame); printFramesRef.current.delete(printFrame); printFramesRef.current.delete(printFrame); }, 5000);
@@ -2131,7 +2109,6 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
           // Fallback: méthode iframe normale
           printFrame.contentWindow?.focus();
           setTimeout(() => {
-            forceContinuousPage(printFrame.contentDocument);
             printFrame.contentWindow?.print();
             setTimeout(() => { if (printFrame.parentNode) document.body.removeChild(printFrame); printFramesRef.current.delete(printFrame); }, 1000);
           }, 500);
@@ -2143,7 +2120,6 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
         // Fallback
         printFrame.contentWindow?.focus();
         setTimeout(() => {
-          forceContinuousPage(printFrame.contentDocument);
           printFrame.contentWindow?.print();
           setTimeout(() => { if (printFrame.parentNode) document.body.removeChild(printFrame); printFramesRef.current.delete(printFrame); }, 1000);
         }, 500);
@@ -2156,7 +2132,6 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
 
     setTimeout(() => {
 
-      forceContinuousPage(printFrame.contentDocument);
       printFrame.contentWindow?.print();
 
       // Supprimer l'iframe après impression
@@ -2358,13 +2333,13 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
       electronPrint.printHtml(fullHtml).then((result: any) => {
         if (!result.success) {
           printFrame.contentWindow?.focus();
-          setTimeout(() => { forceContinuousPage(printFrame.contentDocument); printFrame.contentWindow?.print(); }, 500);
+          setTimeout(() => { printFrame.contentWindow?.print(); }, 500);
         } else {
           if (printFrame.parentNode) document.body.removeChild(printFrame); printFramesRef.current.delete(printFrame);
         }
       }).catch(() => {
         printFrame.contentWindow?.focus();
-        setTimeout(() => { forceContinuousPage(printFrame.contentDocument); printFrame.contentWindow?.print(); }, 500);
+        setTimeout(() => { printFrame.contentWindow?.print(); }, 500);
       });
       return;
     }
@@ -2376,7 +2351,6 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
 
       try {
         printFrame.contentWindow?.focus();
-        forceContinuousPage(printFrame.contentDocument);
         printFrame.contentWindow?.print();
       } catch (e) {
         console.error('Reprint error:', e);
