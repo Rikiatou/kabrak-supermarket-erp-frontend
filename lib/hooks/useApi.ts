@@ -86,8 +86,8 @@ export function useProductSearch() {
       const response = await productsApi.search({ q: query, category, limit: 50 });
       setResults(response.data.map(apiProductToFrontend));
     } catch (e) {
-      console.warn("Erreur recherche:", e);
-      setResults([]);
+      // FIX: Ne pas vider les résultats en cas d'erreur réseau (WiFi instable)
+      console.warn("Erreur recherche (résultats conservés):", e);
     } finally {
       setLoading(false);
     }
@@ -115,8 +115,10 @@ export function useServerProductSearch() {
       const response = await productsApi.search({ q: query || undefined, category: catFilter, stockStatus, limit: 100 });
       setResults(response.data.map(apiProductToFrontend));
     } catch (e) {
-      console.warn("Erreur recherche server-side:", e);
-      setResults([]);
+      // FIX: Ne pas vider les résultats en cas d'erreur réseau (WiFi instable).
+      // Garder les anciens résultats visibles plutôt que de faire disparaître
+      // les produits — ils réapparaîtront au prochain fetch réussi.
+      console.warn("Erreur recherche server-side (résultats conservés):", e);
     } finally {
       setLoading(false);
     }

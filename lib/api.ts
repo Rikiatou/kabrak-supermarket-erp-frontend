@@ -6,6 +6,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
 // Helper pour les requêtes
 // FIX: Support AbortController pour annuler les requêtes (évite memory leaks)
 // FIX: timeoutMs personnalisable pour les opérations longues (purchase orders, etc.)
+// FIX: Retry automatique sur erreur réseau (WiFi instable) — 1 retry après 2s
 async function fetchAPI<T>(
   endpoint: string,
   options?: RequestInit & { signal?: AbortSignal; timeoutMs?: number }
@@ -39,38 +40,60 @@ async function fetchAPI<T>(
   // FIX: Timeout par défaut de 15s pour éviter requêtes qui pendent indéfiniment
   // FIX: timeoutMs personnalisable pour les opérations longues (purchase orders, etc.)
   const timeoutMs = options?.timeoutMs ?? 15000;
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-  // Si l'appelant fournit déjà un signal, on combine les deux
-  const signal = options?.signal;
-  if (signal) {
-    signal.addEventListener("abort", () => controller.abort());
-  }
+  // Retirer timeoutMs du spread (pas une option valide pour fetch)
+  const { timeoutMs: _timeoutMs, ...fetchOptions } = options || {};
 
-  try {
-    // Retirer timeoutMs du spread (pas une option valide pour fetch)
-    const { timeoutMs: _timeoutMs, ...fetchOptions } = options || {};
-    const res = await fetch(url, {
-      ...fetchOptions,
-      headers,
-      signal: controller.signal,
-    });
+  // FIX: Tentative unique avec retry sur erreur réseau
+  let lastError: any = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-    if (!res.ok) {
-      const error = await res.json().catch(() => ({ message: "Erreur API" }));
-      throw new Error(error.message || `Erreur ${res.status}`);
+    // Si l'appelant fournit déjà un signal, on combine les deux
+    const signal = options?.signal;
+    if (signal) {
+      signal.addEventListener("abort", () => controller.abort());
     }
 
-    return res.json();
-  } catch (e: any) {
-    if (e.name === "AbortError") {
-      throw new Error("Requête annulée (timeout ou abort)");
+    try {
+      const res = await fetch(url, {
+        ...fetchOptions,
+        headers,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ message: "Erreur API" }));
+        throw new Error(error.message || `Erreur ${res.status}`);
+      }
+
+      return res.json();
+    } catch (e: any) {
+      clearTimeout(timeoutId);
+      lastError = e;
+
+      // Ne pas retry si:
+      // - L'appelant a aborté volontairement (signal externe)
+      // - C'est une erreur HTTP (pas réseau) — le serveur a répondu
+      if (signal?.aborted) throw e;
+      if (e.message?.startsWith("Erreur ") && !e.message.includes("annulée")) throw e;
+
+      // Retry seulement sur erreur réseau (timeout, connection refused, etc.)
+      if (attempt === 0) {
+        await new Promise((r) => setTimeout(r, 2000)); // attendre 2s avant retry
+        continue;
+      }
     }
-    throw e;
-  } finally {
-    clearTimeout(timeoutId);
   }
+
+  // Tous les tentatives ont échoué
+  if (lastError?.name === "AbortError") {
+    throw new Error("Requête annulée (timeout ou abort)");
+  }
+  throw lastError;
 }
 
 // ========================================
