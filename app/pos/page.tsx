@@ -489,6 +489,11 @@ export default function POSPage() {
 
           // Remove server-generated fields that might cause conflicts
           const { id, transactionNumber, _createdAt, syncStatus, syncedAt, ...cleanTx } = tx;
+          // FIX: Préserver la date originale pour que la transaction resoumise
+          // reste à sa place chronologique (au lieu d'aller en haut de la liste)
+          if (_createdAt) {
+            cleanTx.date = new Date(_createdAt).toISOString();
+          }
           await createTransaction(cleanTx);
           console.log(`✅ Pending tx resubmitted`);
 
@@ -513,6 +518,9 @@ export default function POSPage() {
 
         setSyncMsg(t.pos.syncSuccess.replace("{n}", String(pending.length)));
 
+        // FIX: Recharger la liste des ventes après sync réussi
+        reloadRecentTransactions();
+
         setTimeout(() => setSyncMsg(null), 4000);
 
       } else if (remaining.length > 0) {
@@ -529,7 +537,7 @@ export default function POSPage() {
 
     }
 
-  }, [createTransaction, t]);
+  }, [createTransaction, t, reloadRecentTransactions]);
 
   // Détection online/offline (doit être après syncPendingTransactions pour éviter TDZ)
   useEffect(() => {
@@ -1760,6 +1768,9 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
       try {
 
         tx = await createTransaction(txPayload);
+
+        // FIX: Recharger la liste des ventes immédiatement après une vente réussie
+        reloadRecentTransactions();
 
       } catch (err) {
 
