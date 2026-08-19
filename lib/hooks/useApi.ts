@@ -610,6 +610,7 @@ export function useCreateTransaction() {
         tax: number;
         total: number;
       }>;
+      date?: string; // Date originale pour resoumission pending
     }): Promise<ApiTransaction | null> => {
       try {
         setCreating(true);

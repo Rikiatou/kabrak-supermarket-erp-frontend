@@ -377,6 +377,7 @@ export const transactionsApi = {
     cashGiven?: number;
     change?: number;
     customerId?: string;
+    date?: string; // Date originale pour resoumission pending
     items: Array<{
       productId: string;
       quantity: number;
@@ -389,6 +390,7 @@ export const transactionsApi = {
     fetchAPI<ApiTransaction>(`/transactions`, {
       method: "POST",
       body: JSON.stringify(data),
+      timeoutMs: 30000, // FIX: 30s au lieu de 15s — la vente est critique
     }),
 
   // Historique
