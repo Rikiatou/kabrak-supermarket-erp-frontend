@@ -319,6 +319,7 @@ export const productsApi = {
     fetchAPI<ApiProduct>(`/products/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
+      timeoutMs: 30000,
     }),
 
   // Supprimer (soft)
@@ -511,6 +512,7 @@ export const stockApi = {
     fetchAPI<ApiStockMovement>(`/stock/movements`, {
       method: "POST",
       body: JSON.stringify(data),
+      timeoutMs: 30000,
     }),
 
   // Alertes
