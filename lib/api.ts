@@ -5,9 +5,10 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
 
 // Helper pour les requêtes
 // FIX: Support AbortController pour annuler les requêtes (évite memory leaks)
+// FIX: timeoutMs personnalisable pour les opérations longues (purchase orders, etc.)
 async function fetchAPI<T>(
   endpoint: string,
-  options?: RequestInit & { signal?: AbortSignal }
+  options?: RequestInit & { signal?: AbortSignal; timeoutMs?: number }
 ): Promise<T> {
   const url = `${API_URL}${endpoint}`;
 
@@ -36,8 +37,10 @@ async function fetchAPI<T>(
   }
 
   // FIX: Timeout par défaut de 15s pour éviter requêtes qui pendent indéfiniment
+  // FIX: timeoutMs personnalisable pour les opérations longues (purchase orders, etc.)
+  const timeoutMs = options?.timeoutMs ?? 15000;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15000);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   // Si l'appelant fournit déjà un signal, on combine les deux
   const signal = options?.signal;
@@ -46,8 +49,10 @@ async function fetchAPI<T>(
   }
 
   try {
+    // Retirer timeoutMs du spread (pas une option valide pour fetch)
+    const { timeoutMs: _timeoutMs, ...fetchOptions } = options || {};
     const res = await fetch(url, {
-      ...options,
+      ...fetchOptions,
       headers,
       signal: controller.signal,
     });
@@ -617,7 +622,7 @@ export const purchaseOrdersApi = {
       expiryDate?: string;
     }>;
   }) =>
-    fetchAPI<ApiPurchaseOrder>(`/purchase-orders/direct`, { method: "POST", body: JSON.stringify(data) }),
+    fetchAPI<ApiPurchaseOrder>(`/purchase-orders/direct`, { method: "POST", body: JSON.stringify(data), timeoutMs: 60000 }),
   // Ajouter des articles à un bordereau existant (reçoit uniquement les nouveaux items)
   addItems: (id: string, items: Array<{
     productId: string;
@@ -631,7 +636,7 @@ export const purchaseOrdersApi = {
     newProductCategory?: string;
     newProductUnit?: string;
   }>) =>
-    fetchAPI<ApiPurchaseOrder>(`/purchase-orders/${id}/items`, { method: "POST", body: JSON.stringify({ items }) }),
+    fetchAPI<ApiPurchaseOrder>(`/purchase-orders/${id}/items`, { method: "POST", body: JSON.stringify({ items }), timeoutMs: 60000 }),
   // Modifier un article existant (correction quantité/coût) — garde la date originale du bordereau
   updateItem: (id: string, itemId: string, data: { quantity?: number; unitCost?: number }) =>
     fetchAPI<ApiPurchaseOrder>(`/purchase-orders/${id}/items/${itemId}`, { method: "PATCH", body: JSON.stringify(data) }),
