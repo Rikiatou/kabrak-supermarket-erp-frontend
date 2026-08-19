@@ -156,13 +156,33 @@ export function useServerProductSearch() {
     }
   }, []);
 
+  // FIX: Cache des scans récents — si le même code-barres est scanné à nouveau
+  // dans les 10 minutes, on retourne immédiatement sans aller au backend.
+  // Très utile en caisse où le même produit est scanné plusieurs fois.
   const scanBarcode = useCallback(async (barcode: string): Promise<Product | null> => {
     if (!barcode) return null;
+
+    // 1. Vérifier le cache
     try {
-      // Pas de setLoading ici: on ne veut pas re-render toute la page POS
-      // pendant le scan (causes lag sur mini PC avec 1000+ produits en cache)
+      const cacheKey = `kabrak_scan_${barcode}`;
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const { data, ts } = JSON.parse(cached);
+        if (data && Date.now() - ts < 10 * 60 * 1000) { // 10 minutes
+          return data as Product;
+        }
+      }
+    } catch { /* cache corrompu */ }
+
+    // 2. Aller au backend
+    try {
       const product = await productsApi.findByBarcode(barcode);
-      return apiProductToFrontend(product);
+      const mapped = apiProductToFrontend(product);
+      // Sauvegarder dans le cache
+      try {
+        localStorage.setItem(`kabrak_scan_${barcode}`, JSON.stringify({ data: mapped, ts: Date.now() }));
+      } catch { /* quota */ }
+      return mapped;
     } catch (e) {
       return null;
     }
