@@ -476,8 +476,8 @@ export function useReturns() {
       const data = await returnsApi.list();
       setReturns(Array.isArray(data) ? data : []);
     } catch (e) {
-      console.warn("Erreur chargement retours:", e);
-      setReturns([]);
+      // FIX: Ne pas vider sur erreur réseau (WiFi instable)
+      console.warn("Erreur chargement retours (données conservées):", e);
     } finally {
       setLoading(false);
     }
@@ -647,7 +647,7 @@ export function useLosses() {
       const res = await stockApi.listLosses(1, 100);
       setLosses(res.data || []);
     } catch {
-      setLosses([]);
+      // FIX: Ne pas vider sur erreur réseau (WiFi instable)
     } finally {
       setLoading(false);
     }
@@ -673,7 +673,7 @@ export function useGifts() {
       const res = await stockApi.listGifts(1, 500);
       setGifts(res.data || []);
     } catch {
-      setGifts([]);
+      // FIX: Ne pas vider sur erreur réseau (WiFi instable)
     } finally {
       setLoading(false);
     }

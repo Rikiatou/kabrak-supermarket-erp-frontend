@@ -1035,7 +1035,7 @@ function ProductDetailPanel({
     setBatchesLoading(true);
     batchesApi.list(product.id)
       .then((res) => setBatches(Array.isArray(res) ? res : []))
-      .catch(() => setBatches([]))
+      .catch(() => { /* FIX: Ne pas vider sur erreur réseau (WiFi instable) */ })
       .finally(() => setBatchesLoading(false));
   };
 

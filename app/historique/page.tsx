@@ -249,7 +249,7 @@ export default function HistoriquePage() {
     setLoadingMovements(true);
     stockApi.listMovements(1, 500, selectedProduct.id)
       .then((res) => { if (!cancelled) setMovements(res.data); })
-      .catch(() => { if (!cancelled) { toast(t.stocks.loadError, "warning"); setMovements([]); } })
+      .catch(() => { if (!cancelled) { toast(t.stocks.loadError, "warning"); /* FIX: Ne pas vider sur erreur réseau */ } })
       .finally(() => { if (!cancelled) setLoadingMovements(false); });
     return () => { cancelled = true; };
   }, [selectedProduct?.id]);
