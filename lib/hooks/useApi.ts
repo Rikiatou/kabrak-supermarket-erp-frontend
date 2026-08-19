@@ -40,22 +40,50 @@ import type { Product } from "@/lib/types";
 // ========================================
 // HOOK: useProducts
 // Récupère les produits depuis le backend
+// FIX: Cache localStorage pour affichage instantané sur WiFi lent
 // ========================================
+const PRODUCTS_CACHE_KEY = "kabrak_products_cache";
+const PRODUCTS_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 export function useProducts() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
+    // 1. Afficher le cache immédiatement (si disponible et frais)
+    try {
+      const cached = localStorage.getItem(PRODUCTS_CACHE_KEY);
+      if (cached) {
+        const { data, ts } = JSON.parse(cached);
+        if (data && Array.isArray(data)) {
+          setProducts(data);
+          // Si le cache est récent (< 5min), on ne re-fetch pas
+          if (Date.now() - ts < PRODUCTS_CACHE_TTL) {
+            setLoading(false);
+            return;
+          }
+          // Cache expiré mais on l'affiche pendant qu'on re-fetch
+          setLoading(false);
+        }
+      }
+    } catch { /* cache corrompu, on continue */ }
+
+    // 2. Re-fetch depuis le backend (en arrière-plan)
     try {
       setLoading(true);
       setError(null);
       const response = await productsApi.list(1, 1000); // Charger jusqu'à 1000 produits
-      setProducts(response.data.map(apiProductToFrontend));
+      const mapped = response.data.map(apiProductToFrontend);
+      setProducts(mapped);
+      // Sauvegarder dans le cache
+      try {
+        localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify({ data: mapped, ts: Date.now() }));
+      } catch { /* quota dépassé, on ignore */ }
     } catch (e: any) {
       setError(e.message);
-      // Fallback: ne pas planter si le backend est down
-      console.warn("Backend indisponible, utilisation des données mock");
+      // FIX: Ne pas planter si le backend est down — le cache est déjà affiché
+      console.warn("Backend indisponible, cache utilisé");
     } finally {
       setLoading(false);
     }
@@ -100,7 +128,11 @@ export function useProductSearch() {
 // HOOK: useServerProductSearch
 // Recherche server-side parmi TOUS les produits (18000+)
 // Retourne: results, search, scanBarcode, bestsellers, loading, refresh
+// FIX: Cache localStorage pour bestsellers (affichage instantané sur WiFi lent)
 // ========================================
+const BESTSELLERS_CACHE_KEY = "kabrak_bestsellers_cache";
+const BESTSELLERS_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 export function useServerProductSearch() {
   const [results, setResults] = useState<Product[]>([]);
   const [bestsellers, setBestsellers] = useState<Product[]>([]);
@@ -137,12 +169,32 @@ export function useServerProductSearch() {
   }, []);
 
   const refresh = useCallback(async () => {
+    // 1. Afficher le cache immédiatement (si disponible et frais)
+    try {
+      const cached = localStorage.getItem(BESTSELLERS_CACHE_KEY);
+      if (cached) {
+        const { data, ts } = JSON.parse(cached);
+        if (data && Array.isArray(data)) {
+          setBestsellers(data);
+          // Si le cache est récent (< 5min), on ne re-fetch pas
+          if (Date.now() - ts < BESTSELLERS_CACHE_TTL) {
+            return;
+          }
+        }
+      }
+    } catch { /* cache corrompu */ }
+
+    // 2. Re-fetch depuis le backend
     try {
       setLoading(true);
       const response = await productsApi.list(1, 50);
-      setBestsellers(response.data.map(apiProductToFrontend));
+      const mapped = response.data.map(apiProductToFrontend);
+      setBestsellers(mapped);
+      try {
+        localStorage.setItem(BESTSELLERS_CACHE_KEY, JSON.stringify({ data: mapped, ts: Date.now() }));
+      } catch { /* quota */ }
     } catch (e) {
-      console.warn("Erreur refresh products:", e);
+      console.warn("Erreur refresh products (cache utilisé):", e);
     } finally {
       setLoading(false);
     }
