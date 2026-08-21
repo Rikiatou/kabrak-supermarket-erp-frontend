@@ -44,9 +44,15 @@ async function fetchAPI<T>(
   // Retirer timeoutMs du spread (pas une option valide pour fetch)
   const { timeoutMs: _timeoutMs, ...fetchOptions } = options || {};
 
-  // FIX: Tentative unique avec retry sur erreur réseau
+  // FIX: Retry uniquement pour les requêtes idempotentes (GET, HEAD).
+  // POST/PATCH/DELETE ne doivent PAS être retentées automatiquement — si le serveur
+  // a traité la requête mais que le WiFi drop pendant la réponse, un retry crée un doublon.
+  const method = (fetchOptions.method || "GET").toUpperCase();
+  const isIdempotent = method === "GET" || method === "HEAD";
+  const maxAttempts = isIdempotent ? 2 : 1;
+
   let lastError: any = null;
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -81,9 +87,9 @@ async function fetchAPI<T>(
       if (signal?.aborted) throw e;
       if (e.message?.startsWith("Erreur ") && !e.message.includes("annulée")) throw e;
 
-      // Retry seulement sur erreur réseau (timeout, connection refused, etc.)
-      if (attempt === 0) {
-        await new Promise((r) => setTimeout(r, 2000)); // attendre 2s avant retry
+      // Retry après 2s (GET/HEAD seulement)
+      if (attempt === 0 && isIdempotent) {
+        await new Promise((r) => setTimeout(r, 2000));
         continue;
       }
     }
