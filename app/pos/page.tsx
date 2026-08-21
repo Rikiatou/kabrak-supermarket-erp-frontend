@@ -204,8 +204,6 @@ export default function POSPage() {
 
   // FIX: Limites pour éviter que localStorage grandisse indéfiniment
   // Généreuses pour ne jamais perdre de vraies transactions (~1MB max, loin du quota 5MB)
-  const MAX_PENDING_TX = 500;
-  const MAX_PENDING_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 jours
   const MAX_HELD_CARTS = 50;
 
   // Recherche server-side pour 3000+ produits
@@ -351,7 +349,6 @@ export default function POSPage() {
 
   const [isOnline, setIsOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
 
-  const [pendingTxCount, setPendingTxCount] = useState(0);
 
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
 
@@ -443,115 +440,20 @@ export default function POSPage() {
 
 
 
-  // Compter les transactions en attente
-
-  const refreshPendingCount = () => {
-
-    try {
-
-      const pending = JSON.parse(localStorage.getItem("kabrak_pending_tx") || "[]");
-
-      setPendingTxCount(pending.length);
-
-    } catch { setPendingTxCount(0); }
-
-  };
 
 
 
-  // Synchroniser les transactions en attente quand online
-  // FIX: useCallback + guard concurrent pour éviter syncs multiples en parallèle
-
-  const isSyncingRef = useRef(false);
-
-  const syncPendingTransactions = useCallback(async () => {
-
-    if (typeof navigator !== "undefined" && !navigator.onLine) return;
-
-    // FIX: Empêcher plusieurs syncs en parallèle
-    if (isSyncingRef.current) return;
-    isSyncingRef.current = true;
-
-    try {
-
-      const pending = JSON.parse(localStorage.getItem("kabrak_pending_tx") || "[]");
-
-      if (pending.length === 0) return;
-
-      console.log(`🔄 Resubmitting ${pending.length} pending transactions...`);
-      setSyncMsg(`🔄 Resoumission de ${pending.length} transaction(s)...`);
-
-      let remaining: any[] = [];
-
-      for (const tx of pending) {
-
-        try {
-
-          // Remove server-generated fields that might cause conflicts
-          const { id, transactionNumber, _createdAt, syncStatus, syncedAt, ...cleanTx } = tx;
-          // FIX: Préserver la date originale pour que la transaction resoumise
-          // reste à sa place chronologique (au lieu d'aller en haut de la liste)
-          if (_createdAt) {
-            cleanTx.date = new Date(_createdAt).toISOString();
-          }
-          await createTransaction(cleanTx);
-          console.log(`✅ Pending tx resubmitted`);
-
-        } catch (e: any) {
-
-          console.log(`❌ Pending tx failed: ${e.message}`);
-          remaining.push(tx);
-
-        }
-
-      }
-
-      // FIX: Nettoyer les vieilles transactions échouées + limiter la taille
-      const nowSync = Date.now();
-      remaining = remaining.filter((tx: any) => tx._createdAt && (nowSync - tx._createdAt) < MAX_PENDING_AGE_MS);
-      if (remaining.length > MAX_PENDING_TX) remaining = remaining.slice(-MAX_PENDING_TX);
-      try { localStorage.setItem("kabrak_pending_tx", JSON.stringify(remaining)); } catch { console.warn("localStorage quota exceeded for pending_tx"); }
-
-      refreshPendingCount();
-
-      if (remaining.length === 0 && pending.length > 0) {
-
-        setSyncMsg(t.pos.syncSuccess.replace("{n}", String(pending.length)));
-
-        // FIX: Recharger la liste des ventes après sync réussi
-        reloadRecentTransactions();
-
-        setTimeout(() => setSyncMsg(null), 4000);
-
-      } else if (remaining.length > 0) {
-
-        setSyncMsg(t.pos.syncFailed.replace("{n}", String(remaining.length)));
-
-        setTimeout(() => setSyncMsg(null), 6000);
-
-      }
-
-    } catch {} finally {
-
-      isSyncingRef.current = false;
-
-    }
-
-  }, [createTransaction, t, reloadRecentTransactions]);
-
-  // Détection online/offline (doit être après syncPendingTransactions pour éviter TDZ)
+  // Détection online/offline (indicateur visuel seulement)
   useEffect(() => {
-    const goOnline = () => { setIsOnline(true); syncPendingTransactions(); };
+    const goOnline = () => setIsOnline(true);
     const goOffline = () => setIsOnline(false);
     window.addEventListener("online", goOnline);
     window.addEventListener("offline", goOffline);
-    // Au montage, synchroniser les transactions en attente
-    syncPendingTransactions();
     return () => {
       window.removeEventListener("online", goOnline);
       window.removeEventListener("offline", goOffline);
     };
-  }, [syncPendingTransactions]);
+  }, []);
 
 
 
@@ -1774,63 +1676,19 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
 
       } catch (err) {
 
-        // Échec réseau  stocker en local pour sync ultérieure
-
-        let pending: any[] = [];
-
-        try {
-
-          pending = JSON.parse(localStorage.getItem("kabrak_pending_tx") || "[]");
-
-        } catch {
-
-          pending = [];
-
-        }
-
-        pending.push({ ...txPayload, _createdAt: Date.now() });
-
-        // FIX: Limiter à 100 transactions max + nettoyer les vieilles (>7 jours)
-        const now = Date.now();
-        pending = pending.filter((tx: any) => tx._createdAt && (now - tx._createdAt) < MAX_PENDING_AGE_MS);
-        if (pending.length > MAX_PENDING_TX) pending = pending.slice(-MAX_PENDING_TX);
-
-        try { localStorage.setItem("kabrak_pending_tx", JSON.stringify(pending)); } catch { console.warn("localStorage quota exceeded for pending_tx"); }
-
-        refreshPendingCount();
-
-        setSyncMsg(t.pos.offlineSaleStored);
-
+        // Vente échouée (réseau) — pas de stockage pending, le caissier doit réessayer
+        setSyncMsg("Vente échouée — réessayez");
         setTimeout(() => setSyncMsg(null), 5000);
+        return;
 
       }
 
     } else {
 
-      // Mode offline  stocker en local
-
-      let pending: any[] = [];
-
-      try {
-
-        pending = JSON.parse(localStorage.getItem("kabrak_pending_tx") || "[]");
-
-      } catch {
-
-        pending = [];
-
-      }
-
-      pending.push({ ...txPayload, _createdAt: Date.now() });
-
-      // FIX: Limiter à 100 transactions max + nettoyer les vieilles (>7 jours)
-      const nowOff = Date.now();
-      pending = pending.filter((tx: any) => tx._createdAt && (nowOff - tx._createdAt) < MAX_PENDING_AGE_MS);
-      if (pending.length > MAX_PENDING_TX) pending = pending.slice(-MAX_PENDING_TX);
-
-      try { localStorage.setItem("kabrak_pending_tx", JSON.stringify(pending)); } catch { console.warn("localStorage quota exceeded for pending_tx"); }
-
-      refreshPendingCount();
+      // Hors ligne — pas de stockage pending
+      setSyncMsg("Hors ligne — reconnectez-vous");
+      setTimeout(() => setSyncMsg(null), 5000);
+      return;
 
     }
 
@@ -2419,19 +2277,6 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
 
         <div className="flex items-center gap-1.5 ml-auto">
 
-          {pendingTxCount > 0 && (
-
-            <button
-              onClick={() => syncPendingTransactions()}
-              className="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 rounded-md px-1.5 py-0.5 font-medium shrink-0 hover:bg-amber-100 cursor-pointer"
-              title="Cliquez pour resoumettre"
-            >
-
-              {t.pos.pendingCount.replace("{n}", String(pendingTxCount))} ↻
-
-            </button>
-
-          )}
 
           {syncMsg && (
 
