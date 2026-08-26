@@ -520,7 +520,7 @@ export const stockApi = {
     fetchAPI<ApiStockMovement>(`/stock/movements`, {
       method: "POST",
       body: JSON.stringify(data),
-      timeoutMs: 30000,
+      timeoutMs: 45000, // aligné sur le backend (maxWait 15s + timeout 30s)
     }),
 
   // Alertes
@@ -655,7 +655,7 @@ export const purchaseOrdersApi = {
       expiryDate?: string;
     }>;
   }) =>
-    fetchAPI<ApiPurchaseOrder>(`/purchase-orders/direct`, { method: "POST", body: JSON.stringify(data), timeoutMs: 60000 }),
+    fetchAPI<ApiPurchaseOrder>(`/purchase-orders/direct`, { method: "POST", body: JSON.stringify(data), timeoutMs: 90000 }),
   // Ajouter des articles à un bordereau existant (reçoit uniquement les nouveaux items)
   addItems: (id: string, items: Array<{
     productId: string;
@@ -669,7 +669,7 @@ export const purchaseOrdersApi = {
     newProductCategory?: string;
     newProductUnit?: string;
   }>) =>
-    fetchAPI<ApiPurchaseOrder>(`/purchase-orders/${id}/items`, { method: "POST", body: JSON.stringify({ items }), timeoutMs: 60000 }),
+    fetchAPI<ApiPurchaseOrder>(`/purchase-orders/${id}/items`, { method: "POST", body: JSON.stringify({ items }), timeoutMs: 90000 }),
   // Modifier un article existant (correction quantité/coût) — garde la date originale du bordereau
   updateItem: (id: string, itemId: string, data: { quantity?: number; unitCost?: number }) =>
     fetchAPI<ApiPurchaseOrder>(`/purchase-orders/${id}/items/${itemId}`, { method: "PATCH", body: JSON.stringify(data) }),
