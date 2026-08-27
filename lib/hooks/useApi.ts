@@ -929,6 +929,27 @@ export function useApi<T>(fetcher: () => Promise<T>, deps: any[]) {
     load();
   }, [load]);
 
+  // FIX: Re-fetch quand le reseau revient ou quand l'onglet redevient visible.
+  // Sans ça, si le fetch initial échoue (réseau coupé), data reste null forever
+  // et activeShifts est null → transactions créées avec registerId=undefined.
+  useEffect(() => {
+    const onOnline = () => {
+      console.log("Réseau rétabli — re-fetch useApi");
+      load();
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        load();
+      }
+    };
+    window.addEventListener("online", onOnline);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("online", onOnline);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [load]);
+
   return { data, loading, error, reload: load };
 }
 

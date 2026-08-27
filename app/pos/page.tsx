@@ -1554,6 +1554,13 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
 
     const registerId = myShift?.registerId;
 
+    // FIX: Bloquer la vente si aucun shift ouvert — sinon registerId=null → transactions orphelines
+    // qui faussent le Z-report et le expected cash.
+    if (!registerId) {
+      toast(t.pos?.noOpenShift || "Ouvrez une caisse avant d'enregistrer une vente.", "warning");
+      return;
+    }
+
 
 
     // Déterminer le montant payé et la monnaie selon le mode

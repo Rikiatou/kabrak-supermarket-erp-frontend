@@ -543,57 +543,29 @@ export default function CaissesPage() {
 
   const defaultEmployeeId = user?.id ?? cashiers[0]?.id ?? "";
 
-  // Quand on clique sur "Fermer", calculer le expected cash depuis les transactions
+  // Quand on clique sur "Fermer", utiliser le Z-report API du backend pour le expected cash.
+  // FIX: Avant, le frontend calculait localement le expected cash à partir des transactions,
+  // mais ça causait 3 bugs :
+  //  1. Filtrage par cashierId au lieu de registerId → inclut les transactions d'autres caisses
+  //  2. Ajout de mobile/orange au expected cash → gonfle le montant (l'argent mobile n'est pas dans le tiroir)
+  //  3. Utilisation de `now` au lieu de `shift.closedAt` → inclut les transactions après la clôture
+  // Solution : toujours utiliser le Z-report API qui calcule correctement (cashDrawerTotal).
   const handleCloseClick = async (shift: ApiShift) => {
     setCloseShift(shift);
     setLoadingCloseSummary(true);
     setCloseExpectedCash(shift.openingCash); // fallback initial
     try {
-      // Récupérer les transactions de cet employé
-      const response = await transactionsApi.list(1, 200, shift.employeeId);
-      const shiftStart = new Date(shift.openedAt).getTime();
-      const now = Date.now();
-
-      // Filtrer les transactions dans la période du shift
-      const shiftTx = response.data.filter((tx) => {
-        const txTime = new Date(tx.date).getTime();
-        return txTime >= shiftStart && txTime <= now && tx.status === "completed";
-      });
-
-      // Calculer le expected total = ouverture + toutes les ventes - monnaie rendue
-      const cashSales = shiftTx
-        .filter((tx) => tx.paymentMethod === "cash")
-        .reduce((sum, tx) => sum + (tx.cashGiven || tx.total), 0);
-      const cardSales = shiftTx
-        .filter((tx) => tx.paymentMethod === "card")
-        .reduce((sum, tx) => sum + tx.total, 0);
-      const mobileSales = shiftTx
-        .filter((tx) => tx.paymentMethod === "mobile")
-        .reduce((sum, tx) => sum + tx.total, 0);
-      const orangeSales = shiftTx
-        .filter((tx) => tx.paymentMethod === "orange")
-        .reduce((sum, tx) => sum + tx.total, 0);
-      const changeGiven = shiftTx.reduce((sum, tx) => sum + (tx.change || 0), 0);
-      const expected = shift.openingCash + cashSales + cardSales + mobileSales + orangeSales - changeGiven;
-
-      console.log("Close shift calc:", { openingCash: shift.openingCash, cashSales, changeGiven, expected, txCount: shiftTx.length });
+      const report = await shiftsApi.zReport(shift.id);
+      // cashDrawerTotal = openingCash + cashReceived - changeGiven - cashReturns
+      // C'est le VRAI montant attendu dans le tiroir de caisse.
+      const expected = report.cashDrawerTotal ?? report.totalExpected ?? shift.openingCash;
       setCloseExpectedCash(expected);
-
-      if (shiftTx.length > 0) {
-        toast(t.caisses.salesCountExpected.replace("{n}", String(shiftTx.length)).replace("{amount}", formatCurrency(expected)), "info");
+      if (report.customerCount > 0) {
+        toast(t.caisses.salesCountExpected.replace("{n}", String(report.customerCount)).replace("{amount}", formatCurrency(expected)), "info");
       }
     } catch (e: any) {
-      console.error("Failed to calculate expected cash:", e?.message);
-      // Essayer le Z-report en fallback
-      try {
-        const report = await shiftsApi.zReport(shift.id);
-        setCloseExpectedCash(report.totalExpected || report.cashDrawerTotal);
-        if (report.customerCount > 0) {
-          toast(t.caisses.salesCountExpected.replace("{n}", String(report.customerCount)).replace("{amount}", formatCurrency(report.totalExpected || report.cashDrawerTotal)), "info");
-        }
-      } catch {
-        toast(t.caisses.expectedCashFallback, "warning");
-      }
+      console.error("Failed to fetch Z-report for expected cash:", e?.message);
+      toast(t.caisses.expectedCashFallback, "warning");
     } finally {
       setLoadingCloseSummary(false);
     }
