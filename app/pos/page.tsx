@@ -1589,33 +1589,8 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
 
     // Essayer d'enregistrer la vente dans le backend
 
-    // Répartition proportionnelle de la remise sur les articles
-
-    const totalForAllocation = subtotal;
-
-    const allocatedDiscount = cart.map((item) => {
-
-      const effPrice = (item as any).unitPrice || getEffectivePrice(item.product);
-
-      const lineTotal = effPrice * item.quantity;
-
-      const ratio = totalForAllocation > 0 ? lineTotal / totalForAllocation : 0;
-
-      return Math.round(discount * ratio);
-
-    });
-
-    // Ajuste pour éviter les erreurs d'arrondi
-
-    const allocatedSum = allocatedDiscount.reduce((s, d) => s + d, 0);
-
-    if (allocatedSum !== discount && cart.length > 0) {
-
-      allocatedDiscount[0] += discount - allocatedSum;
-
-    }
-
-
+    // La remise est stockée au niveau de la transaction uniquement.
+    // Les items gardent leur prix plein pour que le Z-report affiche les vrais prix.
 
     const txPayload = {
 
@@ -1641,7 +1616,7 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
 
       customerId: selectedCustomer?.id,
 
-      items: cart.map((item, idx) => {
+      items: cart.map((item) => {
 
         const effPrice = (item as any).unitPrice || getEffectivePrice(item.product);
         const isPackItem = (item as any).sellMode === "pack";
@@ -1656,11 +1631,11 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
 
           unitPrice: Math.round(effPrice),
 
-          discount: Math.round(allocatedDiscount[idx]),
+          discount: 0,
 
           tax: 0,
 
-          total: Math.round(effPrice * item.quantity - allocatedDiscount[idx]),
+          total: Math.round(effPrice * item.quantity),
 
         };
 
