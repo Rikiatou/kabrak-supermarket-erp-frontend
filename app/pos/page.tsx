@@ -88,7 +88,7 @@ import { useBarcodeScanner } from "@/lib/hooks/useBarcodeScanner";
 
 import type { ApiCustomer, ApiTransaction } from "@/lib/api";
 
-import { productsApi, apiProductToFrontend, invoicesApi } from "@/lib/api";
+import { productsApi, apiProductToFrontend, invoicesApi, shiftsApi } from "@/lib/api";
 
 import { useAuth } from "@/lib/auth/context";
 
@@ -1552,10 +1552,23 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
 
     const myShift = activeShifts?.find((s) => s.employeeId === user.id && s.status === "open") ?? null;
 
-    const registerId = myShift?.registerId;
+    let registerId = myShift?.registerId;
 
-    // FIX: Bloquer la vente si aucun shift ouvert — sinon registerId=null → transactions orphelines
-    // qui faussent le Z-report et le expected cash.
+    // FIX: Si le shift n'est pas dans l'état React (activeShifts momentanément vide/périmé
+    // à cause d'un blip réseau), on fait un fetch LIVE avant de bloquer. Ça évite de refuser
+    // une vente alors que la caisse est bien ouverte en base.
+    if (!registerId) {
+      try {
+        const freshShifts = await shiftsApi.active();
+        const freshShift = freshShifts?.find((s) => s.employeeId === user.id && s.status === "open");
+        registerId = freshShift?.registerId;
+      } catch {
+        // Réseau réellement coupé — l'enregistrement de la vente échouerait de toute façon.
+      }
+    }
+
+    // Bloquer la vente uniquement si, même après re-vérification live, aucune caisse n'est ouverte.
+    // Sinon registerId=null → transactions orphelines qui faussent le Z-report et le expected cash.
     if (!registerId) {
       toast(t.pos?.noOpenShift || "Ouvrez une caisse avant d'enregistrer une vente.", "warning");
       return;
