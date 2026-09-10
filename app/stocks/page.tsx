@@ -574,7 +574,7 @@ export default function StocksPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm text-[var(--text-secondary)]">{product.category}</td>
+                    <td className="px-4 py-3 text-sm text-[var(--text-secondary)] max-w-[140px] truncate" title={product.category}>{product.category}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
@@ -625,7 +625,7 @@ export default function StocksPage() {
                         <span className="text-xs text-[var(--text-muted)]">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1">
                         {hasActiveMarkdown(product) ? (
                           <button
