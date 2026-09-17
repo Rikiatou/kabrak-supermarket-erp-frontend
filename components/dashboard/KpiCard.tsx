@@ -7,7 +7,8 @@ import { useI18n } from "@/lib/i18n/context";
 interface KpiCardProps {
   label: string;
   value: number;
-  previous: number;
+  previous?: number;
+  footnote?: string;
   format?: "currency" | "number" | "percent";
   icon: React.ReactNode;
   iconBg: string;
@@ -19,13 +20,14 @@ export function KpiCard({
   label,
   value,
   previous,
+  footnote,
   format = "currency",
   icon,
   iconBg,
   suffix,
 }: KpiCardProps) {
   const { t } = useI18n();
-  const delta = previous > 0 ? ((value - previous) / previous) * 100 : 0;
+  const delta = previous !== undefined && previous > 0 ? ((value - previous) / previous) * 100 : 0;
   const isUp = delta > 0;
   const isFlat = delta === 0;
 
@@ -47,25 +49,27 @@ export function KpiCard({
         >
           {icon}
         </div>
-        <div
-          className={cn(
-            "flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md",
-            isFlat
-              ? "bg-slate-100 text-slate-500"
-              : isUp
-              ? "bg-[var(--success-light)] text-[var(--success)]"
-              : "bg-[var(--danger-light)] text-[var(--danger)]"
-          )}
-        >
-          {isFlat ? (
-            <Minus className="w-3 h-3" />
-          ) : isUp ? (
-            <TrendingUp className="w-3 h-3" />
-          ) : (
-            <TrendingDown className="w-3 h-3" />
-          )}
-          <span className="tabular-nums">{Math.abs(delta ?? 0).toFixed(1)}%</span>
-        </div>
+        {previous !== undefined && (
+          <div
+            className={cn(
+              "flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md",
+              isFlat
+                ? "bg-slate-100 text-slate-500"
+                : isUp
+                ? "bg-[var(--success-light)] text-[var(--success)]"
+                : "bg-[var(--danger-light)] text-[var(--danger)]"
+            )}
+          >
+            {isFlat ? (
+              <Minus className="w-3 h-3" />
+            ) : isUp ? (
+              <TrendingUp className="w-3 h-3" />
+            ) : (
+              <TrendingDown className="w-3 h-3" />
+            )}
+            <span className="tabular-nums">{Math.abs(delta ?? 0).toFixed(1)}%</span>
+          </div>
+        )}
       </div>
 
       <p className="text-[22px] font-bold text-[var(--text-primary)] tabular-nums leading-none mb-1 tracking-tight">
@@ -73,12 +77,16 @@ export function KpiCard({
         {suffix && <span className="text-sm font-normal text-[var(--text-muted)] ml-1">{suffix}</span>}
       </p>
       <p className="text-[12px] text-[var(--text-secondary)] font-medium">{label}</p>
-      <p className="text-[11px] text-[var(--text-muted)] mt-1">
-        {t.kpiCard.vsYesterday}{" "}
-        <span className="tabular-nums">
-          {format === "currency" ? formatCurrency(previous) : formatNumber(previous)}
-        </span>
-      </p>
+      {previous !== undefined ? (
+        <p className="text-[11px] text-[var(--text-muted)] mt-1">
+          {t.kpiCard.vsYesterday}{" "}
+          <span className="tabular-nums">
+            {format === "currency" ? formatCurrency(previous) : formatNumber(previous)}
+          </span>
+        </p>
+      ) : footnote ? (
+        <p className="text-[11px] text-[var(--text-muted)] mt-1">{footnote}</p>
+      ) : null}
     </div>
   );
 }

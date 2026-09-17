@@ -32,6 +32,7 @@ import {
   useMonthlyTopProducts,
   useAverageBasket,
   useUnpaidInvoices,
+  useActiveShifts,
 } from "@/lib/hooks/useApi";
 
 export default function DashboardPage() {
@@ -47,6 +48,7 @@ export default function DashboardPage() {
   const { data: topProducts } = useMonthlyTopProducts(5);
   const { data: averageBasket } = useAverageBasket();
   const { data: unpaidInvoices } = useUnpaidInvoices();
+  const { data: activeShifts } = useActiveShifts();
 
   // Données réelles du backend (fallback sur mock si indisponible)
   const revenue = todayStats?.revenue ?? 0;
@@ -88,7 +90,7 @@ export default function DashboardPage() {
       <div className="flex items-center gap-3 mb-6 flex-wrap">
         <div className="flex items-center gap-2 bg-[var(--success-light)] text-emerald-700 text-xs font-medium px-3 py-1.5 rounded-full">
           <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-          {t.dashboard.cashierOpen} — 3 {t.dashboard.activeCashiers}
+          {t.dashboard.cashierOpen} — {activeShifts?.length ?? 0} {t.dashboard.activeCashiers}
         </div>
         {criticalAlerts > 0 && (
           <div className="flex items-center gap-2 bg-[var(--danger-light)] text-red-700 text-xs font-medium px-3 py-1.5 rounded-full">
@@ -117,7 +119,7 @@ export default function DashboardPage() {
         <KpiCard
           label={t.dashboard.avgBasket}
           value={averageBasket?.average ?? 0}
-          previous={0}
+          previous={yesterdayStats?.avgBasket ?? 0}
           format="currency"
           icon={<ShoppingBag className="w-5 h-5 text-emerald-600" />}
           iconBg="bg-[var(--success-light)]"
@@ -133,7 +135,7 @@ export default function DashboardPage() {
         <KpiCard
           label={t.dashboard.unpaidInvoices}
           value={unpaidInvoices?.totalUnpaid ?? 0}
-          previous={0}
+          footnote={`${unpaidInvoices?.count ?? 0} ${t.dashboard.unpaidCount}`}
           format="currency"
           icon={<AlertTriangle className="w-5 h-5 text-red-600" />}
           iconBg="bg-[var(--danger-light)]"
