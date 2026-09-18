@@ -67,7 +67,10 @@ export function KpiCard({
             ) : (
               <TrendingDown className="w-3 h-3" />
             )}
-            <span className="tabular-nums">{Math.abs(delta ?? 0).toFixed(1)}%</span>
+            <span className="tabular-nums">
+              {isUp ? "+" : ""}
+              {delta.toFixed(1)}%
+            </span>
           </div>
         )}
       </div>
