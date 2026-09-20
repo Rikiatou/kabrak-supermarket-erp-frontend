@@ -56,6 +56,9 @@ export function ZReportReceipt({
   const totalDiscount = report.totalDiscount ?? 0;
   const returnsAndCredits = report.returnsAndCredits ?? 0;
   const cashReturns = (report as any).cashReturns ?? 0;
+  // Échanges / avoirs : réduisent Net Sales mais aucune sortie d'argent →
+  // Total Receipts = Net Sales + nonCashReturns. Affiché pour que le ticket se réconcilie.
+  const nonCashReturns = (report as any).nonCashReturns ?? 0;
   const creditInvoices = report.creditInvoices ?? [];
   const creditTotal = creditInvoices.reduce((s, c) => s + c.balance, 0);
 
@@ -157,6 +160,7 @@ export function ZReportReceipt({
         ${(rbm as any).orange > 0 ? row(z.orange || "Orange Money", formatCurrency((rbm as any).orange)) : ""}
         <div style="border-top:1px solid #000;margin-top:3px;padding-top:3px">
           ${row(z.totalReceipts, formatCurrency(report.totalReceipts), true)}
+          ${nonCashReturns > 0 ? `<div style="font-size:10px">${row((z as any).nonCashReturns || "incl. exchanges/store credit (no cash out)", formatCurrency(nonCashReturns))}</div>` : ""}
         </div>
       </div>
       <div style="border-top:1px dashed #000;margin-top:5px;padding-top:5px">
@@ -326,6 +330,12 @@ export function ZReportReceipt({
                 <span>{z.totalReceipts}</span>
                 <span className="tabular-nums">{formatCurrency(report.totalReceipts)}</span>
               </div>
+              {nonCashReturns > 0 && (
+                <div className="flex justify-between text-[11px] text-[var(--text-muted)]">
+                  <span>{(z as any).nonCashReturns || "incl. exchanges/store credit (no cash out)"}</span>
+                  <span className="tabular-nums">{formatCurrency(nonCashReturns)}</span>
+                </div>
+              )}
             </div>
           </div>
 
