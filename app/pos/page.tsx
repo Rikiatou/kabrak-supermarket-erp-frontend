@@ -196,6 +196,8 @@ interface HeldCart {
 
 
 
+const isUnnamedProduct = (name?: string) => !name || name === "Pending sync" || name.startsWith("A RENOMMER");
+
 export default function POSPage() {
 
   const { t, locale } = useI18n();
@@ -235,6 +237,12 @@ export default function POSPage() {
   // Seuls boss/manager/supervisor/stockist peuvent créer des produits
 
   const canCreateProduct = ["boss", "manager", "supervisor", "stockist"].includes(user?.role ?? "");
+
+  // Produit sans nom ("Pending sync" / "A RENOMMER …") ou à 0 F : la caissière le complète au scan
+  const [fixProduct, setFixProduct] = useState<Product | null>(null);
+  const [fixName, setFixName] = useState("");
+  const [fixPrice, setFixPrice] = useState("");
+  const [fixSaving, setFixSaving] = useState(false);
 
   const { data: activeShifts } = useActiveShifts();
 
@@ -534,6 +542,13 @@ export default function POSPage() {
 
   const addToCart = useCallback((product: Product, mode: "unit" | "pack" = sellMode) => {
 
+    if (isUnnamedProduct(product.name) || !(product.price > 0)) {
+      setFixProduct(product);
+      setFixName(isUnnamedProduct(product.name) ? "" : product.name);
+      setFixPrice(product.price > 0 ? String(product.price) : "");
+      return;
+    }
+
     // Déterminer le prix et la quantité selon le mode
     const isPack = mode === "pack" && product.wholesalePrice && product.packQuantity;
     const effectiveUnitPrice = isPack ? product.wholesalePrice! : getEffectivePrice(product);
@@ -786,11 +801,33 @@ export default function POSPage() {
 
   // Désactivé si un modal est ouvert (checkout, new product, history, customer)
 
-  const posModalOpen = showNewProductModal || showScanner || showHistoryModal || showCustomerSearch || showCustomerCreateModal || showInvoiceModal || checkoutStep !== "cart";
+  const posModalOpen = !!fixProduct || showNewProductModal || showScanner || showHistoryModal || showCustomerSearch || showCustomerCreateModal || showInvoiceModal || checkoutStep !== "cart";
 
   useBarcodeScanner(handleBarcodeScan, posModalOpen);
 
 
+
+  const saveFixedProduct = useCallback(async () => {
+    if (!fixProduct) return;
+    const name = fixName.trim().toUpperCase();
+    const price = Math.round(Number(fixPrice.replace(/\s/g, "").replace(",", ".")));
+    if (!name || isUnnamedProduct(name)) { toast("Tapez le nom écrit sur le produit", "warning"); return; }
+    if (!(price > 0)) { toast("Tapez le prix de vente", "warning"); return; }
+    setFixSaving(true);
+    try {
+      const updated = await productsApi.update(fixProduct.id, { name, price });
+      const fixed = { ...fixProduct, ...apiProductToFrontend(updated), name, price };
+      setFixProduct(null);
+      addToCart(fixed);
+      toast(`${name} enregistré`, "success");
+      reload();
+      setTimeout(() => searchRef.current?.focus(), 100);
+    } catch (e: unknown) {
+      toast(e instanceof Error ? e.message : "Erreur", "warning");
+    } finally {
+      setFixSaving(false);
+    }
+  }, [fixProduct, fixName, fixPrice, addToCart, reload, toast]);
 
   // Handler quand un produit est créé depuis le modal (scan checkout)
 
@@ -3173,6 +3210,55 @@ ${r.paidInFull ? '<div class="center bold lg">PAID IN FULL</div>' : ""}
 
         />
 
+      )}
+
+      {fixProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl">
+            <h3 className="text-lg font-bold text-gray-900">Produit à compléter</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              Code-barres <span className="font-mono font-semibold">{fixProduct.barcode}</span> · stock {fixProduct.stock}.
+              Lisez le nom sur le produit et tapez le prix. C&apos;est enregistré une fois pour toutes.
+            </p>
+            <label className="mt-4 block text-sm font-medium text-gray-700">Nom du produit</label>
+            <input
+              autoFocus={!fixName}
+              value={fixName}
+              onChange={(e) => setFixName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); document.getElementById("fix-price")?.focus(); } }}
+              placeholder="ex. BISCUIT CHOCO 50G"
+              className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm uppercase focus:border-blue-500 focus:outline-none"
+            />
+            <label className="mt-3 block text-sm font-medium text-gray-700">Prix de vente (F)</label>
+            <input
+              id="fix-price"
+              autoFocus={!!fixName}
+              inputMode="numeric"
+              value={fixPrice}
+              onChange={(e) => setFixPrice(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); saveFixedProduct(); } }}
+              placeholder="ex. 500"
+              className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2.5 text-lg font-bold focus:border-blue-500 focus:outline-none"
+            />
+            <div className="mt-5 flex gap-2">
+              <button
+                type="button"
+                onClick={() => { setFixProduct(null); setTimeout(() => searchRef.current?.focus(), 100); }}
+                className="flex-1 rounded-xl border border-gray-300 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                disabled={fixSaving}
+                onClick={saveFixedProduct}
+                className="flex-1 rounded-xl bg-blue-600 py-2.5 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {fixSaving ? "…" : "Enregistrer et vendre"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {showNewProductModal && (
