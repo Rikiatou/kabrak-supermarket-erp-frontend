@@ -120,6 +120,8 @@ export default function AchatsPage() {
   const [appendToOrderId, setAppendToOrderId] = useState<string | null>(null);
   const [appendOrderNumber, setAppendOrderNumber] = useState("");
   const [appendExistingItems, setAppendExistingItems] = useState<Array<{ name: string; quantity: number }>>([]);
+  // Après un essai d'enregistrement: surligne les lignes sans quantité ou sans prix d'achat
+  const [showIncompleteLines, setShowIncompleteLines] = useState(false);
   const [confirmReuseOrder, setConfirmReuseOrder] = useState<typeof orders[0] | null>(null);
 
   // Auto-focus le champ scan quand le formulaire de livraison s'ouvre
@@ -194,17 +196,17 @@ export default function AchatsPage() {
     const found = await prodScanBarcode(code);
     if (found) {
       // Vérifier si déjà dans les lignes
-      const existingIdx = deliveryLines.findIndex((l) => l.productId === found.id);
-      if (existingIdx >= 0) {
-        updateDeliveryLine(existingIdx, "qty", deliveryLines[existingIdx].qty + 1);
-      } else {
-        setDeliveryLines((l) => [...l, {
+      // Mise à jour fonctionnelle: avec des scans rapides, la liste du closure peut être périmée
+      setDeliveryLines((l) => {
+        const existingIdx = l.findIndex((x) => x.productId === found.id);
+        if (existingIdx >= 0) return l.map((x, idx) => idx === existingIdx ? { ...x, qty: x.qty + 1 } : x);
+        return [...l, {
           productId: found.id, productLabel: `${found.name} (${found.sku})`, qty: 1, unitPrice: found.costPrice || 0,
           sellPrice: found.price || 0, expiryDate: found.expiryDate ? found.expiryDate.split("T")[0] : "",
           receiveInPacks: false, packQty: 1, productPackQuantity: (found as any).packQuantity || null,
           isNewProduct: false, newProductName: "", newProductBarcode: "", newProductCategory: "Grocery", newProductUnit: "pc",
-        }]);
-      }
+        }];
+      });
       setScanInput("");
       toast(`${found.name} ${t.achats.scanProductAdded}`, "success");
       setTimeout(() => scanInputRef.current?.focus(), 50);
@@ -214,7 +216,7 @@ export default function AchatsPage() {
       setShowNewProductModal(true);
       setScanInput("");
     }
-  }, [scanInput, prodScanBarcode, deliveryLines, toast]);
+  }, [scanInput, prodScanBarcode, toast]);
 
   // Global barcode scanner — actif seulement quand le formulaire de livraison est ouvert
   useBarcodeScanner(
@@ -269,6 +271,7 @@ export default function AchatsPage() {
     setDeliverySupplierId(""); setDeliverySupplierName(""); setDeliveryLines([{ productId: "", productLabel: "", qty: 1, unitPrice: 0, sellPrice: 0, expiryDate: "", receiveInPacks: false, packQty: 1, productPackQuantity: null, isNewProduct: false, newProductName: "", newProductBarcode: "", newProductCategory: "Grocery", newProductUnit: "pc" }]);
     setScanInput(""); setScanMode(false);
     setAppendToOrderId(null); setAppendOrderNumber(""); setAppendExistingItems([]);
+    setShowIncompleteLines(false);
     try { localStorage.removeItem(DELIVERY_DRAFT_KEY); } catch {}
   };
 
@@ -361,19 +364,18 @@ export default function AchatsPage() {
 
   useEffect(() => {
     if (!showDeliveryForm) return;
-    if (appendToOrderId) return; // pas d'autosave en mode "ajout à un bordereau existant"
     const timeoutId = setTimeout(() => {
       if (hasDeliveryContent) {
         try {
           localStorage.setItem(DELIVERY_DRAFT_KEY, JSON.stringify({
             deliveryRef, deliveryDate, deliverySupplierId, deliverySupplierName,
-            deliveryLines, savedAt: Date.now(),
+            deliveryLines, appendToOrderId, appendOrderNumber, appendExistingItems, savedAt: Date.now(),
           }));
         } catch { console.warn("localStorage quota exceeded for delivery draft"); }
       }
     }, 1000);
     return () => clearTimeout(timeoutId);
-  }, [showDeliveryForm, appendToOrderId, hasDeliveryContent, deliveryRef, deliveryDate, deliverySupplierId, deliverySupplierName, deliveryLines]);
+  }, [showDeliveryForm, appendToOrderId, appendOrderNumber, appendExistingItems, hasDeliveryContent, deliveryRef, deliveryDate, deliverySupplierId, deliverySupplierName, deliveryLines]);
 
   // === DRAFT RESTORE (delivery): au mount, restaure le bordereau en cours ===
   useEffect(() => {
@@ -387,6 +389,12 @@ export default function AchatsPage() {
         setDeliverySupplierId(draft.deliverySupplierId || "");
         setDeliverySupplierName(draft.deliverySupplierName || "");
         setDeliveryLines(lines);
+        if (draft.appendToOrderId) {
+          // Brouillon de "Compléter la livraison": on revient sur le même bordereau
+          setAppendToOrderId(draft.appendToOrderId);
+          setAppendOrderNumber(draft.appendOrderNumber || "");
+          setAppendExistingItems(Array.isArray(draft.appendExistingItems) ? draft.appendExistingItems : []);
+        }
         setShowDeliveryForm(true);
         const age = Math.round((Date.now() - (draft.savedAt || Date.now())) / 60000);
         toast(`${t.achats.deliveryDraftRestored || "Bordereau restauré"} (${lines.length} ligne(s), ${age} min)`, "success");
@@ -410,6 +418,20 @@ export default function AchatsPage() {
     if (!supplierId) { toast(t.achats.selectSupplier, "warning"); return; }
     // Valider les lignes: produit existant avec qty et prix d'achat
     const validLines = deliveryLines.filter((l) => l.productId && l.qty > 0 && l.unitPrice > 0);
+    // Avant: les lignes sans quantité ou sans prix d'achat étaient ignorées sans rien dire
+    // (ex. 54 articles scannés, 50 entrés en stock). On bloque et on les montre.
+    const incomplete = deliveryLines.filter((l) => l.productId && !(l.qty > 0 && l.unitPrice > 0));
+    if (incomplete.length > 0) {
+      setShowIncompleteLines(true);
+      const names = incomplete.slice(0, 3).map((l) => l.productLabel || "?").join(", ");
+      toast(
+        (locale === "fr"
+          ? `${incomplete.length} article(s) sans quantité ou sans prix d'achat (en rouge) : ${names}`
+          : `${incomplete.length} item(s) with no quantity or no buy price (in red): ${names}`) + (incomplete.length > 3 ? "…" : ""),
+        "warning",
+      );
+      return;
+    }
     if (validLines.length === 0) { toast(t.achats.deliveryNeedQty, "warning"); return; }
     // Construire les items (partagé entre création directe et ajout à un bordereau)
     const items = validLines.map((l) => {
@@ -466,7 +488,7 @@ export default function AchatsPage() {
     } finally {
       setSavingDelivery(false);
     }
-  }, [deliverySupplierId, deliverySupplierName, deliveryDate, deliveryRef, deliveryLines, appendToOrderId, user, reloadOrders, reloadSuppliers, toast, t]);
+  }, [deliverySupplierId, deliverySupplierName, deliveryDate, deliveryRef, deliveryLines, appendToOrderId, user, reloadOrders, reloadSuppliers, toast, t, locale]);
 
   const handlePrintDelivery = (order: typeof orders[0]) => {
     const sup = order.supplier ? (suppliers.find((s) => s.id === order.supplier.id) || order.supplier) : null;
@@ -995,8 +1017,9 @@ export default function AchatsPage() {
                     const lineTotal = line.receiveInPacks && line.productPackQuantity
                       ? line.packQty * line.unitPrice
                       : line.qty * line.unitPrice;
+                    const isIncomplete = showIncompleteLines && !!line.productId && !(line.qty > 0 && line.unitPrice > 0);
                     return (
-                      <div key={i} className="border border-[var(--border)] rounded-lg p-2 space-y-1.5">
+                      <div key={i} className={`border rounded-lg p-2 space-y-1.5 ${isIncomplete ? "border-red-500 bg-red-50" : "border-[var(--border)]"}`}>
                         {/* Ligne 1: Produit — recherche server-side (tous les produits) + bouton nouveau produit */}
                         <div className="grid grid-cols-[1fr_30px] gap-1.5 items-center relative">
                             <input
