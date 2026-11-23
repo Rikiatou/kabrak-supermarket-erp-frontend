@@ -158,8 +158,7 @@ export default function StocksPage() {
       toast(`${data.name} ${t.stocks.addedToStock}`, "success");
       reloadProducts();
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : t.stocks.errorAdd;
-      toast(msg, "warning");
+      throw e instanceof Error ? e : new Error(t.stocks.errorAdd);
     } finally {
       setSaving(false);
     }
@@ -688,7 +687,7 @@ export default function StocksPage() {
         <NewProductModal
           prefillBarcode={stockScanBarcode}
           onClose={() => { setShowNewProduct(false); setStockScanBarcode(""); document.body.focus(); }}
-          onSave={(data) => { handleNewProduct(data); }}
+          onSave={handleNewProduct}
         />
       )}
 

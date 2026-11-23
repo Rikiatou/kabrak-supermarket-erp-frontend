@@ -255,7 +255,7 @@ export default function AchatsPage() {
       setPendingBarcode("");
       setTimeout(() => scanInputRef.current?.focus(), 100);
     } catch (e: unknown) {
-      toast(e instanceof Error ? e.message : t.stocks.errorAdd, "warning");
+      throw e instanceof Error ? e : new Error(t.stocks.errorAdd);
     }
   }, [t, toast]);
 

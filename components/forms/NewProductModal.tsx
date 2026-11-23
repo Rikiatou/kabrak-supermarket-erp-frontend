@@ -12,7 +12,7 @@ const UNITS = ["bottle", "can", "pack", "sack", "kg", "liter", "box", "bar", "ja
 
 interface NewProductModalProps {
   onClose: () => void;
-  onSave: (product: Omit<Product, "id">) => void;
+  onSave: (product: Omit<Product, "id">) => void | Promise<void>;
   prefillBarcode?: string;
 }
 
@@ -78,6 +78,8 @@ export function NewProductModal({ onClose, onSave, prefillBarcode }: NewProductM
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [stockMode, setStockMode] = useState<"unit" | "pack">("unit");
   const barcodeRef = useRef<HTMLInputElement>(null);
 
@@ -100,14 +102,17 @@ export function NewProductModal({ onClose, onSave, prefillBarcode }: NewProductM
     return Object.keys(errs).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) return;
+    if (saving || !validate()) return;
     // Si elle a saisi le stock en cartons, convertir en unités
     const stockInUnits = stockMode === "pack" && form.packQuantity
       ? Number(form.stock) * Number(form.packQuantity)
       : Number(form.stock);
-    onSave({
+    setSaving(true);
+    setSaveError("");
+    try {
+      await onSave({
       sku: form.sku,
       name: form.name,
       category: form.category,
@@ -122,7 +127,13 @@ export function NewProductModal({ onClose, onSave, prefillBarcode }: NewProductM
       barcode: form.barcode,
       supplier: form.supplier || undefined,
       expiryDate: form.expiryDate || undefined,
-    } as any);
+      } as any);
+    } catch (err: unknown) {
+      setSaveError(err instanceof Error && err.message ? err.message : t.stocks.errorAdd);
+      return;
+    } finally {
+      setSaving(false);
+    }
     setSaved(true);
     setTimeout(() => {
       setSaved(false);
@@ -347,11 +358,16 @@ export function NewProductModal({ onClose, onSave, prefillBarcode }: NewProductM
               </div>
 
               {/* Footer */}
+              {saveError && (
+                <div role="alert" className="mx-6 mb-3 px-4 py-2.5 rounded-xl bg-[var(--danger-light)] text-red-600 text-sm font-semibold shrink-0">
+                  {saveError}
+                </div>
+              )}
               <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[var(--border)] shrink-0">
                 <Button type="button" variant="secondary" onClick={onClose}>
                   {t.common.cancel}
                 </Button>
-                <Button type="submit" icon={<CheckCircle2 className="w-4 h-4" />}>
+                <Button type="submit" loading={saving} disabled={saving} icon={<CheckCircle2 className="w-4 h-4" />}>
                   {t.common.save}
                 </Button>
               </div>

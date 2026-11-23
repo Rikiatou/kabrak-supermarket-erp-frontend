@@ -889,9 +889,7 @@ export default function POSPage() {
 
     } catch (e: unknown) {
 
-      const msg = e instanceof Error ? e.message : "Erreur";
-
-      alert(`Error: ${msg}`);
+      throw e instanceof Error ? e : new Error("Erreur");
 
     }
 
