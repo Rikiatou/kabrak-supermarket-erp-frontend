@@ -68,6 +68,7 @@ export interface Product {
   barcode: string;
   expiryDate?: string;
   supplier?: string;
+  supplierId?: string;
   imageUrl?: string;
 }
 

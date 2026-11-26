@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { useI18n } from "@/lib/i18n/context";
 import { cn } from "@/lib/utils";
 import { productsApi } from "@/lib/api";
+import { useSuppliers } from "@/lib/hooks/useApi";
 import type { Product } from "@/lib/types";
 
 const UNITS = ["bottle", "can", "pack", "sack", "kg", "liter", "box", "bar", "jar", "unit"];
@@ -29,17 +30,18 @@ type FormData = {
   stock: string;
   minStock: string;
   unit: string;
-  supplier: string;
+  supplierId: string;
   expiryDate: string;
 };
 
 const empty: FormData = {
   name: "", sku: "", barcode: "", category: "", price: "",
-  costPrice: "", wholesalePrice: "", packQuantity: "", packBarcode: "", stock: "", minStock: "", unit: "unit", supplier: "", expiryDate: "",
+  costPrice: "", wholesalePrice: "", packQuantity: "", packBarcode: "", stock: "", minStock: "", unit: "unit", supplierId: "", expiryDate: "",
 };
 
 export function NewProductModal({ onClose, onSave, prefillBarcode }: NewProductModalProps) {
   const { t } = useI18n();
+  const { suppliers } = useSuppliers();
 
   // Catégories dynamiques chargées depuis le backend
   // Fallback: categories connues de la DB (apres normalisation)
@@ -125,7 +127,7 @@ export function NewProductModal({ onClose, onSave, prefillBarcode }: NewProductM
       minStock: Number(form.minStock),
       unit: form.unit,
       barcode: form.barcode,
-      supplier: form.supplier || undefined,
+      supplierId: form.supplierId || undefined,
       expiryDate: form.expiryDate || undefined,
       } as any);
     } catch (err: unknown) {
@@ -345,9 +347,11 @@ export function NewProductModal({ onClose, onSave, prefillBarcode }: NewProductM
                   </p>
                   <div className="grid grid-cols-2 gap-4">
                     <Field label={t.forms.supplier}>
-                      <input type="text" value={form.supplier} onChange={set("supplier")}
-                        placeholder={t.forms.supplierPh}
-                        className={inputClass(false)} />
+                      <select value={form.supplierId} onChange={set("supplierId")}
+                        className={inputClass(false)}>
+                        <option value="">{t.forms.noSupplier}</option>
+                        {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                      </select>
                     </Field>
                     <Field label={t.forms.expiryDate}>
                       <input type="date" value={form.expiryDate} onChange={set("expiryDate")}

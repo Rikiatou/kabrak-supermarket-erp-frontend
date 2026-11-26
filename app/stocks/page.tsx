@@ -24,7 +24,7 @@ import { formatCurrency, formatDate, cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/context";
 import { useToast } from "@/components/ui/Toast";
 import { NewProductModal } from "@/components/forms/NewProductModal";
-import { useStockAlerts, useStockValue, useSetMarkdown, useRemoveMarkdown, useServerProductSearch } from "@/lib/hooks/useApi";
+import { useStockAlerts, useStockValue, useSetMarkdown, useRemoveMarkdown, useServerProductSearch, useSuppliers } from "@/lib/hooks/useApi";
 import { useBarcodeScanner } from "@/lib/hooks/useBarcodeScanner";
 import { productsApi, stockApi, apiProductToFrontend, batchesApi } from "@/lib/api";
 import { getEffectivePrice, hasActiveMarkdown } from "@/lib/api";
@@ -65,6 +65,7 @@ export default function StocksPage() {
   const { t } = useI18n();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { suppliers } = useSuppliers();
   const { results: searchResults, search: serverSearch, scanBarcode: serverScanBarcode, loading: searchLoading, refresh: reloadProducts } = useServerProductSearch();
   const { alerts: stockAlertsData } = useStockAlerts();
   const { value: stockValueData } = useStockValue();
@@ -113,7 +114,7 @@ export default function StocksPage() {
   const [restockNote, setRestockNote] = useState("");
   // Edit modal
   const [editProduct, setEditProduct] = useState<Product | null>(null);
-  const [editForm, setEditForm] = useState({ name: "", price: "", costPrice: "", wholesalePrice: "", packQuantity: "", packBarcode: "", stock: "", minStock: "", category: "", barcode: "", sku: "", unit: "unit" });
+  const [editForm, setEditForm] = useState({ name: "", price: "", costPrice: "", wholesalePrice: "", packQuantity: "", packBarcode: "", stock: "", minStock: "", category: "", barcode: "", sku: "", unit: "unit", supplierId: "" });
   const { setMarkdown, setting: settingMarkdown } = useSetMarkdown();
   const { removeMarkdown, removing: removingMarkdown } = useRemoveMarkdown();
 
@@ -154,6 +155,7 @@ export default function StocksPage() {
         stock: data.stock,
         minStock: data.minStock,
         unit: data.unit,
+        supplierId: data.supplierId || undefined,
       });
       toast(`${data.name} ${t.stocks.addedToStock}`, "success");
       reloadProducts();
@@ -264,6 +266,7 @@ export default function StocksPage() {
       barcode: product.barcode || "",
       sku: product.sku || "",
       unit: product.unit || "unit",
+      supplierId: product.supplierId || "",
     });
   };
   const closeEditModal = () => {
@@ -291,6 +294,7 @@ export default function StocksPage() {
         barcode: editForm.barcode || undefined,
         sku: editForm.sku || undefined,
         unit: editForm.unit,
+        supplierId: editForm.supplierId || null,
       });
       // Create adjustment movement if stock changed (this also updates the stock)
       if (stockChanged) {
@@ -931,6 +935,17 @@ export default function StocksPage() {
                 <datalist id="edit-categories">
                   {dbCategories.map((c) => <option key={c.name} value={c.name} />)}
                 </datalist>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">{t.forms.supplier}</label>
+                <select
+                  value={editForm.supplierId}
+                  onChange={(e) => setEditForm({ ...editForm, supplierId: e.target.value })}
+                  className="w-full px-3 py-2.5 border border-[var(--border)] rounded-xl text-sm outline-none focus:border-[var(--brand)] bg-white"
+                >
+                  <option value="">{t.forms.noSupplier}</option>
+                  {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
               </div>
               <div>
                 <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 block">{t.stocks.barcode}</label>
