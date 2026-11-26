@@ -855,6 +855,8 @@ export default function POSPage() {
 
         unit: data.unit,
 
+        supplierId: data.supplierId || undefined,
+
         expiryDate: data.expiryDate || undefined,
 
       });

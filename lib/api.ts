@@ -129,7 +129,7 @@ export interface ApiProduct {
   minStock: number;
   unit: string;
   expiryDate?: string;
-  supplierId?: string;
+  supplierId?: string | null;
   imageUrl?: string;
   isActive: boolean;
   createdAt: string;
@@ -1155,6 +1155,7 @@ export function apiProductToFrontend(p: ApiProduct): Product {
     barcode: p.barcode,
     expiryDate: p.expiryDate,
     supplier: p.supplier?.name,
+    supplierId: p.supplierId ?? p.supplier?.id,
     imageUrl: p.imageUrl,
   };
 }
