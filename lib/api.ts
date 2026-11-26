@@ -451,9 +451,15 @@ export const transactionsApi = {
 
   // Objectif mensuel (dashboard)
   monthlyGoal: () =>
-    fetchAPI<{ current: number; goal: number; progress: number; transactions: number; remaining: number }>(
+    fetchAPI<ApiMonthlyGoal>(
       `/transactions/stats/monthly-goal`
     ),
+
+  setMonthlyGoal: (goal: number) =>
+    fetchAPI<ApiMonthlyGoal>(`/transactions/stats/monthly-goal`, {
+      method: "PUT",
+      body: JSON.stringify({ goal }),
+    }),
 
   // Top produits vendus (dashboard)
   topProducts: (limit?: number) =>
@@ -952,6 +958,33 @@ export interface ApiRevenue {
   amount: number;
 }
 
+export interface ApiMonthlyGoal {
+  current: number;
+  goal: number | null;
+  progress: number;
+  transactions: number;
+  remaining: number;
+}
+
+export interface ApiProfitLoss {
+  grossSales: number;
+  refunds: number;
+  salesRevenue: number;
+  salesCount: number;
+  costOfGoodsSold: number;
+  grossProfit: number;
+  grossMarginRate: number;
+  otherRevenue: number;
+  totalRevenue: number;
+  totalExpenses: number;
+  losses: number;
+  netProfit: number;
+  netMarginRate: number;
+  paymentMethods: Array<{ method: string; amount: number; count: number }>;
+  purchases: { amount: number; count: number };
+  expenseByCategory: Array<{ category: string; amount: number }>;
+}
+
 export const accountingApi = {
   expenses: (startDate?: string, endDate?: string, category?: string) =>
     fetchAPI<ApiExpense[]>(`/accounting/expenses?${startDate ? `startDate=${startDate}&` : ""}${endDate ? `endDate=${endDate}&` : ""}${category ? `category=${category}` : ""}`),
@@ -962,9 +995,9 @@ export const accountingApi = {
   createRevenue: (data: { category: string; description: string; amount: number }) =>
     fetchAPI<ApiRevenue>(`/accounting/revenues`, { method: "POST", body: JSON.stringify(data) }),
   profitLoss: (startDate: string, endDate: string) =>
-    fetchAPI<{ totalRevenue: number; totalExpenses: number; netProfit: number; expenseBreakdown: Array<{ category: string; amount: number }> }>(`/accounting/profit-loss?startDate=${startDate}&endDate=${endDate}`),
+    fetchAPI<ApiProfitLoss>(`/accounting/profit-loss?startDate=${startDate}&endDate=${endDate}`),
   monthlySummary: (year: number) =>
-    fetchAPI<Array<{ month: number; revenue: number; expenses: number; profit: number }>>(`/accounting/monthly-summary?year=${year}`),
+    fetchAPI<Array<{ month: number; revenue: number; costOfGoodsSold: number; grossProfit: number; expenses: number; losses: number; profit: number }>>(`/accounting/monthly-summary?year=${year}`),
   expenseBreakdown: (startDate: string, endDate: string) =>
     fetchAPI<Array<{ category: string; amount: number; percentage: number }>>(`/accounting/expense-breakdown?startDate=${startDate}&endDate=${endDate}`),
 };

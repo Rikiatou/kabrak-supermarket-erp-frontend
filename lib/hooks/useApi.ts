@@ -34,6 +34,7 @@ import {
   type ApiInvoice,
   type ApiNotification,
   type ApiNotificationSummary,
+  type ApiMonthlyGoal,
 } from "@/lib/api";
 import type { Product } from "@/lib/types";
 
@@ -320,15 +321,25 @@ export function useWeekTrend() {
 // Objectif mensuel (dashboard)
 // ========================================
 export function useMonthlyGoal() {
-  const [data, setData] = useState<{ current: number; goal: number; progress: number; transactions: number; remaining: number } | null>(null);
+  const [data, setData] = useState<ApiMonthlyGoal | null>(null);
 
-  useEffect(() => {
+  const reload = useCallback(() => {
     transactionsApi.monthlyGoal()
       .then(setData)
       .catch(() => {});
   }, []);
 
-  return { data };
+  useEffect(() => {
+    reload();
+  }, [reload]);
+
+  const saveGoal = useCallback(async (goal: number) => {
+    const res = await transactionsApi.setMonthlyGoal(goal);
+    setData(res);
+    return res;
+  }, []);
+
+  return { data, reload, saveGoal };
 }
 
 // ========================================

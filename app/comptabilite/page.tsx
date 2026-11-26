@@ -8,6 +8,8 @@ import {
   ArrowDownRight,
   Plus,
   X,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import {
   AreaChart,
@@ -230,13 +232,14 @@ export default function ComptabilitePage() {
   const [startDate, setStartDate] = useState(defaultStartDate());
   const [endDate, setEndDate] = useState(defaultEndDate());
   const currentYear = new Date().getFullYear();
+  const [year, setYear] = useState(currentYear);
 
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
 
   // Data hooks
   const { data: profitLossData, loading: plLoading, reload: reloadPL } = useProfitLoss(startDate, endDate);
-  const { data: monthlyDataRaw, loading: monthlyLoading } = useMonthlySummary(currentYear);
+  const { data: monthlyDataRaw, loading: monthlyLoading } = useMonthlySummary(year);
   const { data: breakdownData, loading: breakdownLoading, reload: reloadBreakdown } = useExpenseBreakdown(startDate, endDate);
   const { data: expensesData, loading: expensesLoading, reload: reloadExpenses } = useExpenses(startDate, endDate);
   const { create: createExpense, creating: expenseCreating } = useCreateExpense();
@@ -262,7 +265,11 @@ export default function ComptabilitePage() {
   const paymentMethodLabel = (key: string) => paymentMethodLabels[key] ?? key;
 
   // Derived data — utiliser les vraies données de l'API, pas de mock
-  const pl = profitLossData ?? { totalRevenue: 0, totalExpenses: 0, netProfit: 0, expenseBreakdown: [] };
+  const pl = profitLossData ?? {
+    grossSales: 0, refunds: 0, salesRevenue: 0, salesCount: 0, costOfGoodsSold: 0, grossProfit: 0,
+    grossMarginRate: 0, otherRevenue: 0, totalRevenue: 0, totalExpenses: 0, losses: 0, netProfit: 0,
+    netMarginRate: 0, paymentMethods: [], purchases: { amount: 0, count: 0 }, expenseByCategory: [],
+  };
 
   const monthlyData = useMemo(() => {
     if (monthlyDataRaw && monthlyDataRaw.length > 0) {
@@ -275,8 +282,8 @@ export default function ComptabilitePage() {
     if (breakdownData && breakdownData.length > 0) {
       return breakdownData.map((b) => ({ name: categoryLabel(b.category), value: b.amount, percentage: b.percentage }));
     }
-    if (profitLossData?.expenseBreakdown && profitLossData.expenseBreakdown.length > 0) {
-      return profitLossData.expenseBreakdown.map((b) => ({ name: categoryLabel(b.category), value: b.amount, percentage: 0 }));
+    if (profitLossData?.expenseByCategory && profitLossData.expenseByCategory.length > 0) {
+      return profitLossData.expenseByCategory.map((b) => ({ name: categoryLabel(b.category), value: b.amount, percentage: 0 }));
     }
     return [];
   }, [breakdownData, profitLossData, t]);
@@ -286,15 +293,17 @@ export default function ComptabilitePage() {
   }, [expensesData]);
 
   // KPI calculations
-  const totalRevenue = pl.totalRevenue;
-  const totalExpenses = pl.totalExpenses;
   const netProfit = pl.netProfit;
-  const marginRate = totalRevenue > 0 ? Math.round((netProfit / totalRevenue) * 100) : 0;
 
-  const currentMonth = monthlyData[monthlyData.length - 1] ?? { revenue: 0, expenses: 0, profit: 0 };
-  const prevMonth = monthlyData[monthlyData.length - 2] ?? currentMonth;
-  const revenueDelta = prevMonth.revenue > 0 ? ((currentMonth.revenue - prevMonth.revenue) / prevMonth.revenue) * 100 : 0;
-  const profitDelta = prevMonth.profit > 0 ? ((currentMonth.profit - prevMonth.profit) / prevMonth.profit) * 100 : 0;
+  // Mois en cours vs mois précédent (seulement quand on regarde l'année en cours)
+  const monthIdx = new Date().getMonth();
+  const currentMonth = year === currentYear ? monthlyData[monthIdx] : undefined;
+  const prevMonth = year === currentYear && monthIdx > 0 ? monthlyData[monthIdx - 1] : undefined;
+  const pctDelta = (cur?: number, prev?: number) =>
+    cur !== undefined && prev !== undefined && prev > 0 ? ((cur - prev) / prev) * 100 : 0;
+  const revenueDelta = pctDelta(currentMonth?.revenue, prevMonth?.revenue);
+  const expenseDelta = pctDelta(currentMonth?.expenses, prevMonth?.expenses);
+  const profitDelta = pctDelta(currentMonth?.profit, prevMonth?.profit);
 
   const handleCreateExpense = async (data: { category: string; description: string; amount: number; paymentMethod: string; supplier?: string }) => {
     try {
@@ -341,33 +350,36 @@ export default function ComptabilitePage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
         {[
           {
-            label: t.comptabilite.totalRevenue,
-            value: totalRevenue,
+            label: t.comptabilite.salesNet,
+            value: pl.salesRevenue,
             delta: revenueDelta,
+            isPercent: false,
             icon: <TrendingUp className="w-5 h-5 text-[var(--brand)]" />,
             iconBg: "bg-[var(--brand-light)]",
           },
           {
-            label: t.comptabilite.totalExpenses,
-            value: totalExpenses,
-            delta: 0,
+            label: t.comptabilite.expensesAndLosses,
+            value: pl.totalExpenses + pl.losses,
+            delta: -expenseDelta,
+            isPercent: false,
             icon: <TrendingDown className="w-5 h-5 text-red-500" />,
             iconBg: "bg-[var(--danger-light)]",
           },
           ...(canSeeProfit ? [{
-            label: t.comptabilite.netProfitLabel,
-            value: netProfit,
-            delta: profitDelta,
-            icon: <TrendingUp className="w-5 h-5 text-emerald-600" />,
-            iconBg: "bg-[var(--success-light)]",
-          },
-          {
-            label: t.comptabilite.netMargin,
-            value: marginRate,
+            label: `${t.comptabilite.grossProfit} (${pl.grossMarginRate}%)`,
+            value: pl.grossProfit,
             delta: 0,
-            isPercent: true,
+            isPercent: false,
             icon: <TrendingUp className="w-5 h-5 text-indigo-600" />,
             iconBg: "bg-[var(--info-light)]",
+          },
+          {
+            label: `${t.comptabilite.netProfitLabel} (${pl.netMarginRate}%)`,
+            value: netProfit,
+            delta: profitDelta,
+            isPercent: false,
+            icon: <TrendingUp className="w-5 h-5 text-emerald-600" />,
+            iconBg: "bg-[var(--success-light)]",
           }] : []),
         ].map(({ label, value, delta, icon, iconBg, isPercent }) => (
           <div key={label} className="bg-white border border-[var(--border)] rounded-2xl p-5 shadow-[var(--shadow-sm)]">
@@ -388,10 +400,75 @@ export default function ComptabilitePage() {
         ))}
       </div>
 
+      {/* Compte de résultat + encaissements + achats */}
+      <div className={cn("grid grid-cols-1 gap-4 mb-5", canSeeProfit ? "lg:grid-cols-3" : "lg:grid-cols-2")}>
+        {canSeeProfit && (
+          <Card padding="md">
+            <CardHeader title={t.comptabilite.plTitle} subtitle={t.comptabilite.plSub} />
+            <div className="mt-2 text-sm divide-y divide-[var(--border-subtle)]">
+              {[
+                { label: t.comptabilite.grossSalesLabel, value: pl.grossSales, sign: "" },
+                { label: t.comptabilite.refundsLabel, value: -pl.refunds, sign: "−" },
+                { label: t.comptabilite.salesNet, value: pl.salesRevenue, bold: true },
+                { label: t.comptabilite.cogs, value: -pl.costOfGoodsSold, sign: "−" },
+                { label: `${t.comptabilite.grossProfit} (${pl.grossMarginRate}%)`, value: pl.grossProfit, bold: true },
+                ...(pl.otherRevenue ? [{ label: t.comptabilite.otherRevenue, value: pl.otherRevenue, sign: "+" }] : []),
+                { label: t.comptabilite.totalExpenses, value: -pl.totalExpenses, sign: "−" },
+                { label: t.comptabilite.lossesLabel, value: -pl.losses, sign: "−" },
+                { label: `${t.comptabilite.netProfitLabel} (${pl.netMarginRate}%)`, value: pl.netProfit, bold: true, total: true },
+              ].map((row) => (
+                <div key={row.label} className={cn("flex items-center justify-between py-2", row.bold && "font-semibold")}>
+                  <span className={row.bold ? "text-[var(--text-primary)]" : "text-[var(--text-secondary)]"}>{row.label}</span>
+                  <span className={cn("tabular-nums", row.total && (row.value >= 0 ? "text-emerald-600" : "text-red-600"))}>
+                    {formatCurrency(row.value)}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <p className="mt-2 text-[11px] text-[var(--text-muted)]">{t.comptabilite.costNote}</p>
+          </Card>
+        )}
+
+        <Card padding="md">
+          <CardHeader title={t.comptabilite.paymentsTitle} subtitle={`${pl.salesCount} ${t.dashboard.transactions.toLowerCase()}`} />
+          {pl.paymentMethods.length === 0 ? (
+            <p className="mt-3 text-xs text-[var(--text-muted)]">{t.comptabilite.noPayments}</p>
+          ) : (
+            <div className="mt-2 text-sm divide-y divide-[var(--border-subtle)]">
+              {pl.paymentMethods.map((pm) => (
+                <div key={pm.method} className="flex items-center justify-between py-2">
+                  <span className="text-[var(--text-secondary)]">{paymentMethodLabels[pm.method] ?? (pm.method === "other" ? t.comptabilite.pmOther : pm.method)}</span>
+                  <span className="font-medium tabular-nums">{formatCurrency(pm.amount)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+
+        <Card padding="md">
+          <CardHeader title={t.comptabilite.purchasesTitle} subtitle={`${pl.purchases.count} ${t.comptabilite.purchasesCount}`} />
+          <p className="mt-3 text-2xl font-bold tabular-nums text-[var(--text-primary)]">{formatCurrency(pl.purchases.amount)}</p>
+          <p className="mt-2 text-[11px] text-[var(--text-muted)]">{t.comptabilite.purchasesNote}</p>
+        </Card>
+      </div>
+
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-5">
         <Card className="lg:col-span-3" padding="md">
-          <CardHeader title={t.comptabilite.revenueChart} subtitle={`${currentYear}`} />
+          <CardHeader
+            title={t.comptabilite.revenueChart}
+            subtitle={`${year}`}
+            action={
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="sm" onClick={() => setYear(year - 1)} aria-label="previous year">
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setYear(year + 1)} disabled={year >= currentYear} aria-label="next year">
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            }
+          />
           <ResponsiveContainer width="100%" height={220}>
             <AreaChart data={monthlyData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
               <defs>
@@ -486,7 +563,7 @@ export default function ComptabilitePage() {
               {expenses.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-5 py-8 text-center text-[var(--text-muted)]">
-                    {t.comptabilite.noExpenses || "No expenses in this period"}
+                    {t.comptabilite.noExpenses}
                   </td>
                 </tr>
               )}
