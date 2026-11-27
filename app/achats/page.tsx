@@ -43,6 +43,7 @@ type OrderStatus = "draft" | "sent" | "received" | "cancelled";
 
 // Clé localStorage pour l'auto-sauvegarde du bordereau de livraison en cours.
 const DELIVERY_DRAFT_KEY = "kabrak_delivery_draft";
+const DELIVERY_CHUNK_SIZE = 40;
 
 function useOrderStatusConfig(t: ReturnType<typeof useI18n>["t"]) {
   return {
@@ -452,28 +453,85 @@ export default function AchatsPage() {
         expiryDate: l.expiryDate || undefined,
       };
     });
+    // Big deliveries are saved in chunks: the first chunk creates the bordereau, the next ones
+    // are added to it. Each saved chunk leaves the form and the draft, so after a timeout or a
+    // network cut, clicking Save again continues with what is left — nothing typed twice, no
+    // item counted twice.
+    const pairs = validLines.map((line, i) => ({ line, item: items[i] }));
+    const emptyLine: DeliveryLine = { productId: "", productLabel: "", qty: 1, unitPrice: 0, sellPrice: 0, expiryDate: "", receiveInPacks: false, packQty: 1, productPackQuantity: null, isNewProduct: false, newProductName: "", newProductBarcode: "", newProductCategory: "Grocery", newProductUnit: "pc" };
+    let orderId = appendToOrderId;
+    let orderNumber = appendOrderNumber;
+    let remaining = [...deliveryLines];
+    let saved = 0;
+
+    // After a timeout the server may still have saved the chunk: check before calling it failed.
+    const chunkSavedAnyway = async (chunkItems: typeof items, itemsBefore: number | null): Promise<{ id: string; orderNumber: string } | null> => {
+      await new Promise((r) => setTimeout(r, 3000));
+      try {
+        if (orderId) {
+          const order = await purchaseOrdersApi.get(orderId);
+          return itemsBefore !== null && (order.items?.length ?? 0) >= itemsBefore + chunkItems.length
+            ? { id: order.id, orderNumber: order.orderNumber } : null;
+        }
+        const chunkTotal = chunkItems.reduce((sum, it) => sum + it.quantity * it.unitCost, 0);
+        const recent = await purchaseOrdersApi.list("received");
+        const match = recent.find((o) =>
+          o.supplierId === supplierId &&
+          Math.abs(o.total - chunkTotal) < 1 &&
+          Date.now() - new Date(o.createdAt).getTime() < 5 * 60 * 1000);
+        return match ? { id: match.id, orderNumber: match.orderNumber } : null;
+      } catch {
+        return null;
+      }
+    };
+
     setSavingDelivery(true);
     try {
-      if (appendToOrderId) {
-        // Mode AJOUT: on ne réceptionne QUE les nouveaux articles
-        await purchaseOrdersApi.addItems(appendToOrderId, items);
-      } else {
-        await purchaseOrdersApi.createDirect({
-          supplierId,
-          expectedDate: deliveryDate,
-          invoiceNumber: deliveryRef || undefined,
-          notes: deliveryRef ? `Bordereau ref: ${deliveryRef}` : undefined,
-          createdBy: user?.id,
-          items,
-        });
-      }
-      // Créer un lot (batch) pour chaque ligne avec date d'expiration
-      for (const l of validLines) {
-        await batchesApi.create({
-          productId: l.productId,
-          quantity: l.qty,
-          expiryDate: l.expiryDate || undefined,
-        }).catch(() => {}); // non-bloquant
+      for (let i = 0; i < pairs.length; i += DELIVERY_CHUNK_SIZE) {
+        const chunk = pairs.slice(i, i + DELIVERY_CHUNK_SIZE);
+        const chunkItems = chunk.map((p) => p.item);
+        let itemsBefore: number | null = null;
+        try {
+          if (orderId) {
+            itemsBefore = (await purchaseOrdersApi.get(orderId)).items?.length ?? 0;
+            await purchaseOrdersApi.addItems(orderId, chunkItems);
+          } else {
+            const created = await purchaseOrdersApi.createDirect({
+              supplierId,
+              expectedDate: deliveryDate,
+              invoiceNumber: deliveryRef || undefined,
+              notes: deliveryRef ? `Bordereau ref: ${deliveryRef}` : undefined,
+              createdBy: user?.id,
+              items: chunkItems,
+            });
+            orderId = created.id;
+            orderNumber = created.orderNumber;
+          }
+        } catch (err) {
+          const found = await chunkSavedAnyway(chunkItems, itemsBefore);
+          if (!found) throw err;
+          orderId = found.id;
+          orderNumber = found.orderNumber;
+        }
+        saved += chunk.length;
+        const done = new Set(chunk.map((p) => p.line));
+        remaining = remaining.filter((l) => !done.has(l));
+        setDeliveryLines(remaining.length > 0 ? remaining : [emptyLine]);
+        setAppendToOrderId(orderId);
+        setAppendOrderNumber(orderNumber);
+        try {
+          localStorage.setItem(DELIVERY_DRAFT_KEY, JSON.stringify({
+            deliveryRef, deliveryDate, deliverySupplierId: supplierId, deliverySupplierName,
+            deliveryLines: remaining, appendToOrderId: orderId, appendOrderNumber: orderNumber,
+            appendExistingItems, savedAt: Date.now(),
+          }));
+        } catch {}
+        // Lots (batches) per line with an expiry date — non-blocking
+        void Promise.all(chunk.map((p) => batchesApi.create({
+          productId: p.line.productId,
+          quantity: p.line.qty,
+          expiryDate: p.line.expiryDate || undefined,
+        }).catch(() => {})));
       }
       const savedMsg = appendToOrderId
         ? `${t.achats.deliveryItemsAdded || "Articles ajoutés"}: ${validLines.length}`
@@ -484,11 +542,19 @@ export default function AchatsPage() {
       setShowDeliveryForm(false);
       resetDeliveryForm();
     } catch (e: unknown) {
-      toast(e instanceof Error ? e.message : t.achats.deliveryErrorSave, "warning");
+      const reason = e instanceof Error ? e.message : t.achats.deliveryErrorSave;
+      if (saved > 0) {
+        reloadOrders();
+        toast(locale === "fr"
+          ? `${saved} article(s) enregistré(s) dans ${orderNumber}. ${pairs.length - saved} restent dans la liste : cliquez à nouveau sur Enregistrer. (${reason})`
+          : `${saved} item(s) saved in ${orderNumber}. ${pairs.length - saved} are still in the list: click Save again. (${reason})`, "warning");
+      } else {
+        toast(reason, "warning");
+      }
     } finally {
       setSavingDelivery(false);
     }
-  }, [deliverySupplierId, deliverySupplierName, deliveryDate, deliveryRef, deliveryLines, appendToOrderId, user, reloadOrders, reloadSuppliers, toast, t, locale]);
+  }, [deliverySupplierId, deliverySupplierName, deliveryDate, deliveryRef, deliveryLines, appendToOrderId, appendOrderNumber, appendExistingItems, user, reloadOrders, reloadSuppliers, toast, t, locale]);
 
   const handlePrintDelivery = (order: typeof orders[0]) => {
     const sup = order.supplier ? (suppliers.find((s) => s.id === order.supplier.id) || order.supplier) : null;
