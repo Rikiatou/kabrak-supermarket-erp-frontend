@@ -1142,20 +1142,24 @@ export default function AchatsPage() {
                               <div className="flex gap-0.5">
                                 <button
                                   type="button"
-                                  onClick={() => {
-                                    updateDeliveryLine(i, "receiveInPacks", false);
-                                    updateDeliveryLine(i, "qty", line.packQty * line.productPackQuantity!);
-                                  }}
+                                  onClick={() => setDeliveryLines((l) => l.map((x, idx) => idx !== i ? x : {
+                                    ...x,
+                                    receiveInPacks: false,
+                                    qty: x.packQty * x.productPackQuantity!,
+                                    unitPrice: x.receiveInPacks ? Math.round(x.unitPrice / x.productPackQuantity!) : x.unitPrice,
+                                  }))}
                                   className={`flex-1 text-[8px] font-bold py-0.5 rounded ${!line.receiveInPacks ? "bg-[#16a34a] text-white" : "bg-slate-100 text-slate-500"}`}
                                 >
                                   UNIT
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => {
-                                    updateDeliveryLine(i, "receiveInPacks", true);
-                                    updateDeliveryLine(i, "qty", line.packQty * line.productPackQuantity!);
-                                  }}
+                                  onClick={() => setDeliveryLines((l) => l.map((x, idx) => idx !== i ? x : {
+                                    ...x,
+                                    receiveInPacks: true,
+                                    qty: x.packQty * x.productPackQuantity!,
+                                    unitPrice: x.receiveInPacks ? x.unitPrice : x.unitPrice * x.productPackQuantity!,
+                                  }))}
                                   className={`flex-1 text-[8px] font-bold py-0.5 rounded ${line.receiveInPacks ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}
                                 >
                                   PACK
